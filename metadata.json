@@ -1,0 +1,8 @@
+{
+  "name": "EcoFeast",
+  "description": "A full-stack food rescue platform connecting businesses, consumers, and charities to reduce waste.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera"
+  ]
+}
