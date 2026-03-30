@@ -1,15 +1,16 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { Target, Globe, Users } from 'lucide-react';
+import { motion } from 'framer-motion'; 
+import { Target, Globe, Users } from 'lucide-react'; 
+
 
 export const About: React.FC = () => {
   const team = [
-      { name: 'Anubhav Akhil', role: 'Founder', emoji: '🧑‍💼' },
+      { name: 'Anubhav Akhil', role: 'Founder', emoji: '🧑‍💼' }, 
       { name: 'Sandeep Kumar', role: 'Founder', emoji: '👨‍💻' },
       { name: 'Sahil Kumar', role: 'Founder', emoji: '🧑‍🔬' },
       { name: 'Ravi Raj Singh', role: 'Co-Founder', emoji: '👨‍🔧' },
       { name: 'Sudhanshu Kumar', role: 'Co-Founder', emoji: '🧑‍🎨' }
-  ];
+  ]; 
 
   return (
     <div className="bg-white dark:bg-dark-950 transition-colors">
