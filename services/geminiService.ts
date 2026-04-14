@@ -1,50 +1,43 @@
-import { GoogleGenAI } from "@google/genai";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
 
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
-
-export const predictExpiryAndTags = async (itemName: string, category: string): Promise<{ expiryHours: number; tags: string[]; impactCO2: number }> => {
+export const predictExpiryAndTags = async (
+  itemName: string,
+  category: string
+): Promise<{ expiryHours: number; tags: string[]; impactCO2: number }> => {
   try {
-    const prompt = `
-      Analyze the food item "${itemName}" in category "${category}".
-      Return a JSON object with:
-      1. "expiryHours": estimated hours until it spoils if left at room temp (conservative estimate).
-      2. "tags": Array of 3 short marketing tags (e.g., "Vegan", "Sweet").
-      3. "impactCO2": estimated kg of CO2 prevented by rescuing 1kg of this food.
-      Output ONLY valid JSON.
-    `;
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-      }
+    const response = await fetch(`${API_BASE}/ai/predict-expiry`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ itemName, category }),
     });
-
-    const text = response.text;
-    if (!text) throw new Error("No response from AI");
-    
-    return JSON.parse(text);
-  } catch (error) {
-    console.error("AI Error:", error);
-    // Fallback if API fails or key missing
+    if (!response.ok) throw new Error("AI request failed");
+    const data = await response.json();
+    return {
+      expiryHours: Number(data.expiryHours || 24),
+      tags: Array.isArray(data.tags) ? data.tags : ["Fresh", "Rescued", "Tasty"],
+      impactCO2: Number(data.impactCO2 || 0.5),
+    };
+  } catch {
     return {
       expiryHours: 24,
       tags: ["Fresh", "Rescued", "Tasty"],
-      impactCO2: 0.5
+      impactCO2: 0.5,
     };
   }
 };
 
 export const suggestRecipe = async (items: string[]): Promise<string> => {
-    try {
-        const prompt = `Suggest a simple recipe name and 1-sentence description using these leftover ingredients: ${items.join(', ')}.`;
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-        });
-        return response.text || "Mix them together for a surprise stew!";
-    } catch (e) {
-        return "Delicious Eco-Salad";
-    }
-}
+  try {
+    const response = await fetch(`${API_BASE}/ai/suggest-recipe`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items }),
+    });
+    if (!response.ok) throw new Error("AI request failed");
+    const data = await response.json();
+    return data.text || "Mix them together for a surprise stew!";
+  } catch {
+    return "Delicious Eco-Salad";
+  }
+};
+

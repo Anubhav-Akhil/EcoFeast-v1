@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Leaf, Menu, X, User as UserIcon, LogOut, Sun, Moon, ShoppingCart } from 'lucide-react';
+import { Menu, X, User as UserIcon, LogOut, Sun, Moon, ShoppingCart } from 'lucide-react';
 import { User, UserRole, Item } from '../types';
 
 interface LayoutProps {
@@ -12,7 +12,7 @@ interface LayoutProps {
   toggleTheme: () => void;
   authModalOpen: boolean;
   setAuthModalOpen: (v: boolean) => void;
-  handleLogin: (email: string, role: UserRole, details: any) => void;
+  handleLogin: (email: string, role: UserRole, details: any, mode: 'login' | 'signup') => void;
   cartCount: number;
   onOpenCart: () => void;
   initialAuthRole?: UserRole;
@@ -27,6 +27,8 @@ export const Layout: React.FC<LayoutProps> = ({
 
   // Auth Form State
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<UserRole>('consumer');
   const [formData, setFormData] = useState({
       email: '',
@@ -42,6 +44,12 @@ export const Layout: React.FC<LayoutProps> = ({
       if (initialAuthRole) setSelectedRole(initialAuthRole);
   }, [initialAuthRole, authModalOpen]);
 
+  React.useEffect(() => {
+      if (authModalOpen) {
+          setAuthError(null);
+      }
+  }, [authModalOpen, authMode, selectedRole]);
+
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'Marketplace', path: '/marketplace' },
@@ -50,9 +58,17 @@ export const Layout: React.FC<LayoutProps> = ({
     { name: 'About', path: '/about' },
   ];
 
-  const handleAuthSubmit = (e: React.FormEvent) => {
+  const handleAuthSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      handleLogin(formData.email, selectedRole, formData);
+      setAuthLoading(true);
+      setAuthError(null);
+      try {
+        await handleLogin(formData.email, selectedRole, formData, authMode);
+      } catch (error: any) {
+        setAuthError(error?.message || 'Authentication failed. Please try again.');
+      } finally {
+        setAuthLoading(false);
+      }
   };
 
   return (
@@ -63,9 +79,7 @@ export const Layout: React.FC<LayoutProps> = ({
           <div className="flex justify-between h-16 items-center">
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-2">
-              <div className="bg-eco-500 p-2 rounded-full text-white">
-                <Leaf size={24} />
-              </div>
+              <img src="/ecofeast-logo.svg" alt="EcoFeast logo" className="w-10 h-10 rounded-full" />
               <span className="text-2xl font-heading font-bold text-gray-900 dark:text-white">EcoFeast</span>
             </Link>
 
@@ -190,7 +204,7 @@ export const Layout: React.FC<LayoutProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             <div className="space-y-4">
               <div className="flex items-center space-x-2">
-                <Leaf className="text-eco-400" />
+                <img src="/ecofeast-logo.svg" alt="EcoFeast logo" className="w-7 h-7 rounded-full" />
                 <span className="text-2xl font-bold">EcoFeast</span>
               </div>
               <p className="text-eco-200 text-sm">
@@ -354,9 +368,15 @@ export const Layout: React.FC<LayoutProps> = ({
                         </>
                     )}
 
-                    <button className="w-full bg-eco-600 text-white py-3 rounded-xl font-bold text-lg hover:bg-eco-700 transition">
-                        {authMode === 'login' ? 'Log In' : 'Sign Up'}
+                    <button
+                        disabled={authLoading}
+                        className="w-full bg-eco-600 text-white py-3 rounded-xl font-bold text-lg hover:bg-eco-700 transition disabled:opacity-70"
+                    >
+                        {authLoading ? 'Please wait...' : (authMode === 'login' ? 'Log In' : 'Sign Up')}
                     </button>
+                    {authError && (
+                        <p className="text-sm text-red-600 dark:text-red-400">{authError}</p>
+                    )}
                 </form>
 
                 <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">

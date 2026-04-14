@@ -1,47 +1,77 @@
 import React, { useEffect, useState } from 'react';
 import { Search, MapPin, Clock, Tag, Filter, AlertCircle, ShoppingCart, Info, Star } from 'lucide-react';
-import { api } from '../services/mockBackend';
+import { api } from '../services/api';
 import { Item, User } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 interface MarketplaceProps {
   user: User | null;
-  onAddToCart: (item: Item) => void;
+  onAddToCart: (item: Item, quantity?: number) => void;
+  refreshKey?: number;
 }
 
-export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart }) => {
+export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, refreshKey = 0 }) => {
   const [items, setItems] = useState<Item[]>([]);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [desiredQty, setDesiredQty] = useState<Record<string, number>>({});
+
+  const storePoints = items.reduce<Record<string, number>>((acc, item) => {
+    const existing = acc[item.storeName] || 0;
+    acc[item.storeName] = Math.max(existing, Number(item.storeCreditPoints || 0));
+    return acc;
+  }, {});
+
+  const rankedStores = (Object.entries(storePoints) as Array<[string, number]>)
+    .sort((a, b) => b[1] - a[1]);
+
+  const storeRankMap = rankedStores.reduce<Record<string, number>>((acc, [storeName], idx) => {
+    acc[storeName] = idx + 1;
+    return acc;
+  }, {});
 
   useEffect(() => {
     loadItems();
-  }, [user]); // Reload if user changes to apply role-based sorting
+  }, [user, refreshKey]); // Reload if user/order changes to apply role-based sorting
 
   const loadItems = async () => {
-    const data = await api.getItems();
-    
-    // Default Sort: Availability first
-    let sorted = data.sort((a, b) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.getItems();
+      const visibleData = data.filter(item => {
+        if (item.forCharity && user?.role !== 'charity') return false;
+        return true;
+      });
+
+      // Sorting Logic
+      const sorted = visibleData.sort((a, b) => {
+        // Keep sold-out at bottom across all roles.
         if (a.quantity === 0 && b.quantity > 0) return 1;
         if (a.quantity > 0 && b.quantity === 0) return -1;
-        return 0;
-    });
 
-    // Custom Sorting Logic based on Role
-    if (user?.role === 'charity') {
-        // Charities see Free Items (Donations) first, then cheaper items
-        sorted.sort((a, b) => a.discountPrice - b.discountPrice);
-    } else {
-        // Consumers/Retailers see Retailers with Higher Credit Points first
-        sorted.sort((a, b) => (b.storeCreditPoints || 0) - (a.storeCreditPoints || 0));
+        if (user?.role === 'charity') {
+          // Charities see free/cheaper items first.
+          return a.discountPrice - b.discountPrice;
+        }
+
+        // Consumers are recommended by retailer charity-credit points.
+        const pointDelta = (b.storeCreditPoints || 0) - (a.storeCreditPoints || 0);
+        if (pointDelta !== 0) return pointDelta;
+        return a.discountPrice - b.discountPrice;
+      });
+
+      setItems(sorted);
+    } catch (e: any) {
+      setItems([]);
+      setError(e?.message || "Unable to load marketplace right now.");
+    } finally {
+      setLoading(false);
     }
-
-    setItems(sorted);
-    setLoading(false);
   };
 
   const filteredItems = items.filter(item => {
@@ -50,6 +80,16 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart }) =
                           item.storeName.toLowerCase().includes(search.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  const getDesiredQty = (item: Item) => {
+    const current = desiredQty[item.id] || 1;
+    return Math.max(1, Math.min(current, Math.max(1, item.quantity)));
+  };
+
+  const setItemDesiredQty = (item: Item, next: number) => {
+    const capped = Math.max(1, Math.min(next, Math.max(1, item.quantity)));
+    setDesiredQty(prev => ({ ...prev, [item.id]: capped }));
+  };
 
   const statsData = [
     { name: 'Bakery', count: items.filter(i=>i.category==='bakery').length },
@@ -129,6 +169,10 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart }) =
           <div className="flex justify-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-eco-600"></div>
           </div>
+        ) : error ? (
+          <div className="bg-red-50 text-red-700 border border-red-200 rounded-xl p-4 mb-8">
+            {error}
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredItems.map((item) => (
@@ -159,11 +203,11 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart }) =
                     </div>
                   )}
 
-                  {/* High Credit Point Badge */}
-                  {(item.storeCreditPoints || 0) > 50 && (
-                      <div className="absolute top-3 left-3 bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded-md flex items-center gap-1 shadow-md" title="High Credit Points Retailer">
-                          <Star size={12} fill="black"/> Top Partner
-                      </div>
+                  {/* Recommendation Badge based on charity-credit ranking */}
+                  {storeRankMap[item.storeName] && storeRankMap[item.storeName] <= 3 && (
+                    <div className="absolute top-3 left-3 bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded-md flex items-center gap-1 shadow-md" title="Recommended by charity-credit points">
+                      <Star size={12} fill="black" /> Recommended
+                    </div>
                   )}
                   
                   {item.forAnimalFeed && (
@@ -206,17 +250,36 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart }) =
                     >
                         View Details
                     </button>
-                    <button 
-                      onClick={() => onAddToCart(item)}
-                      disabled={item.quantity === 0}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
-                          item.quantity === 0 
-                          ? 'bg-gray-300 dark:bg-dark-700 text-gray-500 cursor-not-allowed' 
-                          : 'bg-eco-600 text-white hover:bg-eco-700 dark:hover:bg-eco-500'
-                      }`}
-                    >
-                      <ShoppingCart size={16} /> {item.discountPrice === 0 ? 'Claim' : 'Reserve'}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-dark-700 overflow-hidden">
+                        <button
+                          onClick={() => setItemDesiredQty(item, getDesiredQty(item) - 1)}
+                          disabled={item.quantity === 0}
+                          className="px-2 py-1 hover:bg-gray-100 dark:hover:bg-dark-700 disabled:opacity-50"
+                        >
+                          -
+                        </button>
+                        <span className="px-2 text-sm dark:text-white min-w-[28px] text-center">{getDesiredQty(item)}</span>
+                        <button
+                          onClick={() => setItemDesiredQty(item, getDesiredQty(item) + 1)}
+                          disabled={item.quantity === 0}
+                          className="px-2 py-1 hover:bg-gray-100 dark:hover:bg-dark-700 disabled:opacity-50"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <button 
+                        onClick={() => onAddToCart(item, getDesiredQty(item))}
+                        disabled={item.quantity === 0}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+                            item.quantity === 0 
+                            ? 'bg-gray-300 dark:bg-dark-700 text-gray-500 cursor-not-allowed' 
+                            : 'bg-eco-600 text-white hover:bg-eco-700 dark:hover:bg-eco-500'
+                        }`}
+                      >
+                        <ShoppingCart size={16} /> {item.discountPrice === 0 ? 'Claim' : 'Reserve'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -282,9 +345,24 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart }) =
                             </div>
                         )}
 
-                        <div className="flex gap-4">
+                        <div className="flex gap-4 items-center">
+                            <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-dark-700 overflow-hidden">
+                                <button
+                                    onClick={() => setItemDesiredQty(selectedItem, getDesiredQty(selectedItem) - 1)}
+                                    className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-dark-700"
+                                >
+                                    -
+                                </button>
+                                <span className="px-3 font-semibold dark:text-white">{getDesiredQty(selectedItem)}</span>
+                                <button
+                                    onClick={() => setItemDesiredQty(selectedItem, getDesiredQty(selectedItem) + 1)}
+                                    className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-dark-700"
+                                >
+                                    +
+                                </button>
+                            </div>
                             <button 
-                                onClick={() => { onAddToCart(selectedItem); setSelectedItem(null); }}
+                                onClick={() => { onAddToCart(selectedItem, getDesiredQty(selectedItem)); setSelectedItem(null); }}
                                 className="flex-1 bg-eco-600 text-white py-3 rounded-xl font-bold hover:bg-eco-700 transition"
                             >
                                 Add to Cart

@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 export type UserRole = 'consumer' | 'retailer' | 'charity' | 'volunteer' | 'admin';
 
 export interface User {
@@ -13,6 +15,7 @@ export interface User {
   address?: string;
   phone?: string;
   vehicleType?: string; // For volunteer
+  charityPointsGained?: number; // For retailers
 }
 
 export interface Item {
@@ -34,6 +37,9 @@ export interface Item {
   status: 'available' | 'reserved' | 'sold' | 'donated' | 'composted';
   distance?: string; // Calculated on client
   forAnimalFeed?: boolean;
+  forCharity?: boolean;
+  rescuedCount?: number;
+  charityClaimCount?: number;
 }
 
 export interface Reservation {
@@ -61,7 +67,7 @@ export interface Task {
 export interface StatMetric {
   label: string;
   value: string | number;
-  icon: React.ReactNode;
+  icon: ReactNode;
   color: string;
 }
 

@@ -1,7 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Mail, MapPin, Phone } from 'lucide-react';
+import { api } from '../services/api';
 
 export const Contact: React.FC = () => {
+    const [form, setForm] = useState({ name: '', email: '', message: '' });
+    const [loading, setLoading] = useState(false);
+    const [status, setStatus] = useState<string | null>(null);
+
+    const submit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setStatus(null);
+        try {
+            await api.sendContactMessage(form.name, form.email, form.message);
+            setStatus('Message sent successfully. We will contact you soon.');
+            setForm({ name: '', email: '', message: '' });
+        } catch (error: any) {
+            setStatus(error?.message || 'Unable to send message right now.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-white dark:bg-dark-950 transition-colors">
             <section className="py-20 bg-eco-900 text-white text-center">
@@ -36,20 +56,44 @@ export const Contact: React.FC = () => {
                 </div>
 
                 <div className="bg-gray-50 dark:bg-dark-900 p-8 rounded-xl shadow-sm border border-gray-100 dark:border-dark-800">
-                    <form className="space-y-4">
+                    <form className="space-y-4" onSubmit={submit}>
                         <div>
                             <label className="block text-sm font-medium mb-1 dark:text-gray-300">Name</label>
-                            <input type="text" className="w-full border p-3 rounded-lg dark:bg-dark-800 dark:border-dark-700 dark:text-white" />
+                            <input
+                                type="text"
+                                required
+                                value={form.name}
+                                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                                className="w-full border p-3 rounded-lg dark:bg-dark-800 dark:border-dark-700 dark:text-white"
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-medium mb-1 dark:text-gray-300">Email</label>
-                            <input type="email" className="w-full border p-3 rounded-lg dark:bg-dark-800 dark:border-dark-700 dark:text-white" />
+                            <input
+                                type="email"
+                                required
+                                value={form.email}
+                                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                                className="w-full border p-3 rounded-lg dark:bg-dark-800 dark:border-dark-700 dark:text-white"
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-medium mb-1 dark:text-gray-300">Message</label>
-                            <textarea rows={4} className="w-full border p-3 rounded-lg dark:bg-dark-800 dark:border-dark-700 dark:text-white"></textarea>
+                            <textarea
+                                rows={4}
+                                required
+                                value={form.message}
+                                onChange={(e) => setForm({ ...form, message: e.target.value })}
+                                className="w-full border p-3 rounded-lg dark:bg-dark-800 dark:border-dark-700 dark:text-white"
+                            ></textarea>
                         </div>
-                        <button className="w-full bg-eco-600 text-white py-3 rounded-lg font-bold hover:bg-eco-700">Send Message</button>
+                        <button
+                            disabled={loading}
+                            className="w-full bg-eco-600 text-white py-3 rounded-lg font-bold hover:bg-eco-700 disabled:opacity-70"
+                        >
+                            {loading ? 'Sending...' : 'Send Message'}
+                        </button>
+                        {status && <p className="text-sm text-gray-600 dark:text-gray-300">{status}</p>}
                     </form>
                 </div>
             </section>

@@ -5,13 +5,22 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:backend": "node backend/server.js",
+    "dev:backend:watch": "node --watch backend/server.js",
+    "dev:full": "concurrently \"npm run dev:backend\" \"npm run dev\"",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start:backend": "node backend/server.js"
   },
   "dependencies": {
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "@google/genai": "^1.30.0",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.555.0",
     "recharts": "^3.5.1",
     "react-router-dom": "^7.9.6",
@@ -19,6 +28,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "concurrently": "^9.2.1",
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, MapPin, Navigation, Mail, Phone, X } from 'lucide-react';
-import { api } from '../services/mockBackend';
+import { api } from '../services/api';
 import { Charity } from '../types';
 
 export const Charities: React.FC = () => {
