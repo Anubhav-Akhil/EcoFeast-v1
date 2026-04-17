@@ -11,8 +11,10 @@ import { Contact } from './pages/Contact';
 import { Impact } from './pages/Impact';
 import { api } from './services/api';
 import { User, Item, UserRole } from './types';
-import { X, Trash2, CheckCircle, Minus, Plus } from 'lucide-react';
+import { X, Trash2, CheckCircle, Minus, Plus, Bell, Truck } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { socket } from './services/socket';
+import { useNotificationStore } from './services/notificationStore';
 
 interface CartEntry {
   item: Item;
@@ -27,6 +29,7 @@ const App: React.FC = () => {
   const [cart, setCart] = useState<CartEntry[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false);
+  const [lastOrderCode, setLastOrderCode] = useState<string>('');
   const [marketplaceRefreshKey, setMarketplaceRefreshKey] = useState(0);
 
   const [isDark, setIsDark] = useState(() => {
@@ -38,6 +41,46 @@ const App: React.FC = () => {
     }
     return false;
   });
+
+  const addNotification = useNotificationStore(state => state.addNotification);
+  const [toastNotification, setToastNotification] = useState<Item | null>(null);
+  const [orderToast, setOrderToast] = useState<any>(null);
+
+  useEffect(() => {
+    const handleNewItem = (item: Item) => {
+      addNotification({
+        type: 'new_item',
+        title: 'New Surplus Food!',
+        message: `${item.storeName} just added ${item.title}.`,
+      });
+      
+      setToastNotification(item);
+      setTimeout(() => setToastNotification(null), 5000);
+    };
+
+    const handleOrderUpdated = (order: any) => {
+      if (user && order.userId === user.id) {
+        const msg = `Your order #${order.code} is now ${order.status.toUpperCase()}.`;
+        
+        addNotification({
+          type: 'order_update',
+          title: 'Order Status Updated',
+          message: msg,
+        });
+
+        setOrderToast(order);
+        setTimeout(() => setOrderToast(null), 6000);
+      }
+    };
+
+    socket.on('new-item', handleNewItem);
+    socket.on('order-updated', handleOrderUpdated);
+
+    return () => {
+      socket.off('new-item', handleNewItem);
+      socket.off('order-updated', handleOrderUpdated);
+    };
+  }, [user, addNotification]);
 
   useEffect(() => {
     const session = api.getSession();
@@ -118,7 +161,8 @@ const App: React.FC = () => {
       const expandedItems = cart.flatMap((entry) =>
         Array.from({ length: entry.quantity }, () => entry.item)
       );
-      await api.createOrder(user.id, expandedItems);
+      const order = await api.createOrder(user.id, expandedItems);
+      setLastOrderCode(order?.code || '');
       setShowCheckoutSuccess(true);
       setCart([]);
       setIsCartOpen(false);
@@ -249,16 +293,84 @@ const App: React.FC = () => {
               <div className="mx-auto mb-4 h-14 w-14 rounded-full bg-green-100 text-green-700 flex items-center justify-center">
                 <CheckCircle size={28} />
               </div>
-              <h3 className="text-2xl font-bold dark:text-white mb-2">Order Confirmed</h3>
-              <p className="text-gray-600 dark:text-gray-300 mb-6">Your food order was placed successfully.</p>
+              <h3 className="text-2xl font-bold dark:text-white mb-2">Order Confirmed! 🎉</h3>
+              <p className="text-gray-600 dark:text-gray-300 mb-3">Your food order was placed successfully.</p>
+              {lastOrderCode && (
+                <div className="bg-eco-50 dark:bg-eco-900/30 border border-eco-200 dark:border-eco-800 rounded-xl px-4 py-3 mb-6">
+                  <p className="text-xs text-eco-600 dark:text-eco-400 font-semibold uppercase tracking-wide mb-1">Your Order Number</p>
+                  <p className="text-2xl font-bold text-eco-700 dark:text-eco-300 font-mono tracking-wider">#{lastOrderCode}</p>
+                  <p className="text-xs text-gray-500 mt-1">Save this to track your order</p>
+                </div>
+              )}
+              <a
+                href="/#/dashboard?tab=orders"
+                onClick={() => setShowCheckoutSuccess(false)}
+                className="block w-full bg-eco-600 text-white py-3 rounded-xl font-bold hover:bg-eco-700 mb-2 text-center"
+              >
+                Track Your Order
+              </a>
               <button
                 onClick={() => setShowCheckoutSuccess(false)}
-                className="w-full bg-eco-600 text-white py-3 rounded-xl font-bold hover:bg-eco-700"
+                className="w-full text-gray-500 py-2 text-sm hover:text-gray-700 dark:hover:text-gray-300"
               >
-                Continue
+                Continue Shopping
               </button>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Socket.IO Toast Notification */}
+      <AnimatePresence>
+        {toastNotification && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            className="fixed bottom-6 right-6 z-[100] bg-white dark:bg-dark-900 border border-eco-200 dark:border-eco-900/50 shadow-2xl rounded-2xl p-4 max-w-sm flex gap-4 cursor-pointer hover:shadow-eco-500/20 transition-shadow"
+            onClick={() => setToastNotification(null)}
+          >
+            <div className="h-12 w-12 rounded-full bg-eco-100 dark:bg-eco-900/50 flex-shrink-0 flex items-center justify-center text-eco-600 dark:text-eco-400">
+              <Bell size={24} />
+            </div>
+            <div className="flex-1">
+              <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-1">New Surplus Food!</h4>
+              <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                {toastNotification.storeName} just added <span className="font-bold text-eco-600 dark:text-eco-400">{toastNotification.title}</span>.
+              </p>
+            </div>
+            <button onClick={(e) => { e.stopPropagation(); setToastNotification(null); }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+              <X size={16} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Socket.IO Order Update Toast */}
+      <AnimatePresence>
+        {orderToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            className="fixed bottom-6 right-6 z-[100] bg-white dark:bg-dark-900 border border-blue-200 dark:border-blue-900/50 shadow-2xl rounded-2xl p-4 max-w-sm flex gap-4 cursor-pointer hover:shadow-blue-500/20 transition-shadow"
+            onClick={() => setOrderToast(null)}
+          >
+            <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/50 flex-shrink-0 flex items-center justify-center text-blue-600 dark:text-blue-400">
+              <Truck size={24} />
+            </div>
+            <div className="flex-1">
+              <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-1">
+                {orderToast.status === 'completed' ? 'Order Delivered!' : 'Order On The Way!'}
+              </h4>
+              <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                Your order <span className="font-bold">#{orderToast.code}</span> has been marked as <span className="font-bold text-blue-600 dark:text-blue-400 uppercase">{orderToast.status}</span>.
+              </p>
+            </div>
+            <button onClick={(e) => { e.stopPropagation(); setOrderToast(null); }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+              <X size={16} />
+            </button>
+          </motion.div>
         )}
       </AnimatePresence>
     </Router>

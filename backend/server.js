@@ -1,4 +1,6 @@
 import express from "express";
+import http from "http";
+import { Server } from "socket.io";
 import cors from "cors";
 import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
@@ -11,6 +13,7 @@ import Order from "./models/Order.js";
 import Task from "./models/Task.js";
 import Charity from "./models/Charity.js";
 import ContactMessage from "./models/ContactMessage.js";
+import Counter from "./models/Counter.js";
 
 dotenv.config();
 
@@ -35,6 +38,22 @@ app.use(
   })
 );
 
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins.length > 0 ? allowedOrigins : "*",
+    methods: ["GET", "POST", "PATCH", "DELETE", "PUT"],
+    credentials: true,
+  },
+});
+
+io.on("connection", (socket) => {
+  console.log("Client connected:", socket.id);
+  socket.on("disconnect", () => {
+    console.log("Client disconnected:", socket.id);
+  });
+});
+
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
 const CHARITY_CREDIT_PER_ITEM = Number(process.env.CHARITY_CREDIT_PER_ITEM || 5);
 const aiClient = process.env.GEMINI_API_KEY
@@ -44,6 +63,15 @@ const aiClient = process.env.GEMINI_API_KEY
 const nowIso = () => new Date().toISOString();
 const createId = (prefix) =>
   `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
+
+async function getNextOrderCode() {
+  const counter = await Counter.findByIdAndUpdate(
+    'orderCode',
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true }
+  );
+  return String(counter.seq).padStart(4, '0');
+}
 
 function signToken(user) {
   return jwt.sign({ sub: user.id, role: user.role, email: user.email }, JWT_SECRET, {
@@ -224,6 +252,9 @@ app.post(
         charityClaimCount: 0,
       });
 
+      // Broadcast new item to all connected clients
+      io.emit("new-item", item.toObject());
+
       return res.status(201).json(item.toObject());
     } catch (error) {
       next(error);
@@ -352,12 +383,13 @@ app.post(
       const dropName = orderUser?.organizationName || orderUser?.name || "Customer";
       const dropAddress = orderUser?.address || "Address not provided";
 
+      const orderCode = await getNextOrderCode();
       const order = await Order.create({
         id: createId("ord"),
         itemId: "multi",
         userId: req.auth.sub,
         status: "pending",
-        code: String(Math.floor(1000 + Math.random() * 9000)),
+        code: orderCode,
         timestamp: nowIso(),
         items: selectedItems.map((item) => item.toObject()),
         totalAmount: selectedItems.reduce((sum, item) => sum + Number(item.discountPrice || 0), 0),
@@ -376,6 +408,7 @@ app.post(
         const itemsSummary = storeItems.map((i) => i.title).join(", ");
         await Task.create({
           id: createId("t"),
+          orderId: order.id,
           storeName,
           pickupAddress: `${storeName} pickup point`,
           dropAddress,
@@ -455,6 +488,17 @@ app.patch(
       if (!task) return res.status(404).json({ message: "Task not found" });
       task.status = status;
       await task.save();
+
+      if (task.orderId) {
+        const order = await Order.findOne({ id: task.orderId });
+        if (order) {
+          order.status = status;
+          await order.save();
+          // Emit order-updated event
+          io.emit("order-updated", order.toObject());
+        }
+      }
+
       return res.status(204).send();
     } catch (error) {
       next(error);
@@ -545,7 +589,7 @@ const port = Number(process.env.PORT || 8787);
 
 connectDb()
   .then(() => {
-    app.listen(port, "0.0.0.0", () => {
+    server.listen(port, "0.0.0.0", () => {
       console.log(`EcoFeast backend running on http://0.0.0.0:${port}`);
     });
   })

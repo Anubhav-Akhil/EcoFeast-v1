@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, User as UserIcon, LogOut, Sun, Moon, ShoppingCart } from 'lucide-react';
+import { Menu, X, User as UserIcon, LogOut, Sun, Moon, ShoppingCart, Bell, Trash2, CheckCircle } from 'lucide-react';
 import { User, UserRole, Item } from '../types';
+import { useNotificationStore } from '../services/notificationStore';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -24,6 +25,11 @@ export const Layout: React.FC<LayoutProps> = ({
 }) => {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const location = useLocation();
+
+  const { notifications, markAsRead, markAllAsRead, clearAll } = useNotificationStore();
+  const unreadCount = notifications.filter(n => !n.read).length;
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   // Auth Form State
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
@@ -109,6 +115,64 @@ export const Layout: React.FC<LayoutProps> = ({
 
               {user ? (
                 <div className="flex items-center gap-4">
+                  {/* Notification Center */}
+                  <div className="relative">
+                    <button 
+                      onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} 
+                      className="relative p-2 text-gray-600 dark:text-gray-300 hover:text-eco-600"
+                    >
+                      <Bell size={22} />
+                      {unreadCount > 0 && (
+                        <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </button>
+
+                    {/* Dropdown */}
+                    {isNotificationsOpen && (
+                      <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-dark-900 border border-gray-200 dark:border-dark-800 rounded-xl shadow-2xl z-50 overflow-hidden">
+                        <div className="p-4 border-b border-gray-100 dark:border-dark-800 flex justify-between items-center bg-gray-50 dark:bg-dark-950">
+                          <h3 className="font-bold text-gray-900 dark:text-white">Notifications</h3>
+                          <div className="flex gap-2">
+                            {unreadCount > 0 && (
+                              <button onClick={markAllAsRead} className="text-xs text-eco-600 hover:underline flex items-center gap-1">
+                                <CheckCircle size={12} /> Mark all read
+                              </button>
+                            )}
+                            <button onClick={clearAll} className="text-xs text-red-500 hover:underline flex items-center gap-1">
+                              <Trash2 size={12} /> Clear
+                            </button>
+                          </div>
+                        </div>
+                        <div className="max-h-[60vh] overflow-y-auto">
+                          {notifications.length === 0 ? (
+                            <div className="p-8 text-center text-gray-500 text-sm">No notifications yet.</div>
+                          ) : (
+                            <div className="divide-y divide-gray-100 dark:divide-dark-800">
+                              {notifications.map((notif) => (
+                                <div 
+                                  key={notif.id} 
+                                  onClick={() => {
+                                    markAsRead(notif.id);
+                                    setIsNotificationsOpen(false);
+                                  }}
+                                  className={`p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-800 transition-colors ${!notif.read ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
+                                >
+                                  <div className="flex justify-between items-start mb-1">
+                                    <span className="font-bold text-sm text-gray-900 dark:text-white">{notif.title}</span>
+                                    <span className="text-[10px] text-gray-400">{new Date(notif.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                  </div>
+                                  <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{notif.message}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {user.role === 'consumer' && (
                       <button onClick={onOpenCart} className="relative p-2 text-gray-600 dark:text-gray-300 hover:text-eco-600">
                           <ShoppingCart size={22} />
@@ -119,13 +183,43 @@ export const Layout: React.FC<LayoutProps> = ({
                           )}
                       </button>
                   )}
-                  <Link to="/dashboard" className="flex items-center gap-2 text-gray-700 dark:text-gray-200 hover:text-eco-700 dark:hover:text-eco-400">
-                    <UserIcon size={18} />
-                    <span className="font-medium">{user.name}</span>
-                  </Link>
-                  <button onClick={onLogout} className="text-gray-400 hover:text-red-500 transition-colors">
-                    <LogOut size={18} />
-                  </button>
+                  {/* Profile Dropdown */}
+                  <div 
+                    className="relative" 
+                    onMouseEnter={() => setIsProfileOpen(true)} 
+                    onMouseLeave={() => setIsProfileOpen(false)}
+                  >
+                    <Link to="/dashboard" className="flex items-center gap-2 text-gray-700 dark:text-gray-200 hover:text-eco-700 dark:hover:text-eco-400 py-2">
+                      <UserIcon size={18} />
+                      <span className="font-medium">{user.name}</span>
+                    </Link>
+                    
+                    {isProfileOpen && (
+                      <div className="absolute right-0 top-full w-48 bg-white dark:bg-dark-900 border border-gray-200 dark:border-dark-800 rounded-xl shadow-2xl z-50 overflow-hidden py-1">
+                        <Link 
+                          to="/dashboard" 
+                          className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-eco-50 dark:hover:bg-dark-800 hover:text-eco-600 transition-colors"
+                        >
+                          My Dashboard
+                        </Link>
+                        {(user.role === 'consumer' || user.role === 'charity') && (
+                          <Link 
+                            to="/dashboard?tab=orders" 
+                            className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-eco-50 dark:hover:bg-dark-800 hover:text-eco-600 transition-colors"
+                          >
+                            Your Orders
+                          </Link>
+                        )}
+                        <div className="border-t border-gray-100 dark:border-dark-800 my-1"></div>
+                        <button 
+                          onClick={onLogout} 
+                          className="w-full text-left px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors flex items-center gap-2"
+                        >
+                          <LogOut size={16} /> Log Out
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <button

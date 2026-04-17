@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { User, Item, Reservation, Task } from '../types';
 import { api } from '../services/api';
+import { socket } from '../services/socket';
 import { predictExpiryAndTags } from '../services/geminiService';
+import { useSearchParams } from 'react-router-dom';
 import { Plus, Package, Calendar, Camera, Leaf, Trash2, CheckSquare, Square, Truck, Upload, Search, PackagePlus, Layers3, TrendingUp, Sparkles, BadgeIndianRupee } from 'lucide-react';
 import { BarChart, Bar, XAxis, ResponsiveContainer } from 'recharts';
 import { SuccessPopup } from '../components/SuccessPopup';
@@ -521,114 +523,372 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
   );
 };
 
-const ConsumerDashboard: React.FC<{ user: User }> = ({ user }) => {
-  const [reservations, setReservations] = useState<Reservation[]>([]);
-  useEffect(() => {
-    api.getUserReservations(user.id).then(setReservations);
-  }, [user.id]);
-  return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <h2 className="text-2xl font-bold mb-2 dark:text-white">Welcome back, {user.name}!</h2>
-      <p className="text-gray-500 dark:text-gray-400 mb-8">Track your latest rescued food orders below.</p>
+// Orders accordion component - tracks which order is expanded
+const OrdersAccordion: React.FC<{ reservations: Reservation[] }> = ({ reservations }) => {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="space-y-6">
-          <h3 className="font-bold text-lg dark:text-white">Your Orders</h3>
-          {reservations.length === 0 ? (
-            <div className="p-8 border-2 border-dashed dark:border-gray-700 rounded-xl text-center text-gray-400">
-              No active orders. <br /> Go save some food!
-            </div>
-          ) : (
-            reservations.map((res) => (
-              <div key={res.id} className="bg-white dark:bg-dark-900 p-4 rounded-xl shadow-sm border border-eco-200 dark:border-dark-800 flex justify-between items-center">
-                <div>
-                  <div className="text-xs text-eco-600 dark:text-eco-400 font-bold uppercase mb-1">Ready for pickup</div>
-                  <div className="font-bold text-gray-900 dark:text-white">Order #{res.code}</div>
-                  <div className="text-sm text-gray-500">
-                    {res.items ? `${res.items.length} items` : '1 Item'} • Total: INR {res.totalAmount || 0}
+  if (reservations.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <div className="h-20 w-20 rounded-full bg-gray-100 dark:bg-dark-800 flex items-center justify-center mb-4">
+          <Package size={36} className="text-gray-400" />
+        </div>
+        <h3 className="font-bold text-lg text-gray-700 dark:text-gray-300 mb-1">No orders yet</h3>
+        <p className="text-sm text-gray-400">Your order history will appear here.</p>
+        <a href="/#/marketplace" className="mt-5 bg-eco-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-eco-700 transition-colors">
+          Browse Marketplace
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {reservations.map((res) => {
+        const isExpanded = expandedId === res.id;
+        const statusStep = res.status === 'completed' ? 3 : res.status === 'accepted' ? 2 : 1;
+        const statusConfig: Record<string, { label: string; badge: string; bar: string }> = {
+          pending:   { label: 'Order Received', badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300', bar: 'bg-amber-400' },
+          accepted:  { label: 'On The Way',      badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',    bar: 'bg-blue-500'  },
+          completed: { label: 'Delivered',       badge: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300', bar: 'bg-green-500' },
+        };
+        const sc = statusConfig[res.status] || { label: res.status, badge: 'bg-gray-100 text-gray-600', bar: 'bg-gray-400' };
+
+        const storeGroups = (res.items || []).reduce((acc: any, item: any) => {
+          const key = item.storeName || 'Unknown Store';
+          if (!acc[key]) acc[key] = [];
+          acc[key].push(item);
+          return acc;
+        }, {});
+
+        const orderDate = res.timestamp ? new Date(res.timestamp) : null;
+        const dateStr = orderDate ? orderDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+        const timeStr = orderDate ? orderDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
+
+        const steps = [
+          { label: 'Order Received',    desc: 'Your order was placed successfully.', done: statusStep >= 1 },
+          { label: 'Partner Picked Up', desc: 'A volunteer is on the way.',           done: statusStep >= 2 },
+          { label: 'Delivered',         desc: 'Enjoy your rescued food!',             done: statusStep >= 3 },
+        ];
+
+        return (
+          <div key={res.id} className="bg-white dark:bg-dark-900 rounded-2xl border border-gray-200 dark:border-dark-800 shadow-sm overflow-hidden">
+            <button
+              onClick={() => setExpandedId(isExpanded ? null : res.id)}
+              className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 dark:hover:bg-dark-800/50 transition-colors"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`h-10 w-1 rounded-full flex-shrink-0 ${sc.bar}`} />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono font-black text-gray-900 dark:text-white text-base">#{res.code}</span>
+                    <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-md ${sc.badge}`}>{sc.label}</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-0.5">{dateStr} · {timeStr} &nbsp;·&nbsp; {res.items?.length || 0} item(s)</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+                <span className="font-black text-eco-600 dark:text-eco-400">INR {res.totalAmount || 0}</span>
+                <span className={`text-gray-400 text-xs transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+              </div>
+            </button>
+
+            {isExpanded && (
+              <div className="border-t border-gray-100 dark:border-dark-800">
+                <div className="px-5 pt-4 pb-3 space-y-4">
+                  {Object.entries(storeGroups).map(([storeName, storeItems]: [string, any]) => (
+                    <div key={storeName}>
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">📍 {storeName}</p>
+                      <div className="space-y-2">
+                        {storeItems.map((item: any, idx: number) => (
+                          <div key={idx} className="flex items-center gap-3 bg-gray-50 dark:bg-dark-800 rounded-xl p-3">
+                            <img src={item.image} alt={item.title} className="h-11 w-11 rounded-lg object-cover flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-gray-800 dark:text-white truncate">{item.title}</p>
+                              <p className="text-xs text-gray-400 capitalize">{item.category}</p>
+                            </div>
+                            <p className="text-sm font-bold text-eco-600 dark:text-eco-400 flex-shrink-0">
+                              {item.discountPrice === 0 ? 'FREE' : `₹${item.discountPrice}`}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="px-5 pb-5 pt-1">
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">Delivery Timeline</p>
+                  <div className="relative pl-7">
+                    <div className="absolute left-2 top-1.5 bottom-1.5 w-0.5 bg-gray-200 dark:bg-dark-700 rounded-full" />
+                    {steps.map((step, i) => (
+                      <div key={i} className={`relative flex items-start gap-3 ${i < steps.length - 1 ? 'pb-5' : ''}`}>
+                        <div className={`absolute -left-5 mt-1 h-3 w-3 rounded-full border-2 z-10 ${
+                          step.done
+                            ? `${sc.bar} border-white dark:border-dark-900`
+                            : 'bg-gray-200 dark:bg-dark-700 border-white dark:border-dark-900'
+                        }`} />
+                        <div>
+                          <p className={`text-sm font-bold leading-tight ${step.done ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-600'}`}>{step.label}</p>
+                          <p className={`text-xs mt-0.5 ${step.done ? 'text-gray-500 dark:text-gray-400' : 'text-gray-300 dark:text-gray-700'}`}>{step.desc}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <div className="h-12 w-12 bg-eco-100 dark:bg-eco-900 rounded-full flex items-center justify-center text-eco-700 dark:text-eco-400">
-                  <Package size={24} />
-                </div>
               </div>
-            ))
-          )}
-        </div>
-
-        <div>
-          <h3 className="font-bold text-lg mb-4 dark:text-white">Your Eco Impact</h3>
-          <div className="bg-gradient-to-br from-eco-500 to-teal-600 rounded-2xl p-6 text-white text-center">
-            <div className="inline-block p-4 bg-white/20 rounded-full mb-4">
-              <Leaf size={32} />
-            </div>
-            <div className="text-5xl font-bold mb-2">{user.ecoPoints}</div>
-            <div className="text-eco-100 font-medium mb-6">Eco Points Earned</div>
-            <div className="grid grid-cols-2 gap-4 border-t border-white/20 pt-4 text-sm">
-              <div>
-                <div className="font-bold text-xl">15kg</div>
-                <div className="text-eco-200">CO2 Saved</div>
-              </div>
-              <div>
-                <div className="font-bold text-xl">INR 3,500</div>
-                <div className="text-eco-200">Money Saved</div>
-              </div>
-            </div>
+            )}
           </div>
-        </div>
-      </div>
+        );
+      })}
     </div>
   );
 };
 
+const ConsumerDashboard: React.FC<{ user: User }> = ({ user }) => {
+  const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (searchParams.get('tab') === 'orders' ? 'orders' : 'overview') as 'overview' | 'orders';
+
+  const fetchOrders = () => {
+    api.getUserReservations(user.id).then(setReservations);
+  };
+
+  useEffect(() => {
+    fetchOrders();
+
+    const handleOrderUpdate = (updatedOrder: Reservation) => {
+      if (updatedOrder.userId === user.id) {
+        setReservations((prev) =>
+          prev.map((r) => (r.id === updatedOrder.id ? { ...r, status: updatedOrder.status } : r))
+        );
+      }
+    };
+
+    socket.on('order-updated', handleOrderUpdate);
+
+    return () => {
+      socket.off('order-updated', handleOrderUpdate);
+    };
+  }, [user.id]);
+
+  return (
+    <div className="p-6 max-w-5xl mx-auto">
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold dark:text-white">Welcome back, {user.name}! 👋</h2>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">Here's a summary of your eco journey.</p>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 mb-8 border-b border-gray-200 dark:border-dark-800">
+        <button
+          onClick={() => setSearchParams({})}
+          className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${
+            activeTab === 'overview'
+              ? 'border-eco-500 text-eco-600 dark:text-eco-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+          }`}
+        >
+          Overview
+        </button>
+        <button
+          onClick={() => setSearchParams({ tab: 'orders' })}
+          className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'orders'
+              ? 'border-eco-500 text-eco-600 dark:text-eco-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+          }`}
+        >
+          Your Orders
+          {reservations.length > 0 && (
+            <span className="bg-eco-500 text-white text-xs rounded-full px-2 py-0.5">{reservations.length}</span>
+          )}
+        </button>
+      </div>
+
+      {/* Overview Tab */}
+      {activeTab === 'overview' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Eco Points Card */}
+          <div className="bg-gradient-to-br from-eco-500 to-teal-600 rounded-2xl p-6 text-white">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <p className="text-eco-100 text-sm font-medium">Eco Points Earned</p>
+                <p className="text-5xl font-bold mt-1">{user.ecoPoints}</p>
+              </div>
+              <div className="p-3 bg-white/20 rounded-full">
+                <Leaf size={28} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 border-t border-white/20 pt-4 text-sm">
+              <div>
+                <div className="font-bold text-xl">{Math.round((user.ecoPoints || 0) * 0.12)}kg</div>
+                <div className="text-eco-200">CO2 Saved</div>
+              </div>
+              <div>
+                <div className="font-bold text-xl">INR {(user.ecoPoints || 0) * 5}</div>
+                <div className="text-eco-200">Value Saved</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Profile Card */}
+          <div className="bg-white dark:bg-dark-900 rounded-2xl p-6 border border-gray-200 dark:border-dark-800 shadow-sm">
+            <h3 className="font-bold text-gray-900 dark:text-white mb-4">My Profile</h3>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 bg-eco-100 dark:bg-eco-900/50 rounded-full flex items-center justify-center text-eco-600 font-bold text-lg">
+                  {user.name?.[0]?.toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-bold text-gray-900 dark:text-white">{user.name}</p>
+                  <p className="text-xs text-gray-500 capitalize">{user.role}</p>
+                </div>
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1 pt-2">
+                <div className="flex justify-between"><span>Total Orders</span><span className="font-bold text-gray-900 dark:text-white">{reservations.length}</span></div>
+                <div className="flex justify-between"><span>Active Orders</span><span className="font-bold text-orange-500">{reservations.filter(r => r.status !== 'completed').length}</span></div>
+                <div className="flex justify-between"><span>Delivered</span><span className="font-bold text-green-500">{reservations.filter(r => r.status === 'completed').length}</span></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Action */}
+          <div className="md:col-span-2 bg-eco-50 dark:bg-eco-900/20 rounded-2xl p-6 border border-eco-200 dark:border-eco-900/50 flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-eco-800 dark:text-eco-300">Ready to save more food?</h3>
+              <p className="text-sm text-eco-600 dark:text-eco-400 mt-1">Browse the marketplace to rescue surplus food near you!</p>
+            </div>
+            <a href="/#/marketplace" className="bg-eco-600 hover:bg-eco-700 text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition-colors whitespace-nowrap ml-4">
+              Browse Marketplace
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* Your Orders Tab */}
+      {activeTab === 'orders' && (
+        <OrdersAccordion reservations={reservations} />
+      )}
+    </div>
+  );
+};
+
+
+
+
 const CharityDashboard: React.FC<{ user: User }> = ({ user }) => {
   const [donations, setDonations] = useState<Item[]>([]);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
   const [successOpen, setSuccessOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (searchParams.get('tab') === 'orders' ? 'orders' : 'overview') as 'overview' | 'orders';
+
   const fetchDonations = async () => {
     const allItems = await api.getItems();
     setDonations(allItems.filter((i) => !!i.forCharity && i.status === 'available' && i.quantity > 0));
   };
+
+  const fetchOrders = () => {
+    api.getUserReservations(user.id).then(setReservations);
+  };
+
   useEffect(() => {
     fetchDonations();
-  }, []);
+    fetchOrders();
+
+    const handleOrderUpdate = (updatedOrder: Reservation) => {
+      if (updatedOrder.userId === user.id) {
+        setReservations((prev) =>
+          prev.map((r) => (r.id === updatedOrder.id ? { ...r, status: updatedOrder.status } : r))
+        );
+      }
+    };
+
+    socket.on('order-updated', handleOrderUpdate);
+
+    return () => {
+      socket.off('order-updated', handleOrderUpdate);
+    };
+  }, [user.id]);
+
   const handleClaimDonation = async (item: Item) => {
     try {
       await api.createOrder(user.id, [item]);
       setSuccessOpen(true);
       fetchDonations();
+      fetchOrders();
     } catch (error: any) {
       alert(error?.message || 'Failed to claim donation');
     }
   };
+
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4 dark:text-white">Charity Dashboard</h2>
+    <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-8">
-        <h3 className="text-xl font-bold mb-4 dark:text-white text-eco-600">Available Donations</h3>
-        {donations.length === 0 ? (
-          <div className="bg-white dark:bg-dark-900 p-8 rounded-xl text-center text-gray-500 border dark:border-dark-800">
-            No charity-marked donations available at the moment.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {donations.map((d) => (
-              <div key={d.id} className="bg-white dark:bg-dark-900 p-5 rounded-xl shadow-sm border border-eco-200 dark:border-dark-800 hover:shadow-md transition">
-                <div className="flex justify-between items-start mb-3">
-                  <h4 className="font-bold text-lg dark:text-white">{d.title}</h4>
-                  <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-bold">FREE</span>
-                </div>
-                <p className="text-sm text-gray-500 mb-3">{d.storeName}</p>
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  <Package size={16} /> {d.quantity} units • <Calendar size={16} /> {d.pickupEnd}
-                </div>
-                <button onClick={() => handleClaimDonation(d)} className="w-full bg-eco-600 text-white py-2 rounded-lg font-bold hover:bg-eco-700">
-                  Claim Donation
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+        <h2 className="text-2xl font-bold dark:text-white">Charity Dashboard 👋</h2>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">Claim free surplus food and track your deliveries.</p>
       </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 mb-8 border-b border-gray-200 dark:border-dark-800">
+        <button
+          onClick={() => setSearchParams({})}
+          className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${
+            activeTab === 'overview'
+              ? 'border-eco-500 text-eco-600 dark:text-eco-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+          }`}
+        >
+          Available Donations
+        </button>
+        <button
+          onClick={() => setSearchParams({ tab: 'orders' })}
+          className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'orders'
+              ? 'border-eco-500 text-eco-600 dark:text-eco-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+          }`}
+        >
+          Your Claims
+          {reservations.length > 0 && (
+            <span className="bg-eco-500 text-white text-xs rounded-full px-2 py-0.5">{reservations.length}</span>
+          )}
+        </button>
+      </div>
+
+      {activeTab === 'overview' && (
+        <div className="mb-8">
+          {donations.length === 0 ? (
+            <div className="bg-white dark:bg-dark-900 p-8 rounded-xl text-center text-gray-500 border dark:border-dark-800">
+              No charity-marked donations available at the moment.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {donations.map((d) => (
+                <div key={d.id} className="bg-white dark:bg-dark-900 p-5 rounded-xl shadow-sm border border-eco-200 dark:border-dark-800 hover:shadow-md transition">
+                  <div className="flex justify-between items-start mb-3">
+                    <h4 className="font-bold text-lg dark:text-white">{d.title}</h4>
+                    <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-bold">FREE</span>
+                  </div>
+                  <p className="text-sm text-gray-500 mb-3">{d.storeName}</p>
+                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    <Package size={16} /> {d.quantity} units • <Calendar size={16} /> {d.pickupEnd}
+                  </div>
+                  <button onClick={() => handleClaimDonation(d)} className="w-full bg-eco-600 text-white py-2 rounded-lg font-bold hover:bg-eco-700">
+                    Claim Donation
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'orders' && (
+        <OrdersAccordion reservations={reservations} />
+      )}
+
       <SuccessPopup open={successOpen} title="Donation Claimed" message="Donation claimed successfully. Volunteer delivery has been requested." onClose={() => setSuccessOpen(false)} />
     </div>
   );
