@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const dataDir = path.resolve(process.cwd(), "backend", "data");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const dataDir = path.resolve(__dirname, "data");
 const dataFile = process.env.DB_FILE || path.join(dataDir, "ecofeast.json");
 
 function nowIso() {

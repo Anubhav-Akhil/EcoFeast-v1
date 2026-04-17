@@ -540,6 +540,6 @@ app.use((error, _req, res, _next) => {
 });
 
 const port = Number(process.env.PORT || 8787);
-app.listen(port, () => {
-  console.log(`EcoFeast backend running on http://localhost:${port}`);
+app.listen(port, "0.0.0.0", () => {
+  console.log(`EcoFeast backend running on http://0.0.0.0:${port}`);
 });
