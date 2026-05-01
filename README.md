@@ -1,71 +1,153 @@
-# EcoFeast Fullstack
+# 🌍 EcoFeast
 
-EcoFeast is now wired as a fullstack application:
-- `frontend`: React + Vite
-- `backend`: Express + file-based JSON database
-- `auth`: JWT-based login/signup
-- `ai`: Gemini calls are proxied through backend routes
+**EcoFeast** is a comprehensive, full-stack application designed to combat food waste by connecting food retailers, consumers, charities, and volunteers. By providing a platform to rescue surplus food, EcoFeast empowers communities to make sustainable choices while earning rewards and ensuring food reaches those in need.
 
-## 1. Setup
+---
 
-Install dependencies:
+## ✨ Key Features
+
+### 🏢 For Retailers
+- **Surplus Food Listing:** Easily list surplus items at discounted prices or donate them for charity/animal feed.
+- **Credit Points:** Earn `CreditPoints` for donating items to charities.
+- **Inventory Management:** Update item quantities, availability, and details in real-time.
+
+### 🛒 For Consumers
+- **Rescue Food:** Purchase discounted surplus food from local retailers.
+- **EcoPoints System:** Earn `EcoPoints` for every rescued meal, gamifying the sustainable experience.
+- **Real-Time Tracking:** Track orders with real-time updates via WebSockets.
+
+### ❤️ For Charities
+- **Claim Donations:** Browse and claim food specifically listed for charity.
+- **Volunteer Integration:** Assign and track delivery tasks for claimed donations.
+
+### 🚲 For Volunteers
+- **Task Management:** View and accept delivery tasks to transport food from retailers to charities.
+- **Status Updates:** Update task statuses (pending, accepted, completed) in real-time.
+
+### 🤖 AI Integration (Powered by Gemini)
+- **Expiry Prediction:** AI analyzes food items to predict expiry hours, generate marketing tags, and calculate prevented CO2 impact.
+- **Recipe Suggestions:** AI suggests simple, creative recipes based on rescued ingredients.
+
+---
+
+## 🛠 Tech Stack
+
+**Frontend**
+- **Framework:** React + Vite
+- **Styling & UI:** Tailwind CSS (implied), Framer Motion (Animations), Lucide React (Icons)
+- **State Management:** Zustand
+- **Routing:** React Router DOM
+- **Data Visualization:** Recharts
+
+**Backend**
+- **Server:** Node.js + Express
+- **Real-Time:** Socket.IO
+- **Database:** MongoDB Atlas (Mongoose)
+- **Authentication:** JWT (JSON Web Tokens) & BcryptJS
+- **AI Integration:** `@google/genai` (Gemini API)
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- [Node.js](https://nodejs.org/) (v18+ recommended)
+- [MongoDB Atlas](https://www.mongodb.com/products/platform/atlas-database) account (or local MongoDB instance)
+- [Google Gemini API Key](https://aistudio.google.com/) (Optional, for AI features)
+
+### 1. Installation
+
+Clone the repository and install dependencies:
 
 ```bash
+git clone https://github.com/your-username/ecofeast.git
+cd ecofeast
 npm install
 ```
 
-Create a `.env` file in project root:
+### 2. Environment Variables
+
+Create a `.env` file in the root directory based on the provided `.env.example`:
 
 ```env
 PORT=8787
-JWT_SECRET=replace-with-a-strong-random-secret
-GEMINI_API_KEY=your_gemini_key_optional
+MONGODB_URI=your_mongodb_connection_string
+JWT_SECRET=your_super_secret_jwt_key
+GEMINI_API_KEY=your_gemini_api_key_here
 FRONTEND_ORIGIN=http://localhost:5173
 ```
 
-Optional frontend override:
-
+*(Optional)* For the frontend, you can override the API base URL by creating a `.env.local` file:
 ```env
-VITE_API_BASE_URL=/api
+VITE_API_BASE_URL=http://localhost:8787/api
 ```
 
-## 2. Run Locally
+### 3. Running Locally
 
-Run backend + frontend together:
+You can run both the frontend and backend concurrently using:
 
 ```bash
 npm run dev:full
 ```
 
-Or run separately:
+Or, run them separately in two terminal windows:
 
+**Backend:**
 ```bash
 npm run dev:backend
+```
+
+**Frontend:**
+```bash
 npm run dev
 ```
 
-Frontend: `http://localhost:5173`  
-Backend: `http://localhost:8787`
+- **Frontend App:** `http://localhost:5173`
+- **Backend API:** `http://localhost:8787`
 
-## 3. Core API Routes
+---
 
-- `POST /api/auth/signup`
-- `POST /api/auth/login`
-- `GET /api/auth/me`
-- `GET /api/items`
-- `POST /api/items`
-- `DELETE /api/items/:id`
-- `POST /api/orders`
-- `GET /api/orders/my`
-- `GET /api/charities`
-- `GET /api/tasks`
-- `PATCH /api/tasks/:id`
-- `POST /api/ai/predict-expiry`
-- `POST /api/ai/suggest-recipe`
-- `POST /api/contact`
+## 📡 Core API Routes
 
-## 4. Deployment Notes
+### Authentication
+- `POST /api/auth/signup` - Register a new user (consumer, retailer, charity, etc.)
+- `POST /api/auth/login` - Authenticate user and receive JWT
+- `GET /api/auth/me` - Get current user profile
 
-- Deploy frontend and backend as separate services, or serve built frontend from backend with `SERVE_STATIC=true`.
-- Keep `JWT_SECRET` and `GEMINI_API_KEY` only on backend.
-- Persist `backend/data/ecofeast.json` using a volume/disk in production.
+### Items & Inventory
+- `GET /api/items` - Fetch all available items
+- `POST /api/items` - List a new item *(Retailer/Admin)*
+- `PATCH /api/items/:id` - Update item details *(Retailer/Admin)*
+- `DELETE /api/items/:id` - Remove an item *(Retailer/Admin)*
+
+### Orders & Tracking
+- `POST /api/orders` - Place a new order
+- `GET /api/orders/my` - Fetch user's order history
+
+### Charities & Volunteering
+- `GET /api/charities` - List registered charities
+- `GET /api/tasks` - Fetch delivery tasks *(Volunteer/Admin)*
+- `PATCH /api/tasks/:id` - Update task status *(Volunteer/Admin)*
+
+### AI Services
+- `POST /api/ai/predict-expiry` - Get AI-driven insights on food items
+- `POST /api/ai/suggest-recipe` - Generate a recipe from selected items
+
+### Other
+- `POST /api/contact` - Submit a contact form message
+- `GET /api/health` - Check backend health status
+
+---
+
+## 📦 Deployment Notes
+
+- **Database:** Ensure `MONGODB_URI` points to a production-ready database (e.g., MongoDB Atlas).
+- **Environment Variables:** Keep `JWT_SECRET`, `MONGODB_URI`, and `GEMINI_API_KEY` strictly on the backend.
+- **CORS:** Configure `FRONTEND_ORIGIN` on the backend to match your deployed frontend URL.
+- **Hosting:** The frontend can be deployed on Vercel/Netlify, while the backend can be hosted on platforms like Render, Heroku, or DigitalOcean.
+
+---
+
+## 📄 License
+
+This project is open-source and available under the [MIT License](LICENSE).
