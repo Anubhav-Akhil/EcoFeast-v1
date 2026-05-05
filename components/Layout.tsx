@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, User as UserIcon, LogOut, Sun, Moon, ShoppingCart, Bell, Trash2, CheckCircle } from 'lucide-react';
+import { Menu, X, User as UserIcon, LogOut, Sun, Moon, ShoppingCart, Bell, Trash2, CheckCircle, LayoutDashboard, Store, Package } from 'lucide-react';
 import { User, UserRole, Item } from '../types';
 import { useNotificationStore } from '../services/notificationStore';
 
@@ -184,40 +184,65 @@ export const Layout: React.FC<LayoutProps> = ({
                       </button>
                   )}
                   {/* Profile Dropdown */}
-                  <div 
-                    className="relative" 
-                    onMouseEnter={() => setIsProfileOpen(true)} 
-                    onMouseLeave={() => setIsProfileOpen(false)}
-                  >
-                    <Link to="/dashboard" className="flex items-center gap-2 text-gray-700 dark:text-gray-200 hover:text-eco-700 dark:hover:text-eco-400 py-2">
+                  <div className="relative">
+                    <button 
+                      onClick={() => setIsProfileOpen(!isProfileOpen)} 
+                      className="flex items-center gap-2 text-gray-700 dark:text-gray-200 hover:text-eco-700 dark:hover:text-eco-400 py-2"
+                    >
                       <UserIcon size={18} />
                       <span className="font-medium">{user.name}</span>
-                    </Link>
+                    </button>
                     
                     {isProfileOpen && (
-                      <div className="absolute right-0 top-full w-48 bg-white dark:bg-dark-900 border border-gray-200 dark:border-dark-800 rounded-xl shadow-2xl z-50 overflow-hidden py-1">
-                        <Link 
-                          to="/dashboard" 
-                          className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-eco-50 dark:hover:bg-dark-800 hover:text-eco-600 transition-colors"
-                        >
-                          My Dashboard
-                        </Link>
-                        {(user.role === 'consumer' || user.role === 'charity') && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)} />
+                      <div className="absolute right-0 top-full mt-1 w-52 bg-white dark:bg-dark-900 border border-gray-200 dark:border-dark-800 rounded-xl shadow-2xl z-50 overflow-hidden">
+                        <div className="px-4 py-3 border-b border-gray-100 dark:border-dark-800">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{user.name}</p>
+                          <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                        </div>
+                        <div className="py-1">
                           <Link 
-                            to="/dashboard?tab=orders" 
-                            className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-eco-50 dark:hover:bg-dark-800 hover:text-eco-600 transition-colors"
+                            to="/profile" 
+                            onClick={() => setIsProfileOpen(false)}
+                            className="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-eco-50 dark:hover:bg-dark-800 hover:text-eco-600 transition-colors"
                           >
-                            Your Orders
+                            <UserIcon size={15} /> My Profile
                           </Link>
-                        )}
-                        <div className="border-t border-gray-100 dark:border-dark-800 my-1"></div>
-                        <button 
-                          onClick={onLogout} 
-                          className="w-full text-left px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors flex items-center gap-2"
-                        >
-                          <LogOut size={16} /> Log Out
-                        </button>
+                          <Link 
+                            to="/dashboard" 
+                            onClick={() => setIsProfileOpen(false)}
+                            className="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-eco-50 dark:hover:bg-dark-800 hover:text-eco-600 transition-colors"
+                          >
+                            <LayoutDashboard size={15} /> My Dashboard
+                          </Link>
+                          {(user.role === 'consumer' || user.role === 'charity') && (
+                            <Link 
+                              to="/dashboard?tab=orders" 
+                              onClick={() => setIsProfileOpen(false)}
+                              className="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-eco-50 dark:hover:bg-dark-800 hover:text-eco-600 transition-colors"
+                            >
+                              <Package size={15} /> Your Orders
+                            </Link>
+                          )}
+                          <Link 
+                            to="/marketplace" 
+                            onClick={() => setIsProfileOpen(false)}
+                            className="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-eco-50 dark:hover:bg-dark-800 hover:text-eco-600 transition-colors"
+                          >
+                            <Store size={15} /> Browse Marketplace
+                          </Link>
+                        </div>
+                        <div className="border-t border-gray-100 dark:border-dark-800">
+                          <button 
+                            onClick={() => { setIsProfileOpen(false); onLogout(); }} 
+                            className="w-full text-left px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors flex items-center gap-2.5"
+                          >
+                            <LogOut size={15} /> Log Out
+                          </button>
+                        </div>
                       </div>
+                      </>
                     )}
                   </div>
                 </div>

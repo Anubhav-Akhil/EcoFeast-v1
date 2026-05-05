@@ -44,7 +44,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
     try {
       const data = await api.getItems();
       const visibleData = data.filter(item => {
-        if (item.forCharity && user?.role !== 'charity') return false;
+        if (item.forCharity && user?.role !== 'charity' && user?.role !== 'retailer') return false;
         return true;
       });
 
@@ -101,14 +101,33 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-dark-950 py-12 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        {/* Retailer Disclaimer */}
+        {user?.role === 'retailer' && (
+          <div className="mb-8 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-5 flex items-start gap-4">
+            <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/40 flex-shrink-0 flex items-center justify-center text-amber-600 dark:text-amber-400 text-xl">
+              ⓘ
+            </div>
+            <div>
+              <h4 className="font-bold text-amber-800 dark:text-amber-300 mb-1">View-Only Mode</h4>
+              <p className="text-sm text-amber-700 dark:text-amber-400/80">
+                These listings are for viewing purposes only. To purchase items, please log in as a <strong>Customer</strong>. To claim free donations, log in as a <strong>Charity</strong>.
+              </p>
+            </div>
+          </div>
+        )}
         
         {/* Header & Graph */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
             <div className="lg:col-span-2">
                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Explore Surplus Food</h1>
                  <p className="text-gray-600 dark:text-gray-400 mb-6">
-                    Rescue high-quality food from local retailers. 
-                    {user?.role === 'charity' ? ' Free donations appear at the top for you.' : ' Top rated partners with high credit points appear first.'}
+                    {user?.role === 'retailer' 
+                      ? 'Browse what other retailers are offering. You are in view-only mode.'
+                      : user?.role === 'charity' 
+                        ? ' Free donations appear at the top for you.' 
+                        : ' Top rated partners with high credit points appear first.'
+                    }
                  </p>
                  
                  {/* Filters */}
@@ -250,36 +269,42 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
                     >
                         View Details
                     </button>
-                    <div className="flex items-center gap-2">
-                      <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-dark-700 overflow-hidden">
-                        <button
-                          onClick={() => setItemDesiredQty(item, getDesiredQty(item) - 1)}
+                    {user?.role === 'retailer' ? (
+                      <span className="px-3 py-2 rounded-lg text-xs font-semibold bg-gray-100 dark:bg-dark-800 text-gray-500 dark:text-gray-400">
+                        View Only
+                      </span>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-dark-700 overflow-hidden">
+                          <button
+                            onClick={() => setItemDesiredQty(item, getDesiredQty(item) - 1)}
+                            disabled={item.quantity === 0}
+                            className="px-2 py-1 hover:bg-gray-100 dark:hover:bg-dark-700 disabled:opacity-50"
+                          >
+                            -
+                          </button>
+                          <span className="px-2 text-sm dark:text-white min-w-[28px] text-center">{getDesiredQty(item)}</span>
+                          <button
+                            onClick={() => setItemDesiredQty(item, getDesiredQty(item) + 1)}
+                            disabled={item.quantity === 0}
+                            className="px-2 py-1 hover:bg-gray-100 dark:hover:bg-dark-700 disabled:opacity-50"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <button 
+                          onClick={() => onAddToCart(item, getDesiredQty(item))}
                           disabled={item.quantity === 0}
-                          className="px-2 py-1 hover:bg-gray-100 dark:hover:bg-dark-700 disabled:opacity-50"
+                          className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+                              item.quantity === 0 
+                              ? 'bg-gray-300 dark:bg-dark-700 text-gray-500 cursor-not-allowed' 
+                              : 'bg-eco-600 text-white hover:bg-eco-700 dark:hover:bg-eco-500'
+                          }`}
                         >
-                          -
-                        </button>
-                        <span className="px-2 text-sm dark:text-white min-w-[28px] text-center">{getDesiredQty(item)}</span>
-                        <button
-                          onClick={() => setItemDesiredQty(item, getDesiredQty(item) + 1)}
-                          disabled={item.quantity === 0}
-                          className="px-2 py-1 hover:bg-gray-100 dark:hover:bg-dark-700 disabled:opacity-50"
-                        >
-                          +
+                          <ShoppingCart size={16} /> {item.discountPrice === 0 ? 'Claim' : 'Reserve'}
                         </button>
                       </div>
-                      <button 
-                        onClick={() => onAddToCart(item, getDesiredQty(item))}
-                        disabled={item.quantity === 0}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
-                            item.quantity === 0 
-                            ? 'bg-gray-300 dark:bg-dark-700 text-gray-500 cursor-not-allowed' 
-                            : 'bg-eco-600 text-white hover:bg-eco-700 dark:hover:bg-eco-500'
-                        }`}
-                      >
-                        <ShoppingCart size={16} /> {item.discountPrice === 0 ? 'Claim' : 'Reserve'}
-                      </button>
-                    </div>
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -346,27 +371,35 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
                         )}
 
                         <div className="flex gap-4 items-center">
-                            <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-dark-700 overflow-hidden">
-                                <button
-                                    onClick={() => setItemDesiredQty(selectedItem, getDesiredQty(selectedItem) - 1)}
-                                    className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-dark-700"
+                            {user?.role === 'retailer' ? (
+                              <div className="flex-1 bg-gray-100 dark:bg-dark-800 text-gray-500 dark:text-gray-400 py-3 rounded-xl font-semibold text-center text-sm">
+                                You are viewing as a Retailer (view-only)
+                              </div>
+                            ) : (
+                              <>
+                                <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-dark-700 overflow-hidden">
+                                    <button
+                                        onClick={() => setItemDesiredQty(selectedItem, getDesiredQty(selectedItem) - 1)}
+                                        className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-dark-700"
+                                    >
+                                        -
+                                    </button>
+                                    <span className="px-3 font-semibold dark:text-white">{getDesiredQty(selectedItem)}</span>
+                                    <button
+                                        onClick={() => setItemDesiredQty(selectedItem, getDesiredQty(selectedItem) + 1)}
+                                        className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-dark-700"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                                <button 
+                                    onClick={() => { onAddToCart(selectedItem, getDesiredQty(selectedItem)); setSelectedItem(null); }}
+                                    className="flex-1 bg-eco-600 text-white py-3 rounded-xl font-bold hover:bg-eco-700 transition"
                                 >
-                                    -
+                                    Add to Cart
                                 </button>
-                                <span className="px-3 font-semibold dark:text-white">{getDesiredQty(selectedItem)}</span>
-                                <button
-                                    onClick={() => setItemDesiredQty(selectedItem, getDesiredQty(selectedItem) + 1)}
-                                    className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-dark-700"
-                                >
-                                    +
-                                </button>
-                            </div>
-                            <button 
-                                onClick={() => { onAddToCart(selectedItem, getDesiredQty(selectedItem)); setSelectedItem(null); }}
-                                className="flex-1 bg-eco-600 text-white py-3 rounded-xl font-bold hover:bg-eco-700 transition"
-                            >
-                                Add to Cart
-                            </button>
+                              </>
+                            )}
                         </div>
                     </div>
                 </motion.div>

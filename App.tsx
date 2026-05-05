@@ -7,6 +7,7 @@ import { Partners } from './pages/Partners';
 import { Charities } from './pages/Charities';
 import { About } from './pages/About';
 import { Dashboards } from './pages/Dashboards';
+import { Profile } from './pages/Profile';
 import { Contact } from './pages/Contact';
 import { Impact } from './pages/Impact';
 import { api } from './services/api';
@@ -200,11 +201,7 @@ const App: React.FC = () => {
           <Route
             path="/marketplace"
             element={
-              user && user.role !== 'consumer' ? (
-                <Navigate to="/dashboard" replace />
-              ) : (
-                <Marketplace user={user} onAddToCart={addToCart} refreshKey={marketplaceRefreshKey} />
-              )
+              <Marketplace user={user} onAddToCart={addToCart} refreshKey={marketplaceRefreshKey} />
             }
           />
 
@@ -213,6 +210,7 @@ const App: React.FC = () => {
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/impact" element={<Impact />} />
+          <Route path="/profile" element={user ? <Profile user={user} onUserUpdate={(u) => setUser(u)} /> : <Navigate to="/" replace />} />
           <Route path="/dashboard" element={user ? <Dashboards user={user} /> : <Navigate to="/" replace />} />
           <Route path="*" element={<div className="p-20 text-center dark:text-white">Page Not Found</div>} />
         </Routes>

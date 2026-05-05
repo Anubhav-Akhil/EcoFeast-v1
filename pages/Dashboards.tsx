@@ -28,6 +28,10 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
   const [priceTarget, setPriceTarget] = useState<Item | null>(null);
   const [priceSaving, setPriceSaving] = useState(false);
   const [priceForm, setPriceForm] = useState({ originalPrice: 0, discountPrice: 0 });
+  const [errorDialog, setErrorDialog] = useState<{title: string, message: string} | null>(null);
+  const [imagePromptOpen, setImagePromptOpen] = useState(false);
+  const [highlightImage, setHighlightImage] = useState(false);
+  const [isGeneratingImg, setIsGeneratingImg] = useState(false);
 
   const [newItem, setNewItem] = useState<Partial<Item>>({
     title: '',
@@ -95,9 +99,30 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const generateImage = () => {
+    if (!newItem.title) {
+       alert("Please enter an Item Name first to generate an image.");
+       return;
+    }
+    setIsGeneratingImg(true);
+    setTimeout(() => {
+      const keyword = newItem.title.split(' ')[0].toLowerCase();
+      const url = `https://loremflickr.com/800/600/food,${encodeURIComponent(keyword)}?lock=${Math.floor(Math.random() * 1000)}`;
+      setNewItem(prev => ({ ...prev, image: url }));
+      setIsGeneratingImg(false);
+      setHighlightImage(false);
+    }, 1500);
+  };
+
+  const handleSubmit = async (e?: React.FormEvent, skipImageCheck = false) => {
+    if (e) e.preventDefault();
     if (!newItem.title || !newItem.description) return;
+    
+    if (!newItem.image && !skipImageCheck) {
+      setImagePromptOpen(true);
+      return;
+    }
+
     setSubmitting(true);
     try {
       await api.addItem({
@@ -107,7 +132,7 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
         pickupStart: '10:00',
         pickupEnd: '20:00',
         expiry: newItem.expiry || new Date(Date.now() + 86400000).toISOString(),
-        image: newItem.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80',
+        image: newItem.image || '/custom-placeholder.png',
         category: newItem.forAnimalFeed ? 'compost' : (newItem.category || 'grocery'),
         discountPrice: newItem.forCharity ? 0 : Number(newItem.discountPrice || 0),
         forCharity: !!newItem.forCharity,
@@ -117,7 +142,10 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
       await loadStoreData();
       openSuccess('Listing Created', 'Surplus item has been added successfully.');
     } catch (error: any) {
-      alert(error?.message || 'Failed to add surplus item');
+      setErrorDialog({
+        title: 'Listing Rejected',
+        message: error?.message || 'Failed to add surplus item'
+      });
     } finally {
       setSubmitting(false);
     }
@@ -131,22 +159,26 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
   };
 
   const handleQuickRestock = async (item: Item, qty: number) => {
-    await api.updateItem(item.id, { quantityDelta: qty });
+    let newQtyDelta = qty;
+    if (qty < 0 && item.quantity + qty < 0) newQtyDelta = -item.quantity;
+    if (newQtyDelta === 0) return;
+    await api.updateItem(item.id, { quantityDelta: newQtyDelta });
     await loadStoreData();
-    openSuccess('Stock Updated', `${qty} item${qty > 1 ? 's' : ''} added to "${item.title}".`);
+    const action = newQtyDelta > 0 ? 'added to' : 'removed from';
+    openSuccess('Stock Updated', `${Math.abs(newQtyDelta)} item${Math.abs(newQtyDelta) > 1 ? 's' : ''} ${action} "${item.title}".`);
   };
 
   const handleRestockSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!restockTarget || restockQty < 1) return;
+    if (!restockTarget || restockQty < 0) return;
     setRestockLoading(true);
     try {
-      await api.updateItem(restockTarget.id, { quantityDelta: restockQty });
+      await api.updateItem(restockTarget.id, { quantity: restockQty });
       const targetTitle = restockTarget.title;
       setRestockTarget(null);
       setRestockQty(1);
       await loadStoreData();
-      openSuccess('Stock Updated', `${restockQty} item${restockQty > 1 ? 's' : ''} added to "${targetTitle}".`);
+      openSuccess('Stock Updated', `Stock for "${targetTitle}" set to ${restockQty}.`);
     } finally {
       setRestockLoading(false);
     }
@@ -270,10 +302,26 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
                   ) : (
                     <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">Active</span>
                   )}
-                  <button onClick={() => handleQuickRestock(item, 1)} className="px-3 py-1.5 text-xs rounded-lg bg-eco-100 text-eco-700 font-semibold hover:bg-eco-200">+1 Stock</button>
-                  <button onClick={() => handleQuickRestock(item, 5)} className="px-3 py-1.5 text-xs rounded-lg bg-emerald-100 text-emerald-700 font-semibold hover:bg-emerald-200">+5 Stock</button>
-                  <button onClick={() => setRestockTarget(item)} className="px-3 py-1.5 text-xs rounded-lg bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200 flex items-center gap-1">
-                    <PackagePlus size={14} /> Custom Add
+                  <div className="flex items-center gap-1 border border-gray-200 dark:border-dark-700 rounded-lg p-0.5 bg-gray-50 dark:bg-dark-800">
+                    <button 
+                      onClick={() => handleQuickRestock(item, -1)} 
+                      disabled={item.quantity === 0} 
+                      className="w-7 h-7 flex items-center justify-center rounded-md bg-transparent text-gray-600 dark:text-gray-300 hover:bg-orange-100 hover:text-orange-700 dark:hover:bg-orange-900/40 dark:hover:text-orange-400 disabled:opacity-30 transition-colors font-bold text-lg leading-none pb-0.5" 
+                      title="Decrease Stock"
+                    >
+                      −
+                    </button>
+                    <span className="text-xs font-bold w-16 text-center text-gray-800 dark:text-white" title="Current Stock">Stock: {item.quantity}</span>
+                    <button 
+                      onClick={() => handleQuickRestock(item, 1)} 
+                      className="w-7 h-7 flex items-center justify-center rounded-md bg-transparent text-gray-600 dark:text-gray-300 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-900/40 dark:hover:text-emerald-400 transition-colors font-bold text-lg leading-none pb-0.5" 
+                      title="Increase Stock"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <button onClick={() => { setRestockTarget(item); setRestockQty(item.quantity); }} className="px-3 py-1.5 text-xs rounded-lg bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200 flex items-center gap-1" title="Set exact stock amount">
+                    <PackagePlus size={14} /> Edit Stock
                   </button>
                   <button onClick={() => openPriceEditor(item)} className="px-3 py-1.5 text-xs rounded-lg bg-violet-100 text-violet-700 font-semibold hover:bg-violet-200 flex items-center gap-1">
                     <BadgeIndianRupee size={14} /> Change Price
@@ -325,7 +373,7 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
                 lowStockItems.slice(0, 4).map((item) => (
                   <button
                     key={item.id}
-                    onClick={() => setRestockTarget(item)}
+                    onClick={() => { setRestockTarget(item); setRestockQty(item.quantity); }}
                     className="block w-full text-left text-xs rounded-md px-2 py-1 bg-orange-50 hover:bg-orange-100 text-orange-800"
                   >
                     {item.title}: {item.quantity}
@@ -340,12 +388,12 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
       {restockTarget && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-dark-900 rounded-2xl p-6 w-full max-w-sm border border-gray-100 dark:border-dark-700">
-            <h4 className="text-xl font-bold dark:text-white mb-2">Add Stock</h4>
+            <h4 className="text-xl font-bold dark:text-white mb-2">Set Custom Stock</h4>
             <p className="text-sm text-gray-500 mb-4">Listing: <span className="font-semibold">{restockTarget.title}</span></p>
             <form onSubmit={handleRestockSubmit} className="space-y-4">
-              <input type="number" min={1} value={restockQty} onChange={(e) => setRestockQty(Number(e.target.value))} className="w-full border p-2 rounded dark:bg-dark-800 dark:border-dark-700 dark:text-white" />
+              <input type="number" min={0} value={restockQty} onChange={(e) => setRestockQty(Number(e.target.value))} className="w-full border p-2 rounded dark:bg-dark-800 dark:border-dark-700 dark:text-white" />
               <div className="grid grid-cols-2 gap-3">
-                <button disabled={restockLoading} type="submit" className="bg-eco-600 text-white py-2 rounded-lg font-semibold hover:bg-eco-700 disabled:opacity-70">{restockLoading ? 'Adding...' : 'Add Items'}</button>
+                <button disabled={restockLoading} type="submit" className="bg-eco-600 text-white py-2 rounded-lg font-semibold hover:bg-eco-700 disabled:opacity-70">{restockLoading ? 'Saving...' : 'Set Stock'}</button>
                 <button type="button" onClick={() => setRestockTarget(null)} className="bg-gray-100 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-200">Cancel</button>
               </div>
             </form>
@@ -387,12 +435,23 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1 dark:text-gray-300">Item Image (Optional)</label>
-                <div className="border border-dashed border-gray-300 dark:border-dark-700 rounded-lg p-3">
-                  <label className="flex items-center justify-center gap-2 cursor-pointer text-sm text-gray-600 dark:text-gray-300">
-                    <Upload size={16} /> Upload Photo
-                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files?.[0])} />
-                  </label>
+                <label className="block text-sm font-medium mb-1 dark:text-gray-300">Item Image</label>
+                <div className={`border border-dashed rounded-lg p-3 ${highlightImage ? 'border-eco-500 bg-eco-50 dark:bg-eco-900/20 ring-2 ring-eco-500 transition-all' : 'border-gray-300 dark:border-dark-700'}`}>
+                  <div className="flex gap-4 items-center justify-center">
+                    <label className="flex items-center justify-center gap-2 cursor-pointer text-sm text-gray-600 dark:text-gray-300 hover:text-eco-600 transition-colors">
+                      <Upload size={16} /> Upload Photo
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files?.[0])} />
+                    </label>
+                    <span className="text-gray-300 dark:text-gray-600">|</span>
+                    <button 
+                      type="button"
+                      onClick={generateImage}
+                      disabled={isGeneratingImg || !newItem.title}
+                      className="flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-300 hover:text-eco-600 disabled:opacity-50 transition-colors"
+                    >
+                      <Sparkles size={16} /> {isGeneratingImg ? 'Generating...' : 'Generate with AI'}
+                    </button>
+                  </div>
                 </div>
                 {newItem.image && <img src={newItem.image} className="mt-3 h-28 w-full object-cover rounded-lg" />}
               </div>
@@ -514,6 +573,67 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {errorDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white dark:bg-dark-900 rounded-2xl p-6 w-full max-w-sm border border-red-100 dark:border-red-900 shadow-xl">
+            <div className="flex items-center gap-3 text-red-600 dark:text-red-400 mb-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              <h4 className="text-xl font-bold">{errorDialog.title}</h4>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">{errorDialog.message}</p>
+            <div className="grid grid-cols-2 gap-3">
+              <button 
+                onClick={() => setErrorDialog(null)} 
+                className="bg-eco-600 text-white py-2 rounded-lg font-semibold hover:bg-eco-700 transition"
+              >
+                Edit Details
+              </button>
+              <button 
+                onClick={() => { setErrorDialog(null); setShowAdd(false); }} 
+                className="bg-gray-100 dark:bg-dark-800 text-gray-700 dark:text-gray-300 py-2 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-dark-700 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {imagePromptOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white dark:bg-dark-900 rounded-2xl p-6 w-full max-w-sm border border-orange-100 dark:border-orange-900 shadow-xl">
+            <div className="flex items-center gap-3 text-orange-600 dark:text-orange-400 mb-2">
+              <Camera size={24} />
+              <h4 className="text-xl font-bold">Missing Image</h4>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
+              You haven't added a picture. Uploading an image helps users know what the product looks like and increases reservations!
+            </p>
+            <div className="grid grid-cols-1 gap-3">
+              <button 
+                onClick={() => { 
+                  setImagePromptOpen(false); 
+                  setHighlightImage(true);
+                  setTimeout(() => setHighlightImage(false), 3000);
+                }} 
+                className="bg-eco-600 text-white py-2 rounded-lg font-semibold hover:bg-eco-700 transition"
+              >
+                Upload / Generate Image
+              </button>
+              <button 
+                onClick={() => { 
+                  setImagePromptOpen(false); 
+                  handleSubmit(undefined, true); 
+                }} 
+                className="bg-gray-100 dark:bg-dark-800 text-gray-700 dark:text-gray-300 py-2 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-dark-700 transition"
+              >
+                Add Without Upload
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1,153 +1,136 @@
-# 🌍 EcoFeast
+# <p align="center">🌍 EcoFeast</p>
 
-**EcoFeast** is a comprehensive, full-stack application designed to combat food waste by connecting food retailers, consumers, charities, and volunteers. By providing a platform to rescue surplus food, EcoFeast empowers communities to make sustainable choices while earning rewards and ensuring food reaches those in need.
+<p align="center">
+  <strong>Combating Food Waste through Community Synergy & AI Innovation</strong>
+</p>
+
+<p align="center">
+  <img src="public/banner.png" alt="EcoFeast Banner" width="100%" style="border-radius: 12px; margin: 20px 0;">
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Status-In%20Development-orange?style=for-the-badge" alt="Status">
+  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License">
+  <img src="https://img.shields.io/badge/Built%20With-React%20%2B%20Node.js-blue?style=for-the-badge" alt="Stack">
+  <img src="https://img.shields.io/badge/AI-Powered%20by%20Gemini-violet?style=for-the-badge" alt="AI">
+</p>
 
 ---
 
-## ✨ Key Features
+## 🌟 The Vision
 
-### 🏢 For Retailers
-- **Surplus Food Listing:** Easily list surplus items at discounted prices or donate them for charity/animal feed.
-- **Credit Points:** Earn `CreditPoints` for donating items to charities.
-- **Inventory Management:** Update item quantities, availability, and details in real-time.
+**EcoFeast** is a mission-driven full-stack ecosystem designed to bridge the gap between surplus food and those who need it most. By connecting food retailers, conscious consumers, charities, and dedicated volunteers, we turn potential waste into community impact.
 
-### 🛒 For Consumers
-- **Rescue Food:** Purchase discounted surplus food from local retailers.
-- **EcoPoints System:** Earn `EcoPoints` for every rescued meal, gamifying the sustainable experience.
-- **Real-Time Tracking:** Track orders with real-time updates via WebSockets.
+Our platform leverages **AI-driven insights** to predict expiry, optimize distribution, and gamify sustainability, making every meal rescued a win for the planet.
 
-### ❤️ For Charities
-- **Claim Donations:** Browse and claim food specifically listed for charity.
-- **Volunteer Integration:** Assign and track delivery tasks for claimed donations.
+---
 
-### 🚲 For Volunteers
-- **Task Management:** View and accept delivery tasks to transport food from retailers to charities.
-- **Status Updates:** Update task statuses (pending, accepted, completed) in real-time.
+## 🚀 Core Ecosystem Pillars
 
-### 🤖 AI Integration (Powered by Gemini)
-- **Expiry Prediction:** AI analyzes food items to predict expiry hours, generate marketing tags, and calculate prevented CO2 impact.
-- **Recipe Suggestions:** AI suggests simple, creative recipes based on rescued ingredients.
+| Role | Impact | Key Features |
+| :--- | :--- | :--- |
+| **🏢 Retailers** | *Zero-Waste Efficiency* | Surplus listing, Real-time inventory, Donation credits. |
+| **🛒 Consumers** | *Sustainable Savings* | Discounted surplus food, EcoPoints, Order tracking. |
+| **❤️ Charities** | *Hunger Relief* | Donation claiming, Volunteer assignment, Task tracking. |
+| **🚲 Volunteers** | *Community Action* | Task management, Real-time delivery updates, Status logs. |
+
+---
+
+## 🤖 AI-Powered Intelligence
+*Integrated with Google Gemini API*
+
+- **⌛ Smart Expiry Prediction:** Analyze food data to predict optimal consumption windows and marketing tags.
+- **📈 Sustainability Analytics:** Real-time calculation of CO2 impact prevented by rescuing food.
+- **🍳 Creative Recipe Engine:** Instant recipe suggestions based on rescued ingredients to minimize kitchen waste.
+- **🎨 AI Media Generation:** Automated product image generation for retailers to speed up listing creation.
 
 ---
 
 ## 🛠 Tech Stack
 
-**Frontend**
-- **Framework:** React + Vite
-- **Styling & UI:** Tailwind CSS (implied), Framer Motion (Animations), Lucide React (Icons)
-- **State Management:** Zustand
-- **Routing:** React Router DOM
-- **Data Visualization:** Recharts
+### Frontend
+- **Framework:** `React 18` + `Vite`
+- **Styling:** `Tailwind CSS` & `Vanilla CSS`
+- **Animations:** `Framer Motion`
+- **Icons:** `Lucide React`
+- **State Management:** `Zustand`
+- **Visualization:** `Recharts`
 
-**Backend**
-- **Server:** Node.js + Express
-- **Real-Time:** Socket.IO
-- **Database:** MongoDB Atlas (Mongoose)
-- **Authentication:** JWT (JSON Web Tokens) & BcryptJS
-- **AI Integration:** `@google/genai` (Gemini API)
+### Backend
+- **Server:** `Node.js` + `Express`
+- **Real-Time:** `Socket.IO`
+- **Database:** `MongoDB Atlas` + `Mongoose`
+- **Security:** `JWT` + `BcryptJS`
+- **Intelligence:** `@google/genai` (Gemini API)
 
 ---
 
-## 🚀 Getting Started
+## 🚦 Getting Started
 
 ### Prerequisites
-- [Node.js](https://nodejs.org/) (v18+ recommended)
-- [MongoDB Atlas](https://www.mongodb.com/products/platform/atlas-database) account (or local MongoDB instance)
-- [Google Gemini API Key](https://aistudio.google.com/) (Optional, for AI features)
+- Node.js (v18+)
+- MongoDB Atlas Account
+- Google AI Studio API Key (Gemini)
 
 ### 1. Installation
-
-Clone the repository and install dependencies:
-
 ```bash
+# Clone the repository
 git clone https://github.com/your-username/ecofeast.git
+
+# Install dependencies
 cd ecofeast
 npm install
 ```
 
-### 2. Environment Variables
-
-Create a `.env` file in the root directory based on the provided `.env.example`:
-
+### 2. Configuration
+Create a `.env` file in the root directory:
 ```env
 PORT=8787
 MONGODB_URI=your_mongodb_connection_string
-JWT_SECRET=your_super_secret_jwt_key
-GEMINI_API_KEY=your_gemini_api_key_here
+JWT_SECRET=your_jwt_key
+GEMINI_API_KEY=your_gemini_api_key
 FRONTEND_ORIGIN=http://localhost:5173
 ```
 
-*(Optional)* For the frontend, you can override the API base URL by creating a `.env.local` file:
-```env
-VITE_API_BASE_URL=http://localhost:8787/api
-```
-
-### 3. Running Locally
-
-You can run both the frontend and backend concurrently using:
-
+### 3. Execution
 ```bash
+# Run both Frontend & Backend concurrently
 npm run dev:full
 ```
 
-Or, run them separately in two terminal windows:
+---
 
-**Backend:**
-```bash
-npm run dev:backend
-```
+## 📡 API Overview
 
-**Frontend:**
-```bash
-npm run dev
-```
-
-- **Frontend App:** `http://localhost:5173`
-- **Backend API:** `http://localhost:8787`
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/auth/signup` | Register new community members. |
+| `GET` | `/api/items` | Browse available surplus items. |
+| `POST` | `/api/orders` | Reserve/Claim food items. |
+| `PATCH` | `/api/tasks/:id` | Update volunteer delivery status. |
+| `POST` | `/api/ai/predict-expiry` | Fetch AI insights for food items. |
 
 ---
 
-## 📡 Core API Routes
-
-### Authentication
-- `POST /api/auth/signup` - Register a new user (consumer, retailer, charity, etc.)
-- `POST /api/auth/login` - Authenticate user and receive JWT
-- `GET /api/auth/me` - Get current user profile
-
-### Items & Inventory
-- `GET /api/items` - Fetch all available items
-- `POST /api/items` - List a new item *(Retailer/Admin)*
-- `PATCH /api/items/:id` - Update item details *(Retailer/Admin)*
-- `DELETE /api/items/:id` - Remove an item *(Retailer/Admin)*
-
-### Orders & Tracking
-- `POST /api/orders` - Place a new order
-- `GET /api/orders/my` - Fetch user's order history
-
-### Charities & Volunteering
-- `GET /api/charities` - List registered charities
-- `GET /api/tasks` - Fetch delivery tasks *(Volunteer/Admin)*
-- `PATCH /api/tasks/:id` - Update task status *(Volunteer/Admin)*
-
-### AI Services
-- `POST /api/ai/predict-expiry` - Get AI-driven insights on food items
-- `POST /api/ai/suggest-recipe` - Generate a recipe from selected items
-
-### Other
-- `POST /api/contact` - Submit a contact form message
-- `GET /api/health` - Check backend health status
+## 🗺 Roadmap
+- [ ] Mobile Application (React Native)
+- [ ] Hyper-local push notifications
+- [ ] Integration with local food bank APIs
+- [ ] Advanced retailer analytics dashboard
 
 ---
 
-## 📦 Deployment Notes
-
-- **Database:** Ensure `MONGODB_URI` points to a production-ready database (e.g., MongoDB Atlas).
-- **Environment Variables:** Keep `JWT_SECRET`, `MONGODB_URI`, and `GEMINI_API_KEY` strictly on the backend.
-- **CORS:** Configure `FRONTEND_ORIGIN` on the backend to match your deployed frontend URL.
-- **Hosting:** The frontend can be deployed on Vercel/Netlify, while the backend can be hosted on platforms like Render, Heroku, or DigitalOcean.
+## 🤝 Contributing
+We welcome contributions! Whether it's a bug fix, feature request, or documentation improvement, please feel free to open a Pull Request.
 
 ---
 
 ## 📄 License
+This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
 
-This project is open-source and available under the [MIT License](LICENSE).
+---
+
+<p align="center">
+  Made with ❤️ for a Greener Planet
+</p>
+

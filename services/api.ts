@@ -160,4 +160,20 @@ export const api = {
       false
     );
   },
+
+  updateProfile: async (data: Record<string, string | undefined>): Promise<User> => {
+    const result = await request<{ user: User }>("/auth/profile", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+    localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(result.user));
+    return result.user;
+  },
+
+  changePassword: async (oldPassword: string, newPassword: string): Promise<void> => {
+    await request("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({ oldPassword, newPassword }),
+    });
+  },
 };

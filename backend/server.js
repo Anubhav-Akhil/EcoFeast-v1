@@ -196,6 +196,66 @@ app.get("/api/auth/me", requireAuth, async (req, res) => {
   return res.json({ user: toPublicUser(user) });
 });
 
+app.patch("/api/auth/profile", requireAuth, async (req, res, next) => {
+  try {
+    const user = await User.findOne({ id: req.auth.sub });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const { name, email, phone, address, organizationName, vehicleType } = req.body || {};
+
+    if (email) {
+      const normalizedEmail = String(email).toLowerCase().trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+        return res.status(400).json({ message: "Invalid email format." });
+      }
+      const existing = await User.findOne({ email: normalizedEmail, id: { $ne: user.id } });
+      if (existing) return res.status(409).json({ message: "Email already in use by another account." });
+      user.email = normalizedEmail;
+    }
+    if (phone !== undefined) {
+      const cleaned = String(phone).replace(/\D/g, '');
+      if (cleaned && cleaned.length !== 10) {
+        return res.status(400).json({ message: "Mobile number must be exactly 10 digits." });
+      }
+      user.phone = cleaned || null;
+    }
+    if (name !== undefined) user.name = String(name).trim();
+    if (address !== undefined) user.address = String(address).trim() || null;
+    if (organizationName !== undefined) user.organizationName = String(organizationName).trim() || null;
+    if (vehicleType !== undefined) user.vehicleType = String(vehicleType).trim() || null;
+
+    await user.save();
+    return res.json({ user: toPublicUser(user) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/auth/change-password", requireAuth, async (req, res, next) => {
+  try {
+    const { oldPassword, newPassword } = req.body || {};
+    assertRequired(oldPassword, "Current password is required");
+    assertRequired(newPassword, "New password is required");
+
+    if (String(newPassword).length < 6) {
+      return res.status(400).json({ message: "New password must be at least 6 characters." });
+    }
+
+    const user = await User.findOne({ id: req.auth.sub });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (!bcrypt.compareSync(String(oldPassword), user.passwordHash)) {
+      return res.status(401).json({ message: "Current password is incorrect." });
+    }
+
+    user.passwordHash = bcrypt.hashSync(String(newPassword), 10);
+    await user.save();
+    return res.json({ message: "Password changed successfully." });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // ── Items ───────────────────────────────────────────────────────────────────
 app.get("/api/items", async (_req, res, next) => {
   try {
@@ -227,6 +287,23 @@ app.post(
       assertRequired(pickupStart, "Pickup start is required");
       assertRequired(pickupEnd, "Pickup end is required");
 
+      if (aiClient) {
+        try {
+          const prompt = `Item: "${title}" (${category}) - ${description}. Is this edible food/grocery? Reply ONLY with JSON {"isFood": true/false}`;
+          const response = await aiClient.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: { responseMimeType: "application/json", maxOutputTokens: 20 },
+          });
+          const output = JSON.parse(response.text || "{}");
+          if (output.isFood === false) {
+             return res.status(400).json({ message: "Item rejected: Only food items are allowed." });
+          }
+        } catch (err) {
+          console.error("AI food validation failed:", err);
+        }
+      }
+
       const item = await Item.create({
         id: createId("item"),
         storeId: user.id,
@@ -238,7 +315,7 @@ app.post(
         discountPrice: Number(discountPrice || 0),
         image: image
           ? String(image)
-          : "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80",
+          : "/custom-placeholder.png",
         category: String(category),
         tags: Array.isArray(tags) ? tags : [],
         expiry: String(expiry || new Date(Date.now() + 24 * 3600000).toISOString()),
@@ -301,10 +378,28 @@ app.patch(
 
       if (title !== undefined) item.title = String(title).trim();
       if (description !== undefined) item.description = String(description).trim();
+      if (category !== undefined) item.category = String(category);
+
+      if ((title !== undefined || description !== undefined || category !== undefined) && aiClient) {
+        try {
+          const prompt = `Item: "${item.title}" (${item.category}) - ${item.description}. Is this edible food/grocery? Reply ONLY with JSON {"isFood": true/false}`;
+          const response = await aiClient.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: { responseMimeType: "application/json", maxOutputTokens: 20 },
+          });
+          const output = JSON.parse(response.text || "{}");
+          if (output.isFood === false) {
+             return res.status(400).json({ message: "Item update rejected: Only food items are allowed." });
+          }
+        } catch (err) {
+          console.error("AI food validation failed:", err);
+        }
+      }
+
       if (originalPrice !== undefined) item.originalPrice = Number(originalPrice);
       if (discountPrice !== undefined) item.discountPrice = Number(discountPrice);
       if (image !== undefined) item.image = String(image || item.image);
-      if (category !== undefined) item.category = String(category);
       if (Array.isArray(tags)) item.tags = tags;
       if (expiry !== undefined) item.expiry = String(expiry);
       if (pickupStart !== undefined) item.pickupStart = String(pickupStart);
@@ -584,6 +679,57 @@ app.use((error, _req, res, _next) => {
   res.status(status).json({ message });
 });
 
+// ── Background Tasks ──────────────────────────────────────────────────────────
+async function runAutoCleanup() {
+  if (!aiClient) return;
+  try {
+    console.log("[Auto-Cleanup] Starting background scan for non-food items...");
+    const items = await Item.find({});
+    console.log(`[Auto-Cleanup] Found ${items.length} items to scan.`);
+    let removedCount = 0;
+    
+    for (const item of items) {
+      console.log(`[Auto-Cleanup] Checking: "${item.title}" (${item.category})`);
+      const prompt = `You are a strict food safety filter. Is "${item.title}" an edible food item, grocery, or meal? A helmet, phone, laptop, clothing, electronics, etc. are NOT food. Reply ONLY with JSON: {"isFood":true} or {"isFood":false}`;
+      
+      let attempts = 0;
+      let success = false;
+      while (attempts < 2 && !success) {
+        attempts++;
+        try {
+          const response = await aiClient.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: { responseMimeType: "application/json", maxOutputTokens: 20 },
+          });
+          const text = response.text || "{}";
+          console.log(`[Auto-Cleanup]   AI response: ${text.trim()}`);
+          const output = JSON.parse(text);
+          if (output.isFood === false) {
+            console.log(`[Auto-Cleanup]   ❌ MISCHIEF DETECTED: Removing "${item.title}"`);
+            await Item.findByIdAndDelete(item._id);
+            removedCount++;
+          } else {
+            console.log(`[Auto-Cleanup]   ✅ Valid food.`);
+          }
+          success = true;
+        } catch (aiErr) {
+          console.log(`[Auto-Cleanup]   ⚠ Attempt ${attempts} failed: ${aiErr.message?.slice(0, 80)}`);
+          if (attempts < 2) {
+            console.log(`[Auto-Cleanup]   Retrying in 15s...`);
+            await new Promise(r => setTimeout(r, 15000));
+          }
+        }
+      }
+      // Wait 12 seconds between items to respect rate limits
+      await new Promise(r => setTimeout(r, 12000));
+    }
+    console.log(`[Auto-Cleanup] Scan complete. Removed ${removedCount} items.`);
+  } catch (err) {
+    console.error("[Auto-Cleanup] Error:", err.message);
+  }
+}
+
 // ── Start ─────────────────────────────────────────────────────────────────────
 const port = Number(process.env.PORT || 8787);
 
@@ -591,6 +737,11 @@ connectDb()
   .then(() => {
     server.listen(port, "0.0.0.0", () => {
       console.log(`EcoFeast backend running on http://0.0.0.0:${port}`);
+      
+      // Auto-cleanup disabled to conserve Gemini API quota.
+      // To run manually: node backend/cleanup.js
+      // setInterval(runAutoCleanup, 21600000);
+      // setTimeout(runAutoCleanup, 60000);
     });
   })
   .catch((err) => {
