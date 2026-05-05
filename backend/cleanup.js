@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import { GoogleGenAI } from "@google/genai";
+import Groq from "groq-sdk";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,10 +11,10 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 let aiClient = null;
-if (process.env.GEMINI_API_KEY) {
-  aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+if (process.env.GROQ_API_KEY) {
+  aiClient = new Groq({ apiKey: process.env.GROQ_API_KEY });
 } else {
-  console.error("GEMINI_API_KEY is not set. Cannot run AI cleanup.");
+  console.error("GROQ_API_KEY is not set. Cannot run AI cleanup.");
   process.exit(1);
 }
 
@@ -45,13 +45,13 @@ async function runCleanup() {
       const prompt = `Item: "${item.title}" (${item.category}) - ${item.description}. Is this edible food/grocery? Reply ONLY with JSON {"isFood": true/false}`;
       
       try {
-        const response = await aiClient.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: prompt,
-          config: { responseMimeType: "application/json", maxOutputTokens: 20 },
+        const response = await aiClient.chat.completions.create({
+          model: "llama-3.3-70b-versatile",
+          messages: [{ role: "user", content: prompt }],
+          response_format: { type: "json_object" },
         });
         
-        const output = JSON.parse(response.text || "{}");
+        const output = JSON.parse(response.choices[0]?.message?.content || "{}");
         
         if (output.isFood === false) {
           console.log(`\n======================================`);
@@ -68,8 +68,8 @@ async function runCleanup() {
         console.error(`AI checking failed for "${item.title}":`, aiErr.message);
       }
       
-      // Delay of 12000ms to avoid Gemini Free Tier rate limits (5 RPM)
-      await new Promise(resolve => setTimeout(resolve, 12000));
+      // Delay of 2000ms to avoid Groq rate limits
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
 
     console.log(`\n🎉 Cleanup complete! Successfully removed ${removedCount} invalid items from the marketplace.`);

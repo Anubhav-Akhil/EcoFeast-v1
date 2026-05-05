@@ -5,7 +5,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { GoogleGenAI } from "@google/genai";
+import Groq from "groq-sdk";
 import { connectDb } from "./db.js";
 import User from "./models/User.js";
 import Item from "./models/Item.js";
@@ -56,8 +56,8 @@ io.on("connection", (socket) => {
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
 const CHARITY_CREDIT_PER_ITEM = Number(process.env.CHARITY_CREDIT_PER_ITEM || 5);
-const aiClient = process.env.GEMINI_API_KEY
-  ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+const aiClient = process.env.GROQ_API_KEY
+  ? new Groq({ apiKey: process.env.GROQ_API_KEY })
   : null;
 
 const nowIso = () => new Date().toISOString();
@@ -290,12 +290,12 @@ app.post(
       if (aiClient) {
         try {
           const prompt = `Item: "${title}" (${category}) - ${description}. Is this edible food/grocery? Reply ONLY with JSON {"isFood": true/false}`;
-          const response = await aiClient.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-            config: { responseMimeType: "application/json", maxOutputTokens: 20 },
+          const response = await aiClient.chat.completions.create({
+            model: "llama-3.3-70b-versatile",
+            messages: [{ role: "user", content: prompt }],
+            response_format: { type: "json_object" },
           });
-          const output = JSON.parse(response.text || "{}");
+          const output = JSON.parse(response.choices[0]?.message?.content || "{}");
           if (output.isFood === false) {
              return res.status(400).json({ message: "Item rejected: Only food items are allowed." });
           }
@@ -383,12 +383,12 @@ app.patch(
       if ((title !== undefined || description !== undefined || category !== undefined) && aiClient) {
         try {
           const prompt = `Item: "${item.title}" (${item.category}) - ${item.description}. Is this edible food/grocery? Reply ONLY with JSON {"isFood": true/false}`;
-          const response = await aiClient.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-            config: { responseMimeType: "application/json", maxOutputTokens: 20 },
+          const response = await aiClient.chat.completions.create({
+            model: "llama-3.3-70b-versatile",
+            messages: [{ role: "user", content: prompt }],
+            response_format: { type: "json_object" },
           });
-          const output = JSON.parse(response.text || "{}");
+          const output = JSON.parse(response.choices[0]?.message?.content || "{}");
           if (output.isFood === false) {
              return res.status(400).json({ message: "Item update rejected: Only food items are allowed." });
           }
@@ -619,12 +619,12 @@ app.post("/api/ai/predict-expiry", async (req, res) => {
       3. "impactCO2": estimated kg of CO2 prevented by rescuing 1kg of this food.
       Output ONLY valid JSON.
     `;
-    const response = await aiClient.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: { responseMimeType: "application/json" },
+    const response = await aiClient.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" },
     });
-    const output = JSON.parse(response.text || "{}");
+    const output = JSON.parse(response.choices[0]?.message?.content || "{}");
     return res.json({
       expiryHours: Number(output.expiryHours || 24),
       tags: Array.isArray(output.tags) ? output.tags : ["Fresh", "Rescued", "Tasty"],
@@ -642,11 +642,11 @@ app.post("/api/ai/suggest-recipe", async (req, res) => {
     return res.json({ text: "Mix them together for a surprise stew!" });
   }
   try {
-    const response = await aiClient.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: `Suggest a simple recipe name and 1-sentence description using these leftover ingredients: ${items.join(", ")}.`,
+    const response = await aiClient.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [{ role: "user", content: `Suggest a simple recipe name and 1-sentence description using these leftover ingredients: ${items.join(", ")}.` }],
     });
-    return res.json({ text: response.text || "Mix them together for a surprise stew!" });
+    return res.json({ text: response.choices[0]?.message?.content || "Mix them together for a surprise stew!" });
   } catch {
     return res.json({ text: "Mix them together for a surprise stew!" });
   }
@@ -697,12 +697,12 @@ async function runAutoCleanup() {
       while (attempts < 2 && !success) {
         attempts++;
         try {
-          const response = await aiClient.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-            config: { responseMimeType: "application/json", maxOutputTokens: 20 },
+          const response = await aiClient.chat.completions.create({
+            model: "llama-3.3-70b-versatile",
+            messages: [{ role: "user", content: prompt }],
+            response_format: { type: "json_object" },
           });
-          const text = response.text || "{}";
+          const text = response.choices[0]?.message?.content || "{}";
           console.log(`[Auto-Cleanup]   AI response: ${text.trim()}`);
           const output = JSON.parse(text);
           if (output.isFood === false) {
@@ -738,7 +738,7 @@ connectDb()
     server.listen(port, "0.0.0.0", () => {
       console.log(`EcoFeast backend running on http://0.0.0.0:${port}`);
       
-      // Auto-cleanup disabled to conserve Gemini API quota.
+      // Auto-cleanup disabled to conserve Groq API quota.
       // To run manually: node backend/cleanup.js
       // setInterval(runAutoCleanup, 21600000);
       // setTimeout(runAutoCleanup, 60000);

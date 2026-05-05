@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { User, Item, Reservation, Task } from '../types';
 import { api } from '../services/api';
 import { socket } from '../services/socket';
-import { predictExpiryAndTags } from '../services/geminiService';
+import { predictExpiryAndTags } from '../services/aiService';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, Package, Calendar, Camera, Leaf, Trash2, CheckSquare, Square, Truck, Upload, Search, PackagePlus, Layers3, TrendingUp, Sparkles, BadgeIndianRupee } from 'lucide-react';
 import { BarChart, Bar, XAxis, ResponsiveContainer } from 'recharts';

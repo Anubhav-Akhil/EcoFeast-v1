@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/Status-In%20Development-orange?style=for-the-badge" alt="Status">
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License">
   <img src="https://img.shields.io/badge/Built%20With-React%20%2B%20Node.js-blue?style=for-the-badge" alt="Stack">
-  <img src="https://img.shields.io/badge/AI-Powered%20by%20Gemini-violet?style=for-the-badge" alt="AI">
+  <img src="https://img.shields.io/badge/AI-Powered%20by%20Groq-violet?style=for-the-badge" alt="AI">
 </p>
 
 ---
@@ -37,7 +37,7 @@ Our platform leverages **AI-driven insights** to predict expiry, optimize distri
 ---
 
 ## 🤖 AI-Powered Intelligence
-*Integrated with Google Gemini API*
+*Integrated with Groq API (Llama 3.3)*
 
 - **⌛ Smart Expiry Prediction:** Analyze food data to predict optimal consumption windows and marketing tags.
 - **📈 Sustainability Analytics:** Real-time calculation of CO2 impact prevented by rescuing food.
@@ -61,7 +61,7 @@ Our platform leverages **AI-driven insights** to predict expiry, optimize distri
 - **Real-Time:** `Socket.IO`
 - **Database:** `MongoDB Atlas` + `Mongoose`
 - **Security:** `JWT` + `BcryptJS`
-- **Intelligence:** `@google/genai` (Gemini API)
+- **Intelligence:** `groq-sdk` (Groq API)
 
 ---
 
@@ -70,7 +70,7 @@ Our platform leverages **AI-driven insights** to predict expiry, optimize distri
 ### Prerequisites
 - Node.js (v18+)
 - MongoDB Atlas Account
-- Google AI Studio API Key (Gemini)
+- Groq API Key
 
 ### 1. Installation
 ```bash
@@ -88,7 +88,7 @@ Create a `.env` file in the root directory:
 PORT=8787
 MONGODB_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_key
-GEMINI_API_KEY=your_gemini_api_key
+GROQ_API_KEY=your_groq_api_key
 FRONTEND_ORIGIN=http://localhost:5173
 ```
 
