@@ -1,8 +1,18 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, User as UserIcon, LogOut, Sun, Moon, ShoppingCart, Bell, Trash2, CheckCircle, LayoutDashboard, Store, Package } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Menu, X, User as UserIcon, LogOut, Sun, Moon, ShoppingCart, Bell, Trash2, CheckCircle, LayoutDashboard, Store, Package, Truck } from 'lucide-react';
 import { User, UserRole, Item } from '../types';
 import { useNotificationStore } from '../services/notificationStore';
+import {
+  fieldLabelClassName,
+  helperTextClassName,
+  inputClassName,
+  ModalHeader,
+  ModalShell,
+  primaryButtonClassName,
+  secondaryButtonClassName,
+  selectClassName,
+} from './ui';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -25,10 +35,12 @@ export const Layout: React.FC<LayoutProps> = ({
 }) => {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   const { notifications, markAsRead, markAllAsRead, clearAll } = useNotificationStore();
   const unreadCount = notifications.filter(n => !n.read).length;
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notifView, setNotifView] = useState<'all' | 'unread'>('all');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   // Auth Form State
@@ -77,6 +89,30 @@ export const Layout: React.FC<LayoutProps> = ({
       }
   };
 
+  const visibleNotifications = (notifView === 'unread'
+    ? notifications.filter((n) => !n.read)
+    : notifications
+  ).slice(0, 50);
+
+  const formatTimeAgo = (ts: number) => {
+    const diffMs = Date.now() - ts;
+    const min = Math.floor(diffMs / 60000);
+    if (min < 1) return 'Just now';
+    if (min < 60) return `${min}m ago`;
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return `${hr}h ago`;
+    const days = Math.floor(hr / 24);
+    return `${days}d ago`;
+  };
+
+  const notifIcon = (type: string) => {
+    if (type === 'new_item') return <Package size={16} />;
+    if (type === 'new_order') return <Bell size={16} />;
+    if (type === 'task_update') return <Truck size={16} />;
+    if (type === 'order_update') return <CheckCircle size={16} />;
+    return <Bell size={16} />;
+  };
+
   return (
     <div className={`min-h-screen flex flex-col font-sans transition-colors duration-300 ${isDark ? 'dark' : ''}`}>
       {/* Sticky Navbar */}
@@ -118,7 +154,10 @@ export const Layout: React.FC<LayoutProps> = ({
                   {/* Notification Center */}
                   <div className="relative">
                     <button 
-                      onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} 
+                      onClick={() => {
+                        setIsNotificationsOpen(!isNotificationsOpen);
+                        setNotifView('all');
+                      }} 
                       className="relative p-2 text-gray-600 dark:text-gray-300 hover:text-eco-600"
                     >
                       <Bell size={22} />
@@ -131,45 +170,99 @@ export const Layout: React.FC<LayoutProps> = ({
 
                     {/* Dropdown */}
                     {isNotificationsOpen && (
-                      <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-dark-900 border border-gray-200 dark:border-dark-800 rounded-xl shadow-2xl z-50 overflow-hidden">
-                        <div className="p-4 border-b border-gray-100 dark:border-dark-800 flex justify-between items-center bg-gray-50 dark:bg-dark-950">
-                          <h3 className="font-bold text-gray-900 dark:text-white">Notifications</h3>
-                          <div className="flex gap-2">
-                            {unreadCount > 0 && (
-                              <button onClick={markAllAsRead} className="text-xs text-eco-600 hover:underline flex items-center gap-1">
-                                <CheckCircle size={12} /> Mark all read
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setIsNotificationsOpen(false)} />
+                        <div className="absolute right-0 mt-2 w-[22rem] bg-white dark:bg-dark-900 border border-gray-200 dark:border-dark-800 rounded-2xl shadow-2xl z-50 overflow-hidden">
+                          <div className="p-4 border-b border-gray-100 dark:border-dark-800 bg-gray-50 dark:bg-dark-950">
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <h3 className="font-bold text-gray-900 dark:text-white">Notifications</h3>
+                                <p className="text-xs text-gray-400 mt-0.5">
+                                  {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
+                                </p>
+                              </div>
+                              <div className="flex gap-2">
+                                {unreadCount > 0 && (
+                                  <button
+                                    onClick={markAllAsRead}
+                                    className="text-xs font-semibold text-eco-600 hover:underline flex items-center gap-1"
+                                  >
+                                    <CheckCircle size={12} /> Mark all
+                                  </button>
+                                )}
+                                <button
+                                  onClick={clearAll}
+                                  className="text-xs font-semibold text-red-500 hover:underline flex items-center gap-1"
+                                >
+                                  <Trash2 size={12} /> Clear
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="mt-3 flex gap-2">
+                              <button
+                                onClick={() => setNotifView('all')}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
+                                  notifView === 'all'
+                                    ? 'bg-white dark:bg-dark-900 border-gray-200 dark:border-dark-700 text-gray-900 dark:text-white'
+                                    : 'bg-transparent border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                                }`}
+                              >
+                                All
                               </button>
+                              <button
+                                onClick={() => setNotifView('unread')}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
+                                  notifView === 'unread'
+                                    ? 'bg-white dark:bg-dark-900 border-gray-200 dark:border-dark-700 text-gray-900 dark:text-white'
+                                    : 'bg-transparent border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                                }`}
+                              >
+                                Unread
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="max-h-[65vh] overflow-y-auto">
+                            {visibleNotifications.length === 0 ? (
+                              <div className="p-10 text-center text-gray-500 text-sm">
+                                {notifView === 'unread' ? 'No unread notifications.' : 'No notifications yet.'}
+                              </div>
+                            ) : (
+                              <div className="divide-y divide-gray-100 dark:divide-dark-800">
+                                {visibleNotifications.map((notif) => (
+                                  <button
+                                    key={notif.id}
+                                    onClick={() => {
+                                      markAsRead(notif.id);
+                                      setIsNotificationsOpen(false);
+                                      if (notif.link) navigate(notif.link);
+                                    }}
+                                    className={`w-full text-left p-4 hover:bg-gray-50 dark:hover:bg-dark-800 transition-colors ${
+                                      !notif.read ? 'bg-blue-50/40 dark:bg-blue-900/10' : ''
+                                    }`}
+                                  >
+                                    <div className="flex gap-3">
+                                      <div className={`h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                                        !notif.read ? 'bg-eco-100 text-eco-700 dark:bg-eco-900/40 dark:text-eco-300' : 'bg-gray-100 text-gray-500 dark:bg-dark-800 dark:text-gray-300'
+                                      }`}>
+                                        {notifIcon(notif.type)}
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex justify-between items-start gap-3">
+                                          <span className="font-bold text-sm text-gray-900 dark:text-white truncate">{notif.title}</span>
+                                          <span className="text-[10px] text-gray-400 flex-shrink-0">{formatTimeAgo(notif.timestamp)}</span>
+                                        </div>
+                                        <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 mt-0.5">{notif.message}</p>
+                                      </div>
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
                             )}
-                            <button onClick={clearAll} className="text-xs text-red-500 hover:underline flex items-center gap-1">
-                              <Trash2 size={12} /> Clear
-                            </button>
                           </div>
                         </div>
-                        <div className="max-h-[60vh] overflow-y-auto">
-                          {notifications.length === 0 ? (
-                            <div className="p-8 text-center text-gray-500 text-sm">No notifications yet.</div>
-                          ) : (
-                            <div className="divide-y divide-gray-100 dark:divide-dark-800">
-                              {notifications.map((notif) => (
-                                <div 
-                                  key={notif.id} 
-                                  onClick={() => {
-                                    markAsRead(notif.id);
-                                    setIsNotificationsOpen(false);
-                                  }}
-                                  className={`p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-800 transition-colors ${!notif.read ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
-                                >
-                                  <div className="flex justify-between items-start mb-1">
-                                    <span className="font-bold text-sm text-gray-900 dark:text-white">{notif.title}</span>
-                                    <span className="text-[10px] text-gray-400">{new Date(notif.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                  </div>
-                                  <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{notif.message}</p>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      </>
                     )}
                   </div>
 
@@ -354,162 +447,181 @@ export const Layout: React.FC<LayoutProps> = ({
       </footer>
 
       {/* Auth Modal */}
-      {authModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-dark-900 rounded-2xl shadow-xl w-full max-w-lg p-8 relative border dark:border-dark-800 max-h-[90vh] overflow-y-auto">
-                <button 
-                    onClick={() => setAuthModalOpen(false)}
-                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                >
-                    <X size={24} />
-                </button>
-                
-                <h2 className="text-2xl font-bold mb-6 text-center dark:text-white">
-                    {authMode === 'login' ? 'Welcome Back' : 'Join EcoFeast'}
-                </h2>
+      <ModalShell
+        open={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        maxWidthClassName="max-w-2xl"
+        panelClassName="max-h-[92vh]"
+        contentClassName="max-h-[92vh] overflow-y-auto p-6 sm:p-8"
+      >
+        <div className="space-y-6">
+          <ModalHeader
+            title={authMode === 'login' ? 'Welcome Back' : 'Join EcoFeast'}
+            description={authMode === 'login' ? 'Access your orders, saved impact, and dashboards from one clean workspace.' : 'Create a polished account experience for customers, retailers, charities, and volunteers.'}
+            eyebrow={authMode === 'login' ? 'Account Access' : 'Create Account'}
+            align="center"
+          />
 
-                <form onSubmit={handleAuthSubmit} className="space-y-4">
-                    {/* Role Selection */}
-                    {authMode === 'signup' && (
-                        <div>
-                            <label className="block text-sm font-medium mb-2 dark:text-gray-300">I am a...</label>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                {['consumer', 'retailer', 'charity', 'volunteer'].map(r => (
-                                    <button
-                                        key={r}
-                                        type="button"
-                                        onClick={() => setSelectedRole(r as UserRole)}
-                                        className={`py-2 px-1 text-xs sm:text-sm rounded-lg capitalize border transition-colors ${
-                                            selectedRole === r 
-                                            ? 'bg-eco-100 border-eco-500 text-eco-700 dark:bg-eco-900 dark:text-eco-300' 
-                                            : 'border-gray-200 dark:border-dark-700 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-800'
-                                        }`}
-                                    >
-                                        {r}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Common Fields */}
-                    <div>
-                        <label className="block text-sm font-medium mb-1 dark:text-gray-300">Email</label>
-                        <input 
-                            type="email" 
-                            required
-                            className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-eco-500 outline-none dark:bg-dark-800 dark:border-dark-700 dark:text-white text-gray-900 bg-white"
-                            placeholder="you@example.com"
-                            value={formData.email}
-                            onChange={e => setFormData({...formData, email: e.target.value})}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-1 dark:text-gray-300">Password</label>
-                        <input 
-                            type="password" 
-                            required
-                            className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-eco-500 outline-none dark:bg-dark-800 dark:border-dark-700 dark:text-white text-gray-900 bg-white"
-                            placeholder="••••••••"
-                            value={formData.password}
-                            onChange={e => setFormData({...formData, password: e.target.value})}
-                        />
-                    </div>
-
-                    {/* Role Specific Fields for Signup */}
-                    {authMode === 'signup' && (
-                        <>
-                            {selectedRole === 'consumer' && (
-                                <div>
-                                    <label className="block text-sm font-medium mb-1 dark:text-gray-300">Full Name</label>
-                                    <input 
-                                        type="text" required
-                                        className="w-full border p-3 rounded-lg dark:bg-dark-800 dark:border-dark-700 dark:text-white text-gray-900 bg-white"
-                                        value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})}
-                                    />
-                                </div>
-                            )}
-
-                            {(selectedRole === 'retailer' || selectedRole === 'charity') && (
-                                <>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1 dark:text-gray-300">Organization Name</label>
-                                        <input 
-                                            type="text" required
-                                            className="w-full border p-3 rounded-lg dark:bg-dark-800 dark:border-dark-700 dark:text-white text-gray-900 bg-white"
-                                            value={formData.orgName} onChange={e => setFormData({...formData, orgName: e.target.value})}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1 dark:text-gray-300">Address</label>
-                                        <input 
-                                            type="text" required
-                                            className="w-full border p-3 rounded-lg dark:bg-dark-800 dark:border-dark-700 dark:text-white text-gray-900 bg-white"
-                                            value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1 dark:text-gray-300">Phone</label>
-                                        <input 
-                                            type="tel" required
-                                            className="w-full border p-3 rounded-lg dark:bg-dark-800 dark:border-dark-700 dark:text-white text-gray-900 bg-white"
-                                            value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})}
-                                        />
-                                    </div>
-                                </>
-                            )}
-
-                            {selectedRole === 'volunteer' && (
-                                <>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1 dark:text-gray-300">Full Name</label>
-                                        <input 
-                                            type="text" required
-                                            className="w-full border p-3 rounded-lg dark:bg-dark-800 dark:border-dark-700 dark:text-white text-gray-900 bg-white"
-                                            value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1 dark:text-gray-300">Vehicle Type</label>
-                                        <select 
-                                            className="w-full border p-3 rounded-lg dark:bg-dark-800 dark:border-dark-700 dark:text-white text-gray-900 bg-white"
-                                            value={formData.vehicleType} onChange={e => setFormData({...formData, vehicleType: e.target.value})}
-                                        >
-                                            <option value="">Select...</option>
-                                            <option value="bike">Bicycle</option>
-                                            <option value="scooter">Scooter/Bike</option>
-                                            <option value="car">Car</option>
-                                            <option value="van">Van</option>
-                                        </select>
-                                    </div>
-                                </>
-                            )}
-                        </>
-                    )}
-
+          <form onSubmit={handleAuthSubmit} className="space-y-5">
+            {authMode === 'signup' && (
+              <div className="rounded-[24px] border border-slate-200/70 bg-slate-50/80 p-4 dark:border-dark-800 dark:bg-dark-950/60">
+                <label className={fieldLabelClassName}>I Am Joining As</label>
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                  {['consumer', 'retailer', 'charity', 'volunteer'].map((r) => (
                     <button
-                        disabled={authLoading}
-                        className="w-full bg-eco-600 text-white py-3 rounded-xl font-bold text-lg hover:bg-eco-700 transition disabled:opacity-70"
+                      key={r}
+                      type="button"
+                      onClick={() => setSelectedRole(r as UserRole)}
+                      className={`rounded-2xl border px-3 py-3 text-sm font-semibold capitalize transition-all ${
+                        selectedRole === r
+                          ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700 shadow-[0_12px_24px_rgba(22,163,74,0.12)] dark:bg-emerald-500/15 dark:text-emerald-300'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-dark-700 dark:bg-dark-800 dark:text-gray-300 dark:hover:bg-dark-700'
+                      }`}
                     >
-                        {authLoading ? 'Please wait...' : (authMode === 'login' ? 'Log In' : 'Sign Up')}
+                      {r}
                     </button>
-                    {authError && (
-                        <p className="text-sm text-red-600 dark:text-red-400">{authError}</p>
-                    )}
-                </form>
-
-                <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
-                    {authMode === 'login' ? "New here? " : "Already have an account? "}
-                    <button 
-                        onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
-                        className="text-eco-600 font-bold hover:underline"
-                    >
-                        {authMode === 'login' ? 'Create Account' : 'Log In'}
-                    </button>
+                  ))}
                 </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label className={fieldLabelClassName}>Email</label>
+                <input
+                  type="email"
+                  required
+                  className={inputClassName}
+                  placeholder="you@example.com"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className={fieldLabelClassName}>Password</label>
+                <input
+                  type="password"
+                  required
+                  className={inputClassName}
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                />
+                {authMode === 'signup' && (
+                  <p className={helperTextClassName}>Choose a secure password with at least 6 characters.</p>
+                )}
+              </div>
+
+              {authMode === 'signup' && selectedRole === 'consumer' && (
+                <div className="sm:col-span-2">
+                  <label className={fieldLabelClassName}>Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    className={inputClassName}
+                    placeholder="Your full name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  />
+                </div>
+              )}
+
+              {authMode === 'signup' && (selectedRole === 'retailer' || selectedRole === 'charity') && (
+                <>
+                  <div className="sm:col-span-2">
+                    <label className={fieldLabelClassName}>Organization Name</label>
+                    <input
+                      type="text"
+                      required
+                      className={inputClassName}
+                      placeholder="Business or organization name"
+                      value={formData.orgName}
+                      onChange={(e) => setFormData({ ...formData, orgName: e.target.value })}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className={fieldLabelClassName}>Address</label>
+                    <input
+                      type="text"
+                      required
+                      className={inputClassName}
+                      placeholder="Street, city, and area details"
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className={fieldLabelClassName}>Phone</label>
+                    <input
+                      type="tel"
+                      required
+                      className={inputClassName}
+                      placeholder="Primary contact number"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    />
+                  </div>
+                </>
+              )}
+
+              {authMode === 'signup' && selectedRole === 'volunteer' && (
+                <>
+                  <div className="sm:col-span-2">
+                    <label className={fieldLabelClassName}>Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      className={inputClassName}
+                      placeholder="Your full name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className={fieldLabelClassName}>Vehicle Type</label>
+                    <select
+                      className={selectClassName}
+                      value={formData.vehicleType}
+                      onChange={(e) => setFormData({ ...formData, vehicleType: e.target.value })}
+                    >
+                      <option value="">Select a vehicle</option>
+                      <option value="bike">Bicycle</option>
+                      <option value="scooter">Scooter/Bike</option>
+                      <option value="car">Car</option>
+                      <option value="van">Van</option>
+                    </select>
+                  </div>
+                </>
+              )}
             </div>
+
+            {authError && (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300">
+                {authError}
+              </div>
+            )}
+
+            <button disabled={authLoading} className={`w-full ${primaryButtonClassName}`}>
+              {authLoading ? 'Please wait...' : authMode === 'login' ? 'Log In' : 'Create Account'}
+            </button>
+          </form>
+
+          <div className="flex flex-col items-center justify-between gap-3 rounded-[22px] border border-slate-200/70 bg-slate-50/80 px-4 py-4 text-sm text-slate-500 dark:border-dark-800 dark:bg-dark-950/60 dark:text-gray-400 sm:flex-row">
+            <span>{authMode === 'login' ? 'New to EcoFeast?' : 'Already have an account?'}</span>
+            <button
+              onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
+              className={secondaryButtonClassName}
+            >
+              {authMode === 'login' ? 'Create Account' : 'Log In'}
+            </button>
+          </div>
         </div>
-      )}
+      </ModalShell>
+
     </div>
   );
 };
+
+
+

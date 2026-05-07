@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, MapPin, Navigation, Mail, Phone, X } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Heart, MapPin, Navigation, Mail, Phone } from 'lucide-react';
 import { api } from '../services/api';
 import { Charity } from '../types';
+import { ModalHeader, ModalShell, primaryButtonClassName } from '../components/ui';
 
 export const Charities: React.FC = () => {
   const [nearbyCharities, setNearbyCharities] = useState<Charity[]>([]);
@@ -88,55 +89,48 @@ export const Charities: React.FC = () => {
           </div>
       </section>
 
-      {/* Charity Details Modal */}
-      <AnimatePresence>
-          {selectedCharity && (
-              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                  <motion.div 
-                      initial={{opacity: 0, y: 20}}
-                      animate={{opacity: 1, y: 0}}
-                      exit={{opacity: 0, y: 20}}
-                      className="bg-white dark:bg-dark-900 rounded-2xl shadow-xl w-full max-w-lg overflow-hidden relative"
-                  >
-                      <button 
-                        onClick={() => setSelectedCharity(null)}
-                        className="absolute top-4 right-4 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full z-10 transition"
-                      >
-                          <X size={20} />
-                      </button>
-                      
-                      <div className="h-48 relative">
-                          <img src={selectedCharity.image} className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-6">
-                              <h2 className="text-3xl font-bold text-white">{selectedCharity.name}</h2>
-                          </div>
-                      </div>
-
-                      <div className="p-6">
-                          <p className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-4">{selectedCharity.mission}</p>
-                          <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed">
-                             {selectedCharity.description || "Dedicated to serving the local community through food rescue and redistribution efforts."}
-                          </p>
-                          
-                          <div className="space-y-3 mb-6">
-                              <div className="flex items-center gap-3 text-gray-700 dark:text-gray-300">
-                                  <Mail size={18} className="text-eco-600"/>
-                                  <span>{selectedCharity.contact || "contact@charity.org"}</span>
-                              </div>
-                              <div className="flex items-center gap-3 text-gray-700 dark:text-gray-300">
-                                  <Phone size={18} className="text-eco-600"/>
-                                  <span>+1 (555) 123-4567</span>
-                              </div>
-                          </div>
-
-                          <button className="w-full bg-eco-600 text-white py-3 rounded-xl font-bold hover:bg-eco-700 transition">
-                              Contact Charity
-                          </button>
-                      </div>
-                  </motion.div>
+      <ModalShell
+        open={!!selectedCharity}
+        onClose={() => setSelectedCharity(null)}
+        maxWidthClassName="max-w-xl"
+        panelClassName="overflow-hidden"
+        contentClassName="p-0"
+      >
+        {selectedCharity && (
+          <div>
+            <div className="relative h-52">
+              <img src={selectedCharity.image} className="h-full w-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-6">
+                <h2 className="text-3xl font-black text-white">{selectedCharity.name}</h2>
               </div>
-          )}
-      </AnimatePresence>
+            </div>
+
+            <div className="space-y-6 p-6">
+              <ModalHeader
+                title={selectedCharity.mission}
+                description={selectedCharity.description || 'Dedicated to serving the local community through food rescue and redistribution efforts.'}
+                eyebrow="Charity Profile"
+              />
+
+              <div className="space-y-3 rounded-[22px] border border-slate-200/70 bg-slate-50/80 p-4 dark:border-dark-800 dark:bg-dark-950/60">
+                <div className="flex items-center gap-3 text-sm text-slate-700 dark:text-gray-300">
+                  <Mail size={18} className="text-eco-600" />
+                  <span>{selectedCharity.contact || 'contact@charity.org'}</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-slate-700 dark:text-gray-300">
+                  <Phone size={18} className="text-eco-600" />
+                  <span>+1 (555) 123-4567</span>
+                </div>
+              </div>
+
+              <button className={`w-full ${primaryButtonClassName}`}>
+                Contact Charity
+              </button>
+            </div>
+          </div>
+        )}
+      </ModalShell>
 
       {/* Success Stories */}
       <section className="py-20 bg-white dark:bg-dark-950 px-4">

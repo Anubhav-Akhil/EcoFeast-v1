@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 export interface NotificationItem {
   id: string;
-  type: 'new_item' | 'order_update' | 'system';
+  type: 'new_item' | 'new_order' | 'task_update' | 'order_update' | 'system';
   title: string;
   message: string;
   timestamp: number;

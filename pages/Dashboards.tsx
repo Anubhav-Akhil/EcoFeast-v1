@@ -1,22 +1,55 @@
-import React, { useEffect, useState } from 'react';
-import { User, Item, Reservation, Task } from '../types';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { User, Item, Reservation, StoreOrder, Task } from '../types';
 import { api } from '../services/api';
 import { socket } from '../services/socket';
 import { predictExpiryAndTags } from '../services/aiService';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Package, Calendar, Camera, Leaf, Trash2, CheckSquare, Square, Truck, Upload, Search, PackagePlus, Layers3, TrendingUp, Sparkles, BadgeIndianRupee } from 'lucide-react';
+import { Plus, Package, Calendar, Camera, Leaf, Trash2, CheckSquare, Square, Truck, Upload, Search, PackagePlus, Layers3, TrendingUp, Sparkles, BadgeIndianRupee, ClipboardList, BadgeCheck, XCircle, Clock, RefreshCw } from 'lucide-react';
 import { BarChart, Bar, XAxis, ResponsiveContainer } from 'recharts';
 import { SuccessPopup } from '../components/SuccessPopup';
+import { AlertPopup, PopupType } from '../components/AlertPopup';
+import { ConfirmPopup } from '../components/ConfirmPopup';
+import {
+  fieldLabelClassName,
+  helperTextClassName,
+  inputClassName,
+  inputCompactClassName,
+  ModalHeader,
+  ModalShell,
+  primaryButtonClassName,
+  secondaryButtonClassName,
+  selectClassName,
+  textareaClassName,
+} from '../components/ui';
 
 interface DashboardProps {
   user: User;
 }
 
+export const statusBadge = (status?: string) => {
+  const s = status || 'pending';
+  const map: Record<string, string> = {
+    pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+    received: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+    packed: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
+    ready: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
+    accepted: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300',
+    picked_up: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300',
+    completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+    cancelled: 'bg-gray-100 text-gray-700 dark:bg-dark-800 dark:text-gray-300',
+  };
+  return map[s] || 'bg-gray-100 text-gray-700 dark:bg-dark-800 dark:text-gray-300';
+};
+
 const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (searchParams.get('tab') || 'listings') as 'listings' | 'orders' | 'pickups';
+
   const [items, setItems] = useState<Item[]>([]);
-  const [showAdd, setShowAdd] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [storeOrders, setStoreOrders] = useState<StoreOrder[]>([]);
+  const [storeTasks, setStoreTasks] = useState<Task[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [tasksLoading, setTasksLoading] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
   const [successTitle, setSuccessTitle] = useState('Success');
   const [successMessage, setSuccessMessage] = useState('Action completed.');
@@ -28,10 +61,20 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
   const [priceTarget, setPriceTarget] = useState<Item | null>(null);
   const [priceSaving, setPriceSaving] = useState(false);
   const [priceForm, setPriceForm] = useState({ originalPrice: 0, discountPrice: 0 });
-  const [errorDialog, setErrorDialog] = useState<{title: string, message: string} | null>(null);
   const [imagePromptOpen, setImagePromptOpen] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState<{ title: string; message: string; onConfirm: () => void; isDestructive?: boolean } | null>(null);
   const [highlightImage, setHighlightImage] = useState(false);
   const [isGeneratingImg, setIsGeneratingImg] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<{ type: PopupType; title: string; message: string }>({ type: 'info', title: '', message: '' });
+
+  const openAlert = (type: PopupType, title: string, message: string) => {
+    setAlertConfig({ type, title, message });
+    setAlertOpen(true);
+  };
 
   const [newItem, setNewItem] = useState<Partial<Item>>({
     title: '',
@@ -48,17 +91,77 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
 
   useEffect(() => {
     loadStoreData();
+    refreshFulfillment();
+
+    const handleNewOrder = (payload: any) => {
+      if (payload?.storeId === user.id) {
+        // For new orders, a full refresh is safest to get all aggregate fields.
+        refreshFulfillment(true); 
+        openSuccess('New Order Received!', `Order #${payload.code} has just arrived for your store.`);
+      }
+    };
+    const handleTaskUpdated = (task: Task) => {
+      if (task?.storeId !== user.id) return;
+      
+      setStoreTasks(prev => prev.map(t => t.id === task.id ? task : t));
+      setStoreOrders(prev => prev.map(so => {
+        if (so.order.id === task.orderId) {
+          return { ...so, task };
+        }
+        return so;
+      }));
+    };
+    const handleOrderUpdated = (order: Reservation) => {
+      setStoreOrders(prev => prev.map(so => {
+        if (so.order.id === order.id) {
+          return { ...so, order };
+        }
+        return so;
+      }));
+    };
+
+    socket.on('new-order', handleNewOrder);
+    socket.on('task-updated', handleTaskUpdated as any);
+    socket.on('order-updated', handleOrderUpdated as any);
+
+    return () => {
+      socket.off('new-order', handleNewOrder);
+      socket.off('task-updated', handleTaskUpdated as any);
+      socket.off('order-updated', handleOrderUpdated as any);
+    };
   }, []);
 
   const loadStoreData = async () => {
-    const all = await api.getItems();
-    setItems(all.filter(i => i.storeName === user.organizationName || i.storeId === user.id));
+    const items = await api.getMyItems();
+    setItems(items);
+  };
+
+  const refreshFulfillment = async (silent = false) => {
+    if (!silent) {
+      setOrdersLoading(true);
+      setTasksLoading(true);
+    }
+    try {
+      const data = await api.getFulfillmentData();
+      setStoreOrders(Array.isArray(data?.orders) ? data.orders : []);
+      setStoreTasks(Array.isArray(data?.tasks) ? data.tasks : []);
+    } catch {
+      setStoreOrders([]);
+      setStoreTasks([]);
+    } finally {
+      setOrdersLoading(false);
+      setTasksLoading(false);
+    }
   };
 
   const openSuccess = (title: string, message: string) => {
     setSuccessTitle(title);
     setSuccessMessage(message);
     setSuccessOpen(true);
+  };
+
+  const openError = (title: string, message: string) => {
+    openAlert('error', title, message);
   };
 
   const getItemType = (item: Item): 'customer' | 'charity' | 'animal' => {
@@ -101,13 +204,20 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
 
   const generateImage = () => {
     if (!newItem.title) {
-       alert("Please enter an Item Name first to generate an image.");
+       openAlert('warning', 'Missing Details', "Please enter an Item Name first to generate an image.");
        return;
     }
     setIsGeneratingImg(true);
     setTimeout(() => {
-      const keyword = newItem.title.split(' ')[0].toLowerCase();
-      const url = `https://loremflickr.com/800/600/food,${encodeURIComponent(keyword)}?lock=${Math.floor(Math.random() * 1000)}`;
+      const title = newItem.title || 'food';
+      let keyword = title.toLowerCase();
+      if (keyword.includes('sushi')) keyword += ',korean,japanese,food,delicious';
+      else keyword = keyword.split(' ').join(',');
+      
+      // Deterministic lock based on title string
+      const lock = title.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 1000;
+      const url = `https://loremflickr.com/800/600/${encodeURIComponent(keyword)}?lock=${lock}`;
+      
       setNewItem(prev => ({ ...prev, image: url }));
       setIsGeneratingImg(false);
       setHighlightImage(false);
@@ -142,20 +252,24 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
       await loadStoreData();
       openSuccess('Listing Created', 'Surplus item has been added successfully.');
     } catch (error: any) {
-      setErrorDialog({
-        title: 'Listing Rejected',
-        message: error?.message || 'Failed to add surplus item'
-      });
+      openError('Listing Rejected', error?.message || 'Failed to add surplus item');
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to remove this listing?')) {
-      await api.deleteItem(id);
-      await loadStoreData();
-    }
+    setConfirmConfig({
+      title: 'Remove Listing?',
+      message: 'Are you sure you want to remove this surplus listing? This action cannot be undone.',
+      isDestructive: true,
+      onConfirm: async () => {
+        await api.deleteItem(id);
+        await loadStoreData();
+        openSuccess('Deleted', 'Item removed successfully.');
+        setConfirmConfig(null);
+      }
+    });
   };
 
   const handleQuickRestock = async (item: Item, qty: number) => {
@@ -209,18 +323,153 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
     }
   };
 
+  const orderCounts = useMemo(() => {
+    const pending = storeOrders.filter((o) => (o.task?.status || o.order.status) === 'pending').length;
+    const received = storeOrders.filter((o) => (o.task?.status || o.order.status) === 'received').length;
+    const packed = storeOrders.filter((o) => (o.task?.status || o.order.status) === 'packed').length;
+    const ready = storeOrders.filter((o) => (o.task?.status || o.order.status) === 'ready').length;
+    const accepted = storeOrders.filter((o) => (o.task?.status || o.order.status) === 'accepted').length;
+    const picked_up = storeOrders.filter((o) => (o.task?.status || o.order.status) === 'picked_up').length;
+    return { pending, received, packed, ready, accepted, picked_up, total: storeOrders.length };
+  }, [storeOrders]);
+
+  const taskCounts = useMemo(() => {
+    const pending = storeTasks.filter((t) => t.status === 'pending').length;
+    const received = storeTasks.filter((t) => t.status === 'received').length;
+    const packed = storeTasks.filter((t) => t.status === 'packed').length;
+    const ready = storeTasks.filter((t) => t.status === 'ready').length;
+    const accepted = storeTasks.filter((t) => t.status === 'accepted').length;
+    const picked_up = storeTasks.filter((t) => t.status === 'picked_up').length;
+    return { pending, received, packed, ready, accepted, picked_up, total: storeTasks.length };
+  }, [storeTasks]);
+
+
+
+  const handleMarkReceived = async (taskId: string) => {
+    // Optimistic update
+    setStoreTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'received' } : t));
+    setStoreOrders(prev => prev.map(so => (so.task?.id === taskId ? { ...so, task: { ...so.task, status: 'received' } as Task } : so)));
+    
+    try {
+      await api.updateTaskStatus(taskId, 'received');
+      openSuccess('Order Received', 'Order status updated to RECEIVED.');
+    } catch (err: any) {
+      refreshFulfillment(true); // Revert on failure
+      openError('Update Failed', err.message || 'Could not update task status.');
+    }
+  };
+
+  const handleMarkPacked = async (taskId: string) => {
+    // Optimistic update
+    setStoreTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'packed' } : t));
+    setStoreOrders(prev => prev.map(so => (so.task?.id === taskId ? { ...so, task: { ...so.task, status: 'packed' } as Task } : so)));
+
+    try {
+      await api.updateTaskStatus(taskId, 'packed');
+      openSuccess('Order Packed', 'Order status updated to PACKED.');
+    } catch (err: any) {
+      refreshFulfillment(true);
+      openError('Update Failed', err.message || 'Could not update task status.');
+    }
+  };
+
+  const handleMarkReady = async (taskId: string) => {
+    // Optimistic update
+    setStoreTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'ready' } : t));
+    setStoreOrders(prev => prev.map(so => (so.task?.id === taskId ? { ...so, task: { ...so.task, status: 'ready' } as Task } : so)));
+
+    try {
+      await api.updateTaskStatus(taskId, 'ready');
+      openSuccess('Marked Ready', 'Pickup is now marked as READY.');
+    } catch (err: any) {
+      refreshFulfillment(true);
+      openError('Update Failed', err.message || 'Could not update task status.');
+    }
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    setConfirmConfig({
+      title: 'Cancel Store Order?',
+      message: "Are you sure you want to cancel your store's part of this order? Items will be restocked automatically.",
+      isDestructive: true,
+      onConfirm: async () => {
+        setConfirmConfig(null);
+        try {
+          await api.cancelStoreOrder(orderId);
+          await refreshFulfillment(true);
+          openSuccess('Order Cancelled', 'Store items were restocked and the pickup was cancelled.');
+        } catch (err: any) {
+          openError('Cancel Failed', err.message || 'Could not cancel order.');
+        }
+      }
+    });
+  };
+
   return (
-    <div className="p-6">
+    <div className="p-6 max-w-7xl mx-auto">
       <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
         <div>
           <h2 className="text-3xl font-black dark:text-white tracking-tight">Retailer Command Center</h2>
           <p className="text-gray-500 dark:text-gray-400">Control all your listings for customers, charities, and animal-use in one dashboard.</p>
         </div>
-        <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 bg-eco-600 text-white px-4 py-2 rounded-lg hover:bg-eco-700 shadow-sm">
-          <Plus size={18} /> Add Surplus
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => refreshFulfillment()}
+            className="flex items-center gap-2 bg-white dark:bg-dark-900 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg border border-gray-200 dark:border-dark-800 hover:bg-gray-50 dark:hover:bg-dark-800 shadow-sm"
+            title="Refresh orders and pickups"
+          >
+            <RefreshCw size={18} className={ordersLoading || tasksLoading ? 'animate-spin' : ''} />
+            Refresh
+          </button>
+          {activeTab === 'listings' && (
+            <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 bg-eco-600 text-white px-4 py-2 rounded-lg hover:bg-eco-700 shadow-sm">
+              <Plus size={18} /> Add Surplus
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="flex gap-2 mb-8 border-b border-gray-200 dark:border-dark-800">
+        <button
+          onClick={() => setSearchParams({ tab: 'listings' })}
+          className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'listings'
+              ? 'border-eco-500 text-eco-600 dark:text-eco-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+          }`}
+        >
+          <Package size={16} /> Listings
+        </button>
+        <button
+          onClick={() => setSearchParams({ tab: 'orders' })}
+          className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'orders'
+              ? 'border-eco-500 text-eco-600 dark:text-eco-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+          }`}
+        >
+          <ClipboardList size={16} /> Orders
+          {orderCounts.total > 0 && (
+            <span className="bg-eco-500 text-white text-xs rounded-full px-2 py-0.5 font-black">{orderCounts.total}</span>
+          )}
+        </button>
+        <button
+          onClick={() => setSearchParams({ tab: 'pickups' })}
+          className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'pickups'
+              ? 'border-eco-500 text-eco-600 dark:text-eco-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+          }`}
+        >
+          <Truck size={16} /> Pickups
+          {taskCounts.total > 0 && (
+            <span className="bg-eco-500 text-white text-xs rounded-full px-2 py-0.5 font-black">{taskCounts.total}</span>
+          )}
         </button>
       </div>
 
+      {activeTab === 'listings' && (
+      <>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-100 to-emerald-50 text-emerald-800 border border-emerald-200">
           <div className="text-sm font-semibold">Total Listings</div>
@@ -309,7 +558,7 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
                       className="w-7 h-7 flex items-center justify-center rounded-md bg-transparent text-gray-600 dark:text-gray-300 hover:bg-orange-100 hover:text-orange-700 dark:hover:bg-orange-900/40 dark:hover:text-orange-400 disabled:opacity-30 transition-colors font-bold text-lg leading-none pb-0.5" 
                       title="Decrease Stock"
                     >
-                      −
+                      -
                     </button>
                     <span className="text-xs font-bold w-16 text-center text-gray-800 dark:text-white" title="Current Stock">Stock: {item.quantity}</span>
                     <button 
@@ -384,50 +633,320 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
           </div>
         </div>
       </div>
+      </>
+      )}
 
-      {restockTarget && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-dark-900 rounded-2xl p-6 w-full max-w-sm border border-gray-100 dark:border-dark-700">
-            <h4 className="text-xl font-bold dark:text-white mb-2">Set Custom Stock</h4>
-            <p className="text-sm text-gray-500 mb-4">Listing: <span className="font-semibold">{restockTarget.title}</span></p>
-            <form onSubmit={handleRestockSubmit} className="space-y-4">
-              <input type="number" min={0} value={restockQty} onChange={(e) => setRestockQty(Number(e.target.value))} className="w-full border p-2 rounded dark:bg-dark-800 dark:border-dark-700 dark:text-white" />
-              <div className="grid grid-cols-2 gap-3">
-                <button disabled={restockLoading} type="submit" className="bg-eco-600 text-white py-2 rounded-lg font-semibold hover:bg-eco-700 disabled:opacity-70">{restockLoading ? 'Saving...' : 'Set Stock'}</button>
-                <button type="button" onClick={() => setRestockTarget(null)} className="bg-gray-100 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-200">Cancel</button>
+      {activeTab === 'orders' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-5 rounded-2xl bg-white dark:bg-dark-900 border border-gray-200 dark:border-dark-800 shadow-sm">
+              <div className="text-sm font-semibold text-gray-500">Total Orders</div>
+              <div className="text-3xl font-black mt-1 dark:text-white">{orderCounts.total}</div>
+            </div>
+            <div className="p-5 rounded-2xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 shadow-sm">
+              <div className="text-sm font-semibold text-amber-700 dark:text-amber-300">New / Pending</div>
+              <div className="text-3xl font-black mt-1 text-amber-800 dark:text-amber-200">{orderCounts.pending + orderCounts.received}</div>
+            </div>
+            <div className="p-5 rounded-2xl bg-violet-50 dark:bg-violet-900/10 border border-violet-200 dark:border-violet-900/30 shadow-sm">
+              <div className="text-sm font-semibold text-violet-700 dark:text-violet-300">Ready to Pickup</div>
+              <div className="text-3xl font-black mt-1 text-violet-800 dark:text-violet-200">{orderCounts.ready}</div>
+            </div>
+            <div className="p-5 rounded-2xl bg-sky-50 dark:bg-sky-900/10 border border-sky-200 dark:border-sky-900/30 shadow-sm">
+              <div className="text-sm font-semibold text-sky-700 dark:text-sky-300">Out for Delivery</div>
+              <div className="text-3xl font-black mt-1 text-sky-800 dark:text-sky-200">{orderCounts.accepted + orderCounts.picked_up}</div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-dark-900 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-dark-800">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <h3 className="font-bold dark:text-white flex items-center gap-2"><ClipboardList size={18} /> Store Orders</h3>
+            </div>
+
+            {ordersLoading ? (
+              <div className="py-16 text-center space-y-4">
+                <div className="flex justify-center">
+                  <RefreshCw className="text-eco-500 animate-spin" size={40} />
+                </div>
+                <div className="text-gray-500 font-medium animate-pulse">Fetching your latest orders...</div>
               </div>
-            </form>
+            ) : storeOrders.length === 0 ? (
+              <div className="py-10 text-center text-gray-500">No orders for your store yet.</div>
+            ) : (
+              <div className="space-y-4">
+                {[...storeOrders].sort((a, b) => {
+                  // Sort by most-recently-updated task, then order
+                  const tA = new Date(a.task?.updatedAt || a.order.createdAt || 0).getTime();
+                  const tB = new Date(b.task?.updatedAt || b.order.createdAt || 0).getTime();
+                  return tB - tA;
+                }).map((row) => {
+                  const status = row.task?.status || row.order.status || 'pending';
+                  const date = row.order.timestamp ? new Date(row.order.timestamp) : null;
+                  const dateStr = date ? date.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+                  return (
+                    <div key={row.order.id} className="p-4 rounded-2xl border border-gray-200 dark:border-dark-800 bg-gray-50 dark:bg-dark-950/30">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono font-black text-gray-900 dark:text-white">#{row.order.code}</span>
+                            <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-md ${statusBadge(status)}`}>{String(status).toUpperCase()}</span>
+                            {dateStr && <span className="text-xs text-gray-400">{dateStr}</span>}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                            <span className="inline-flex items-center gap-1"><Package size={14} /> {row.totalQty} unit(s)</span>
+                            <span className="inline-flex items-center gap-1"><BadgeIndianRupee size={14} /> INR {row.totalAmount}</span>
+                            {(row.pickupStart || row.pickupEnd) && (
+                              <span className="inline-flex items-center gap-1"><Clock size={14} /> Pickup {row.pickupStart || '--'}-{row.pickupEnd || '--'}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          {row.task?.id && status === 'pending' && (
+                            <button
+                              onClick={() => handleMarkReceived(row.task!.id)}
+                              className="px-3 py-2 rounded-xl text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
+                            >
+                              <BadgeCheck size={16} /> Mark Received
+                            </button>
+                          )}
+                          {row.task?.id && status === 'received' && (
+                            <button
+                              onClick={() => handleMarkPacked(row.task!.id)}
+                              className="px-3 py-2 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 flex items-center gap-2"
+                            >
+                              <BadgeCheck size={16} /> Mark Packed
+                            </button>
+                          )}
+                          {row.task?.id && status === 'packed' && (
+                            <button
+                              onClick={() => handleMarkReady(row.task!.id)}
+                              className="px-3 py-2 rounded-xl text-sm font-bold bg-eco-600 text-white hover:bg-eco-700 flex items-center gap-2"
+                            >
+                              <BadgeCheck size={16} /> Confirm Pickup
+                            </button>
+                          )}
+                          {(status === 'pending' || status === 'ready') && (
+                            <button
+                              onClick={() => handleCancelOrder(row.order.id)}
+                              className="px-3 py-2 rounded-xl text-sm font-bold bg-white dark:bg-dark-900 border border-gray-200 dark:border-dark-800 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 flex items-center gap-2"
+                            >
+                              <XCircle size={16} /> Cancel
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {row.storeItems?.length > 0 && (
+                        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {row.storeItems.slice(0, 6).map((item, idx) => (
+                            <div key={`${row.order.id}_${item.id}_${idx}`} className="flex items-center gap-3 bg-white dark:bg-dark-900 rounded-xl p-3 border border-gray-200 dark:border-dark-800">
+                              <img src={item.image} alt={item.title} className="h-10 w-10 rounded-lg object-cover flex-shrink-0" />
+                              <div className="min-w-0 flex-1">
+                                <div className="text-sm font-bold text-gray-900 dark:text-white truncate">{item.title}</div>
+                                <div className="text-xs text-gray-400 capitalize">{item.category}</div>
+                              </div>
+                              <div className="text-sm font-black text-eco-600 dark:text-eco-400">{item.discountPrice === 0 ? 'FREE' : `INR ${item.discountPrice}`}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {showAdd && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-dark-900 p-8 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold mb-4 dark:text-white">List New Surplus</h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
+      {activeTab === 'pickups' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-5 rounded-2xl bg-white dark:bg-dark-900 border border-gray-200 dark:border-dark-800 shadow-sm">
+              <div className="text-sm font-semibold text-gray-500">Total Pickups</div>
+              <div className="text-3xl font-black mt-1 dark:text-white">{taskCounts.total}</div>
+            </div>
+            <div className="p-5 rounded-2xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 shadow-sm">
+              <div className="text-sm font-semibold text-amber-700 dark:text-amber-300">Waiting for Ready</div>
+              <div className="text-3xl font-black mt-1 text-amber-800 dark:text-amber-200">{taskCounts.pending + taskCounts.received + taskCounts.packed}</div>
+            </div>
+            <div className="p-5 rounded-2xl bg-violet-50 dark:bg-violet-900/10 border border-violet-200 dark:border-violet-900/30 shadow-sm">
+              <div className="text-sm font-semibold text-violet-700 dark:text-violet-300">Available to Partners</div>
+              <div className="text-3xl font-black mt-1 text-violet-800 dark:text-violet-200">{taskCounts.ready}</div>
+            </div>
+            <div className="p-5 rounded-2xl bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 shadow-sm">
+              <div className="text-sm font-semibold text-blue-700 dark:text-blue-300">In Transit</div>
+              <div className="text-3xl font-black mt-1 text-blue-800 dark:text-blue-200">{taskCounts.accepted}</div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-dark-900 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-dark-800">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <h3 className="font-bold dark:text-white flex items-center gap-2"><Truck size={18} /> Pickups For My Store</h3>
+            </div>
+
+            {tasksLoading ? (
+              <div className="py-16 text-center space-y-4">
+                <div className="flex justify-center">
+                  <RefreshCw className="text-eco-500 animate-spin" size={40} />
+                </div>
+                <div className="text-gray-500 font-medium animate-pulse">Loading pickup tasks...</div>
+              </div>
+            ) : storeTasks.length === 0 ? (
+              <div className="py-10 text-center text-gray-500">No pickup tasks yet.</div>
+            ) : (
+              <div className="space-y-3">
+                {[...storeTasks].sort((a, b) => {
+                  // Most recently updated first
+                  const tA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+                  const tB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+                  return tB - tA;
+                }).map((task) => (
+                  <div key={task.id} className="p-4 rounded-2xl border border-gray-200 dark:border-dark-800 bg-gray-50 dark:bg-dark-950/30">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-gray-900 dark:text-white">{task.storeName}</span>
+                          <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-md ${statusBadge(task.status)}`}>{String(task.status).toUpperCase()}</span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1 space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="inline-flex items-center gap-1"><Truck size={14} /> {task.weight}</span>
+                            {task.orderId && <span className="font-mono text-gray-400">order:{task.orderId}</span>}
+                          </div>
+                          <div className="text-gray-500">Drop: <span className="font-semibold text-gray-700 dark:text-gray-200">{task.charityName}</span></div>
+                          <div className="text-gray-500">Items: <span className="text-gray-700 dark:text-gray-200">{task.itemsSummary}</span></div>
+                        </div>
+                      </div>
+
+                        {task.status === 'ready' && (
+                          <div className="text-xs font-bold text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/20 px-3 py-2 rounded-xl border border-violet-100 dark:border-violet-800 flex items-center gap-2">
+                             <Clock size={14} /> Waiting for delivery partner to pickup
+                          </div>
+                        )}
+                        {task.status === 'accepted' && (
+                          <div className="text-xs font-bold text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 px-3 py-2 rounded-xl border border-cyan-100 dark:border-cyan-800 flex items-center gap-2">
+                             <Truck size={14} /> {task.volunteerName || 'Volunteer'} is coming to pick up the order
+                          </div>
+                        )}
+                        {task.status === 'picked_up' && (
+                          <div className="text-xs font-bold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-900/20 px-3 py-2 rounded-xl border border-sky-100 dark:border-sky-800 flex items-center gap-2">
+                             <BadgeCheck size={14} /> Order Picked Up
+                          </div>
+                        )}
+                        
+                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                          {task.status === 'pending' && (
+                            <button
+                              onClick={() => handleMarkReceived(task.id)}
+                              className="px-3 py-2 rounded-xl text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
+                            >
+                              <BadgeCheck size={16} /> Accept Order
+                            </button>
+                          )}
+                          {task.status === 'received' && (
+                            <button
+                              onClick={() => handleMarkPacked(task.id)}
+                              className="px-3 py-2 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 flex items-center gap-2"
+                            >
+                              <BadgeCheck size={16} /> Mark Packed
+                            </button>
+                          )}
+                          {task.status === 'packed' && (
+                            <button
+                              onClick={() => handleMarkReady(task.id)}
+                              className="px-3 py-2 rounded-xl text-sm font-bold bg-violet-600 text-white hover:bg-violet-700 flex items-center gap-2"
+                            >
+                              <BadgeCheck size={16} /> Mark Ready
+                            </button>
+                          )}
+                          {(['pending', 'received', 'packed', 'ready'].includes(task.status)) && task.orderId && (
+                            <button
+                              onClick={() => handleCancelOrder(task.orderId as string)}
+                              className="px-3 py-2 rounded-xl text-sm font-bold bg-white dark:bg-dark-900 border border-gray-200 dark:border-dark-800 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 flex items-center gap-2"
+                            >
+                              <XCircle size={16} /> Cancel
+                            </button>
+                          )}
+                        </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <ModalShell open={!!restockTarget} onClose={() => setRestockTarget(null)} maxWidthClassName="max-w-md">
+        {restockTarget && (
+          <div className="space-y-6">
+            <ModalHeader
+              title="Adjust Inventory"
+              description={`Set the exact live stock level for ${restockTarget.title}.`}
+              eyebrow="Listing Controls"
+            />
+            <form onSubmit={handleRestockSubmit} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium mb-1 dark:text-gray-300">Item Name</label>
+                <label className={fieldLabelClassName}>Available Units</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={restockQty}
+                  onChange={(e) => setRestockQty(Number(e.target.value))}
+                  className={inputClassName}
+                />
+                <p className={helperTextClassName}>Use `0` to mark the listing as sold out without deleting it.</p>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button disabled={restockLoading} type="submit" className={primaryButtonClassName}>
+                  {restockLoading ? 'Saving...' : 'Update Stock'}
+                </button>
+                <button type="button" onClick={() => setRestockTarget(null)} className={secondaryButtonClassName}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+      </ModalShell>
+
+      <ModalShell
+        open={showAdd}
+        onClose={() => setShowAdd(false)}
+        maxWidthClassName="max-w-2xl"
+        panelClassName="max-h-[92vh]"
+        contentClassName="max-h-[92vh] overflow-y-auto p-6 sm:p-8"
+      >
+        <div className="space-y-6">
+          <ModalHeader
+            title="List New Surplus"
+            description="Create a polished listing with strong details, clear pricing, and better photo coverage."
+            eyebrow="New Listing"
+          />
+          <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className={fieldLabelClassName}>Item Name</label>
                 <div className="flex gap-2">
                   <input
                     required
-                    className="flex-1 border p-2 rounded dark:bg-dark-800 dark:border-dark-700 dark:text-white"
+                    className={inputClassName}
                     value={newItem.title}
                     onChange={(e) => setNewItem({ ...newItem, title: e.target.value })}
                     placeholder="e.g. Assorted Bagels"
                   />
-                  <button type="button" onClick={handleAiAnalysis} disabled={aiLoading || !newItem.title} className="bg-eco-100 text-eco-700 p-2 rounded hover:bg-eco-200" title="Auto-fill with AI">
+                  <button type="button" onClick={handleAiAnalysis} disabled={aiLoading || !newItem.title} className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-300" title="Auto-fill with AI">
                     {aiLoading ? '...' : <Camera size={20} />}
                   </button>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1 dark:text-gray-300">Description</label>
+                <label className={fieldLabelClassName}>Description</label>
                 <textarea
                   required
-                  rows={3}
-                  className="w-full border p-2 rounded dark:bg-dark-800 dark:border-dark-700 dark:text-white"
+                  rows={4}
+                  className={textareaClassName}
                   value={newItem.description}
                   onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
                   placeholder="Describe item quality and quantity"
@@ -435,19 +954,19 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1 dark:text-gray-300">Item Image</label>
-                <div className={`border border-dashed rounded-lg p-3 ${highlightImage ? 'border-eco-500 bg-eco-50 dark:bg-eco-900/20 ring-2 ring-eco-500 transition-all' : 'border-gray-300 dark:border-dark-700'}`}>
-                  <div className="flex gap-4 items-center justify-center">
-                    <label className="flex items-center justify-center gap-2 cursor-pointer text-sm text-gray-600 dark:text-gray-300 hover:text-eco-600 transition-colors">
+                <label className={fieldLabelClassName}>Item Image</label>
+                <div className={`rounded-[24px] border border-dashed p-4 ${highlightImage ? 'border-emerald-500 bg-emerald-50 ring-4 ring-emerald-500/15 transition-all dark:bg-emerald-950/30' : 'border-slate-300 bg-slate-50/80 dark:border-dark-700 dark:bg-dark-950/60'}`}>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-center">
+                    <label className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 transition-colors hover:border-emerald-300 hover:text-emerald-700 dark:border-dark-700 dark:bg-dark-800 dark:text-gray-300 dark:hover:text-emerald-300">
                       <Upload size={16} /> Upload Photo
                       <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files?.[0])} />
                     </label>
-                    <span className="text-gray-300 dark:text-gray-600">|</span>
+                    <span className="hidden text-gray-300 dark:text-gray-600 sm:block">or</span>
                     <button 
                       type="button"
                       onClick={generateImage}
                       disabled={isGeneratingImg || !newItem.title}
-                      className="flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-300 hover:text-eco-600 disabled:opacity-50 transition-colors"
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 transition-colors hover:border-emerald-300 hover:text-emerald-700 disabled:opacity-50 dark:border-dark-700 dark:bg-dark-800 dark:text-gray-300 dark:hover:text-emerald-300"
                     >
                       <Sparkles size={16} /> {isGeneratingImg ? 'Generating...' : 'Generate with AI'}
                     </button>
@@ -458,9 +977,9 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1 dark:text-gray-300">Category</label>
+                  <label className={fieldLabelClassName}>Category</label>
                   <select
-                    className="w-full border p-2 rounded dark:bg-dark-800 dark:border-dark-700 dark:text-white"
+                    className={selectClassName}
                     value={newItem.category}
                     onChange={(e) => setNewItem({ ...newItem, category: e.target.value as Item['category'] })}
                   >
@@ -471,11 +990,11 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1 dark:text-gray-300">Quantity</label>
+                  <label className={fieldLabelClassName}>Quantity</label>
                   <input
                     type="number"
                     min={1}
-                    className="w-full border p-2 rounded dark:bg-dark-800 dark:border-dark-700 dark:text-white"
+                    className={inputClassName}
                     value={newItem.quantity || 1}
                     onChange={(e) => setNewItem({ ...newItem, quantity: +e.target.value })}
                   />
@@ -484,12 +1003,12 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1 dark:text-gray-300">Original Price (INR)</label>
-                  <input type="number" className="w-full border p-2 rounded dark:bg-dark-800 dark:border-dark-700 dark:text-white" value={newItem.originalPrice || 0} onChange={(e) => setNewItem({ ...newItem, originalPrice: +e.target.value })} />
+                  <label className={fieldLabelClassName}>Original Price (INR)</label>
+                  <input type="number" className={inputClassName} value={newItem.originalPrice || 0} onChange={(e) => setNewItem({ ...newItem, originalPrice: +e.target.value })} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1 dark:text-gray-300">Discount Price (INR)</label>
-                  <input type="number" className="w-full border p-2 rounded dark:bg-dark-800 dark:border-dark-700 dark:text-white" value={newItem.discountPrice || 0} onChange={(e) => setNewItem({ ...newItem, discountPrice: +e.target.value })} disabled={!!newItem.forCharity} />
+                  <label className={fieldLabelClassName}>Discount Price (INR)</label>
+                  <input type="number" className={`${inputClassName} disabled:opacity-60`} value={newItem.discountPrice || 0} onChange={(e) => setNewItem({ ...newItem, discountPrice: +e.target.value })} disabled={!!newItem.forCharity} />
                 </div>
               </div>
 
@@ -515,137 +1034,168 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
                 </div>
               </div>
 
-              <button disabled={submitting} type="submit" className="w-full bg-eco-600 text-white py-2 rounded-lg font-bold hover:bg-eco-700 disabled:opacity-70">
+              <button disabled={submitting} type="submit" className={`w-full ${primaryButtonClassName}`}>
                 {submitting ? 'Adding...' : 'Add Surplus Item'}
               </button>
-              <button type="button" onClick={() => setShowAdd(false)} className="w-full text-gray-500 py-2 hover:text-gray-700">Cancel</button>
+              <button type="button" onClick={() => setShowAdd(false)} className={`w-full ${secondaryButtonClassName}`}>Cancel</button>
             </form>
           </div>
-        </div>
-      )}
+      </ModalShell>
 
-      {priceTarget && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-dark-900 rounded-2xl p-6 w-full max-w-sm border border-gray-100 dark:border-dark-700">
-            <h4 className="text-xl font-bold dark:text-white mb-2">Change Price</h4>
-            <p className="text-sm text-gray-500 mb-4">
-              Listing: <span className="font-semibold">{priceTarget.title}</span>
-            </p>
-            <form onSubmit={handlePriceUpdate} className="space-y-4">
+      <ModalShell open={!!priceTarget} onClose={() => setPriceTarget(null)} maxWidthClassName="max-w-md">
+        {priceTarget && (
+          <div className="space-y-6">
+            <ModalHeader
+              title="Update Pricing"
+              description={`Refine how ${priceTarget.title} appears to customers and charity partners.`}
+              eyebrow="Pricing"
+            />
+            <form onSubmit={handlePriceUpdate} className="space-y-5">
               <div>
-                <label className="block text-sm mb-1 dark:text-gray-300">Original Price (INR)</label>
+                <label className={fieldLabelClassName}>Original Price (INR)</label>
                 <input
                   type="number"
                   min={0}
                   value={priceForm.originalPrice}
                   onChange={(e) => setPriceForm((prev) => ({ ...prev, originalPrice: Number(e.target.value) }))}
-                  className="w-full border p-2 rounded dark:bg-dark-800 dark:border-dark-700 dark:text-white"
+                  className={inputClassName}
                 />
               </div>
               <div>
-                <label className="block text-sm mb-1 dark:text-gray-300">Discount Price (INR)</label>
+                <label className={fieldLabelClassName}>Discount Price (INR)</label>
                 <input
                   type="number"
                   min={0}
                   disabled={!!priceTarget.forCharity}
                   value={priceTarget.forCharity ? 0 : priceForm.discountPrice}
                   onChange={(e) => setPriceForm((prev) => ({ ...prev, discountPrice: Number(e.target.value) }))}
-                  className="w-full border p-2 rounded dark:bg-dark-800 dark:border-dark-700 dark:text-white disabled:opacity-60"
+                  className={`${inputClassName} disabled:opacity-60`}
                 />
                 {priceTarget.forCharity && (
-                  <p className="text-xs text-green-600 mt-1">Charity listings are always free.</p>
+                  <p className={helperTextClassName}>Charity listings stay free to keep donation claims frictionless.</p>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  disabled={priceSaving}
-                  type="submit"
-                  className="bg-eco-600 text-white py-2 rounded-lg font-semibold hover:bg-eco-700 disabled:opacity-70"
-                >
-                  {priceSaving ? 'Saving...' : 'Save'}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button disabled={priceSaving} type="submit" className={primaryButtonClassName}>
+                  {priceSaving ? 'Saving...' : 'Save Changes'}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setPriceTarget(null)}
-                  className="bg-gray-100 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-200"
-                >
+                <button type="button" onClick={() => setPriceTarget(null)} className={secondaryButtonClassName}>
                   Cancel
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        )}
+      </ModalShell>
+
+      {confirmConfig && (
+        <ConfirmPopup
+          open={!!confirmConfig}
+          title={confirmConfig.title}
+          message={confirmConfig.message}
+          isDestructive={confirmConfig.isDestructive}
+          onConfirm={confirmConfig.onConfirm}
+          onCancel={() => setConfirmConfig(null)}
+        />
       )}
 
-      {errorDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white dark:bg-dark-900 rounded-2xl p-6 w-full max-w-sm border border-red-100 dark:border-red-900 shadow-xl">
-            <div className="flex items-center gap-3 text-red-600 dark:text-red-400 mb-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-              <h4 className="text-xl font-bold">{errorDialog.title}</h4>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">{errorDialog.message}</p>
-            <div className="grid grid-cols-2 gap-3">
-              <button 
-                onClick={() => setErrorDialog(null)} 
-                className="bg-eco-600 text-white py-2 rounded-lg font-semibold hover:bg-eco-700 transition"
-              >
-                Edit Details
-              </button>
-              <button 
-                onClick={() => { setErrorDialog(null); setShowAdd(false); }} 
-                className="bg-gray-100 dark:bg-dark-800 text-gray-700 dark:text-gray-300 py-2 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-dark-700 transition"
-              >
-                Close
-              </button>
-            </div>
+      <ModalShell open={imagePromptOpen} onClose={() => setImagePromptOpen(false)} maxWidthClassName="max-w-md">
+        <div className="space-y-6">
+          <ModalHeader
+            title="Add a Listing Image?"
+            description="A clear photo makes surplus items feel trustworthy and helps reservations convert faster."
+            icon={<Camera size={24} />}
+            tone="warning"
+            eyebrow="Recommended"
+          />
+          <div className="grid grid-cols-1 gap-3">
+            <button
+              onClick={() => {
+                setImagePromptOpen(false);
+                setHighlightImage(true);
+                setTimeout(() => setHighlightImage(false), 3000);
+              }}
+              className={primaryButtonClassName}
+            >
+              Upload or Generate Image
+            </button>
+            <button
+              onClick={() => {
+                setImagePromptOpen(false);
+                handleSubmit(undefined, true);
+              }}
+              className={secondaryButtonClassName}
+            >
+              Continue Without Image
+            </button>
           </div>
         </div>
-      )}
+      </ModalShell>
 
-      {imagePromptOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white dark:bg-dark-900 rounded-2xl p-6 w-full max-w-sm border border-orange-100 dark:border-orange-900 shadow-xl">
-            <div className="flex items-center gap-3 text-orange-600 dark:text-orange-400 mb-2">
-              <Camera size={24} />
-              <h4 className="text-xl font-bold">Missing Image</h4>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
-              You haven't added a picture. Uploading an image helps users know what the product looks like and increases reservations!
-            </p>
-            <div className="grid grid-cols-1 gap-3">
-              <button 
-                onClick={() => { 
-                  setImagePromptOpen(false); 
-                  setHighlightImage(true);
-                  setTimeout(() => setHighlightImage(false), 3000);
-                }} 
-                className="bg-eco-600 text-white py-2 rounded-lg font-semibold hover:bg-eco-700 transition"
-              >
-                Upload / Generate Image
-              </button>
-              <button 
-                onClick={() => { 
-                  setImagePromptOpen(false); 
-                  handleSubmit(undefined, true); 
-                }} 
-                className="bg-gray-100 dark:bg-dark-800 text-gray-700 dark:text-gray-300 py-2 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-dark-700 transition"
-              >
-                Add Without Upload
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <SuccessPopup open={successOpen} title={successTitle} message={successMessage} onClose={() => setSuccessOpen(false)} />
+          <AlertPopup open={alertOpen} type={alertConfig.type} title={alertConfig.title} message={alertConfig.message} onClose={() => setAlertOpen(false)} />
+          <SuccessPopup open={successOpen} title={successTitle} message={successMessage} onClose={() => setSuccessOpen(false)} />
     </div>
   );
 };
 
 // Orders accordion component - tracks which order is expanded
-const OrdersAccordion: React.FC<{ reservations: Reservation[] }> = ({ reservations }) => {
+const OrdersAccordion: React.FC<{ reservations: Reservation[]; viewer?: User; loading?: boolean }> = ({ reservations, viewer, loading }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [tasksByOrderId, setTasksByOrderId] = useState<Record<string, Task[]>>({});
+  const [tasksLoadingByOrderId, setTasksLoadingByOrderId] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const handleTaskUpdate = (task: Task) => {
+      if (!task?.orderId) return;
+      setTasksByOrderId((prev) => {
+        const existing = prev[task.orderId as string];
+        if (!existing) return prev;
+        const next = existing.some((t) => t.id === task.id)
+          ? existing.map((t) => (t.id === task.id ? task : t))
+          : [task, ...existing];
+        return { ...prev, [task.orderId as string]: next };
+      });
+    };
+    socket.on('task-updated', handleTaskUpdate as any);
+    return () => {
+      socket.off('task-updated', handleTaskUpdate as any);
+    };
+  }, []);
+
+  const ensureOrderTasksLoaded = async (orderId: string) => {
+    if (!viewer) return;
+    if (tasksByOrderId[orderId]) return;
+    setTasksLoadingByOrderId((prev) => ({ ...prev, [orderId]: true }));
+    try {
+      const tasks = await api.getOrderTasks(orderId);
+      setTasksByOrderId((prev) => ({ ...prev, [orderId]: tasks }));
+    } catch {
+      setTasksByOrderId((prev) => ({ ...prev, [orderId]: [] }));
+    } finally {
+      setTasksLoadingByOrderId((prev) => ({ ...prev, [orderId]: false }));
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="bg-white dark:bg-dark-900 rounded-2xl border border-gray-200 dark:border-dark-800 p-5 animate-pulse">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-4">
+                <div className="h-10 w-10 bg-gray-200 dark:bg-dark-800 rounded-full" />
+                <div className="space-y-2">
+                  <div className="h-4 w-24 bg-gray-200 dark:bg-dark-800 rounded" />
+                  <div className="h-3 w-32 bg-gray-100 dark:bg-dark-800/50 rounded" />
+                </div>
+              </div>
+              <div className="h-6 w-16 bg-gray-200 dark:bg-dark-800 rounded" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   if (reservations.length === 0) {
     return (
@@ -666,11 +1216,40 @@ const OrdersAccordion: React.FC<{ reservations: Reservation[] }> = ({ reservatio
     <div className="space-y-3">
       {reservations.map((res) => {
         const isExpanded = expandedId === res.id;
-        const statusStep = res.status === 'completed' ? 3 : res.status === 'accepted' ? 2 : 1;
+        const currentStatus = res.status === 'cancelled' ? (res.lastStatus || 'pending') : res.status;
+        const orderTasks = tasksByOrderId[res.id] || [];
+        const taskStatuses = orderTasks.map(t => t.status);
+        
+        // Find the most advanced status among all tasks
+        const getStep = (s: string) => 
+          s === 'completed' ? 8 : 
+          s === 'picked_up' ? 7 :
+          s === 'accepted' ? 6 : 
+          s === 'ready' ? 5 : 
+          s === 'packed' ? 4 : 
+          s === 'received' ? 3 : 
+          s === 'pending' ? 2 : 1;
+
+        let statusStep = Math.max(1, ...taskStatuses.map(getStep));
+        
+        // If it's cancelled, we want to know how far it got before cancellation
+        // If all tasks are cancelled, statusStep will be 1 (from getStep('cancelled'))
+        // So we fall back to res.lastStatus or 1
+        if (res.status === 'cancelled' && statusStep <= 2) {
+           statusStep = getStep(res.lastStatus || 'pending');
+        } else if (res.status !== 'cancelled') {
+           // Standard case: statusStep is already calculated from tasks
+        }
+
         const statusConfig: Record<string, { label: string; badge: string; bar: string }> = {
           pending:   { label: 'Order Received', badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300', bar: 'bg-amber-400' },
-          accepted:  { label: 'On The Way',      badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',    bar: 'bg-blue-500'  },
+          received:  { label: 'Confirmed',      badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300', bar: 'bg-blue-400' },
+          packed:    { label: 'Packed',         badge: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300', bar: 'bg-indigo-400' },
+          ready:     { label: 'Ready',          badge: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300', bar: 'bg-violet-500' },
+          accepted:  { label: 'On The Way',      badge: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300',    bar: 'bg-cyan-500'  },
+          picked_up: { label: 'Out for Delivery',badge: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300', bar: 'bg-orange-500' },
           completed: { label: 'Delivered',       badge: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300', bar: 'bg-green-500' },
+          cancelled: { label: 'Cancelled',       badge: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',         bar: 'bg-red-500'  },
         };
         const sc = statusConfig[res.status] || { label: res.status, badge: 'bg-gray-100 text-gray-600', bar: 'bg-gray-400' };
 
@@ -686,15 +1265,34 @@ const OrdersAccordion: React.FC<{ reservations: Reservation[] }> = ({ reservatio
         const timeStr = orderDate ? orderDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
 
         const steps = [
-          { label: 'Order Received',    desc: 'Your order was placed successfully.', done: statusStep >= 1 },
-          { label: 'Partner Picked Up', desc: 'A volunteer is on the way.',           done: statusStep >= 2 },
-          { label: 'Delivered',         desc: 'Enjoy your rescued food!',             done: statusStep >= 3 },
+          { label: 'Order Placed',   desc: 'Your request is in the system.',     done: statusStep >= 1 },
+          { label: 'Store Received', desc: 'Retailer is preparing items.',       done: statusStep >= 3 },
+          { label: 'Packed & Ready', desc: 'Items are bagged for pickup.',       done: statusStep >= 4 },
+          { label: 'Partner Assigned', desc: 'A volunteer is coming to pick up.', done: statusStep >= 6 },
+          { label: 'Picked Up',      desc: 'Order is on the way to you.',        done: statusStep >= 7 },
+          { label: 'Delivered',      desc: 'Enjoy your rescued food!',           done: statusStep >= 8 },
         ];
+
+        if (res.status === 'cancelled') {
+          // Find where the progress stopped and insert "Cancelled" there
+          const lastDoneIndex = [...steps].reverse().findIndex(s => s.done);
+          const insertIndex = lastDoneIndex === -1 ? 0 : steps.length - lastDoneIndex;
+          steps.splice(insertIndex, 0, { 
+            label: 'Order Cancelled', 
+            desc: 'This order was cancelled by the retailer.', 
+            done: true,
+            isError: true 
+          });
+        }
 
         return (
           <div key={res.id} className="bg-white dark:bg-dark-900 rounded-2xl border border-gray-200 dark:border-dark-800 shadow-sm overflow-hidden">
             <button
-              onClick={() => setExpandedId(isExpanded ? null : res.id)}
+              onClick={() => {
+                const next = isExpanded ? null : res.id;
+                setExpandedId(next);
+                if (next) ensureOrderTasksLoaded(next);
+              }}
               className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 dark:hover:bg-dark-800/50 transition-colors"
             >
               <div className="flex items-center gap-3 min-w-0">
@@ -702,6 +1300,11 @@ const OrdersAccordion: React.FC<{ reservations: Reservation[] }> = ({ reservatio
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono font-black text-gray-900 dark:text-white text-base">#{res.code}</span>
+                    {res.deliveryOtp && res.status !== 'cancelled' && (
+                      <span className="ml-2 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-md font-bold border border-yellow-200">
+                        Delivery OTP: {res.deliveryOtp}
+                      </span>
+                    )}
                     <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-md ${sc.badge}`}>{sc.label}</span>
                   </div>
                   <p className="text-xs text-gray-400 mt-0.5">{dateStr} · {timeStr} &nbsp;·&nbsp; {res.items?.length || 0} item(s)</p>
@@ -719,6 +1322,60 @@ const OrdersAccordion: React.FC<{ reservations: Reservation[] }> = ({ reservatio
                   {Object.entries(storeGroups).map(([storeName, storeItems]: [string, any]) => (
                     <div key={storeName}>
                       <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">📍 {storeName}</p>
+                      {viewer && (
+                        <div className="mb-2">
+                          {tasksLoadingByOrderId[res.id] ? (
+                            <div className="text-xs text-gray-400">Loading pickup status...</div>
+                          ) : (
+                            (() => {
+                              const orderTasks = tasksByOrderId[res.id] || [];
+                              const storeId = storeItems?.[0]?.storeId;
+                              const matchingTask =
+                                orderTasks.find((t) => storeId && t.storeId === storeId) ||
+                                orderTasks.find((t) => t.storeName === storeName);
+                              const s = matchingTask?.status || 'pending';
+                                const labelMap: Record<string, string> = {
+                                  pending: 'Order sent to store',
+                                  received: 'Order confirmed by store',
+                                  packed: 'Order packed',
+                                  ready: 'Waiting for delivery partner to pickup',
+                                  accepted: `${matchingTask?.volunteerName || 'Partner'} is coming to pick up the order`,
+                                  picked_up: 'He is on the way. Give delivery OTP at the time of delivery.',
+                                  completed: 'Delivered',
+                                  cancelled: 'Cancelled by store',
+                                };
+                              return (
+                                <div className="p-3 rounded-xl bg-white dark:bg-dark-900 border border-gray-200 dark:border-dark-800">
+                                  <div className="flex items-center justify-between gap-3">
+                                    <div className="text-xs font-bold text-gray-700 dark:text-gray-200">
+                                      {['ready', 'accepted', 'picked_up', 'completed'].includes(s) ? 'Delivery Side Progress' : 'Retailer Side Progress'}:{' '}
+                                      <span className="text-eco-600 dark:text-eco-400">
+                                        {labelMap[s] || String(s)}
+                                      </span>
+                                    </div>
+                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${statusBadge(s)}`}>
+                                      {String(s).toUpperCase()}
+                                    </span>
+                                  </div>
+                                  {matchingTask?.volunteerName && (['accepted', 'picked_up', 'completed'].includes(s)) && (
+                                    <div className="mt-2 text-xs text-gray-600 dark:text-gray-300 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-900/30">
+                                      <div className="flex items-center gap-2 mb-1">
+                                         <Truck size={12} className="text-blue-500" />
+                                         <span className="font-bold text-blue-700 dark:text-blue-300">Delivery Partner Details</span>
+                                      </div>
+                                      <div className="ml-5">
+                                        <p>Name: <span className="font-bold text-gray-900 dark:text-white">{matchingTask.volunteerName}</span></p>
+                                        {matchingTask.volunteerVehicleType && <p>Vehicle: <span className="font-bold text-gray-900 dark:text-white">{matchingTask.volunteerVehicleType}</span></p>}
+                                        {matchingTask.volunteerPhone && <p>Phone: <span className="font-bold text-gray-900 dark:text-white">{matchingTask.volunteerPhone}</span></p>}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()
+                          )}
+                        </div>
+                      )}
                       <div className="space-y-2">
                         {storeItems.map((item: any, idx: number) => (
                           <div key={idx} className="flex items-center gap-3 bg-gray-50 dark:bg-dark-800 rounded-xl p-3">
@@ -745,12 +1402,12 @@ const OrdersAccordion: React.FC<{ reservations: Reservation[] }> = ({ reservatio
                       <div key={i} className={`relative flex items-start gap-3 ${i < steps.length - 1 ? 'pb-5' : ''}`}>
                         <div className={`absolute -left-5 mt-1 h-3 w-3 rounded-full border-2 z-10 ${
                           step.done
-                            ? `${sc.bar} border-white dark:border-dark-900`
+                            ? `${(step as any).isError ? 'bg-red-500' : sc.bar} border-white dark:border-dark-900 shadow-[0_0_8px_rgba(0,0,0,0.1)]`
                             : 'bg-gray-200 dark:bg-dark-700 border-white dark:border-dark-900'
                         }`} />
                         <div>
-                          <p className={`text-sm font-bold leading-tight ${step.done ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-600'}`}>{step.label}</p>
-                          <p className={`text-xs mt-0.5 ${step.done ? 'text-gray-500 dark:text-gray-400' : 'text-gray-300 dark:text-gray-700'}`}>{step.desc}</p>
+                          <p className={`text-sm font-bold leading-tight ${step.done ? ((step as any).isError ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white') : 'text-gray-400 dark:text-gray-600'}`}>{step.label}</p>
+                          <p className={`text-xs mt-0.5 ${step.done ? ((step as any).isError ? 'text-red-400 dark:text-red-500/60' : 'text-gray-500 dark:text-gray-400') : 'text-gray-300 dark:text-gray-700'}`}>{step.desc}</p>
                         </div>
                       </div>
                     ))}
@@ -767,35 +1424,66 @@ const OrdersAccordion: React.FC<{ reservations: Reservation[] }> = ({ reservatio
 
 const ConsumerDashboard: React.FC<{ user: User }> = ({ user }) => {
   const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [myTasks, setMyTasks] = useState<Task[]>([]);
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = (searchParams.get('tab') === 'orders' ? 'orders' : 'overview') as 'overview' | 'orders';
+  const activeTab = (searchParams.get('tab') || 'overview') as 'overview' | 'orders';
 
-  const fetchOrders = () => {
-    api.getUserReservations(user.id).then(setReservations);
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<{ type: PopupType; title: string; message: string }>({ type: 'info', title: '', message: '' });
+
+  const openAlert = (type: PopupType, title: string, message: string) => {
+    setAlertConfig({ type, title, message });
+    setAlertOpen(true);
   };
 
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
-    fetchOrders();
+    setIsLoading(true);
+    Promise.all([
+      api.getUserReservations(user.id),
+      api.getMyTasks()
+    ]).then(([orders, tasks]) => {
+      setReservations(orders);
+      setMyTasks(tasks);
+      setIsLoading(false);
+    }).catch(() => setIsLoading(false));
 
     const handleOrderUpdate = (updatedOrder: Reservation) => {
       if (updatedOrder.userId === user.id) {
-        setReservations((prev) =>
-          prev.map((r) => (r.id === updatedOrder.id ? { ...r, status: updatedOrder.status } : r))
-        );
+        setReservations((prev) => {
+          const exists = prev.find((r) => r.id === updatedOrder.id);
+          if (exists) {
+            return prev.map((r) => (r.id === updatedOrder.id ? { ...r, ...updatedOrder } : r));
+          } else {
+            return [updatedOrder, ...prev];
+          }
+        });
       }
     };
 
+    const handleTaskUpdate = (task: Task) => {
+      if (!task?.orderId) return;
+      setMyTasks((prev) => {
+        const existing = prev.find((t) => t.id === task.id);
+        if (!existing) return [task, ...prev];
+        return prev.map((t) => (t.id === task.id ? task : t));
+      });
+    };
+
     socket.on('order-updated', handleOrderUpdate);
+    socket.on('task-updated', handleTaskUpdate as any);
 
     return () => {
       socket.off('order-updated', handleOrderUpdate);
+      socket.off('task-updated', handleTaskUpdate as any);
     };
   }, [user.id]);
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-8">
-        <h2 className="text-2xl font-bold dark:text-white">Welcome back, {user.name}! 👋</h2>
+        <h2 className="text-2xl font-bold dark:text-white">Welcome back, {user.name}! {'\uD83D\uDC4B'}</h2>
         <p className="text-gray-500 dark:text-gray-400 mt-1">Here's a summary of your eco journey.</p>
       </div>
 
@@ -888,8 +1576,10 @@ const ConsumerDashboard: React.FC<{ user: User }> = ({ user }) => {
 
       {/* Your Orders Tab */}
       {activeTab === 'orders' && (
-        <OrdersAccordion reservations={reservations} />
+        <OrdersAccordion reservations={reservations} viewer={user} loading={isLoading} />
       )}
+
+      <AlertPopup open={alertOpen} type={alertConfig.type} title={alertConfig.title} message={alertConfig.message} onClose={() => setAlertOpen(false)} />
     </div>
   );
 };
@@ -900,9 +1590,20 @@ const ConsumerDashboard: React.FC<{ user: User }> = ({ user }) => {
 const CharityDashboard: React.FC<{ user: User }> = ({ user }) => {
   const [donations, setDonations] = useState<Item[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [myTasks, setMyTasks] = useState<Task[]>([]);
   const [successOpen, setSuccessOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = (searchParams.get('tab') === 'orders' ? 'orders' : 'overview') as 'overview' | 'orders';
+  const activeTab = (searchParams.get('tab') || 'overview') as 'overview' | 'orders' | 'pickups';
+
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<{ type: PopupType; title: string; message: string }>({ type: 'info', title: '', message: '' });
+
+  const openAlert = (type: PopupType, title: string, message: string) => {
+    setAlertConfig({ type, title, message });
+    setAlertOpen(true);
+  };
+
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchDonations = async () => {
     const allItems = await api.getItems();
@@ -910,25 +1611,50 @@ const CharityDashboard: React.FC<{ user: User }> = ({ user }) => {
   };
 
   const fetchOrders = () => {
-    api.getUserReservations(user.id).then(setReservations);
+    api.getUserReservations(user.id).then((res) => {
+      setReservations(res);
+      setIsLoading(false);
+    }).catch(() => setIsLoading(false));
+  };
+
+  const fetchMyTasks = () => {
+    api.getMyTasks().then(setMyTasks).catch(() => setMyTasks([]));
   };
 
   useEffect(() => {
+    setIsLoading(true);
     fetchDonations();
     fetchOrders();
+    fetchMyTasks();
 
     const handleOrderUpdate = (updatedOrder: Reservation) => {
       if (updatedOrder.userId === user.id) {
-        setReservations((prev) =>
-          prev.map((r) => (r.id === updatedOrder.id ? { ...r, status: updatedOrder.status } : r))
-        );
+        setReservations((prev) => {
+          const exists = prev.find((r) => r.id === updatedOrder.id);
+          if (exists) {
+            return prev.map((r) => (r.id === updatedOrder.id ? { ...r, ...updatedOrder } : r));
+          } else {
+            return [updatedOrder, ...prev];
+          }
+        });
       }
     };
 
+    const handleTaskUpdate = (task: Task) => {
+      if (!task?.orderId) return;
+      setMyTasks((prev) => {
+        const existing = prev.find((t) => t.id === task.id);
+        if (!existing) return [task, ...prev];
+        return prev.map((t) => (t.id === task.id ? task : t));
+      });
+    };
+
     socket.on('order-updated', handleOrderUpdate);
+    socket.on('task-updated', handleTaskUpdate as any);
 
     return () => {
       socket.off('order-updated', handleOrderUpdate);
+      socket.off('task-updated', handleTaskUpdate as any);
     };
   }, [user.id]);
 
@@ -939,14 +1665,14 @@ const CharityDashboard: React.FC<{ user: User }> = ({ user }) => {
       fetchDonations();
       fetchOrders();
     } catch (error: any) {
-      alert(error?.message || 'Failed to claim donation');
+      openAlert('error', 'Claim Failed', error?.message || 'Failed to claim donation. Please try again later.');
     }
   };
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-8">
-        <h2 className="text-2xl font-bold dark:text-white">Charity Dashboard 👋</h2>
+        <h2 className="text-2xl font-bold dark:text-white">Charity Dashboard {'\uD83D\uDC4B'}</h2>
         <p className="text-gray-500 dark:text-gray-400 mt-1">Claim free surplus food and track your deliveries.</p>
       </div>
 
@@ -1006,9 +1732,10 @@ const CharityDashboard: React.FC<{ user: User }> = ({ user }) => {
       )}
 
       {activeTab === 'orders' && (
-        <OrdersAccordion reservations={reservations} />
+        <OrdersAccordion reservations={reservations} viewer={user} loading={isLoading} />
       )}
 
+      <AlertPopup open={alertOpen} type={alertConfig.type} title={alertConfig.title} message={alertConfig.message} onClose={() => setAlertOpen(false)} />
       <SuccessPopup open={successOpen} title="Donation Claimed" message="Donation claimed successfully. Volunteer delivery has been requested." onClose={() => setSuccessOpen(false)} />
     </div>
   );
@@ -1018,6 +1745,17 @@ const VolunteerDashboard: React.FC<{ user: User }> = ({ user }) => {
   const [isAvailable, setIsAvailable] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [successOpen, setSuccessOpen] = useState(false);
+  const [deliveryConfirmTarget, setDeliveryConfirmTarget] = useState<{ taskId: string; code: string } | null>(null);
+  const [deliveryConfirmLoading, setDeliveryConfirmLoading] = useState(false);
+  const deliveryOtpInputRef = useRef<HTMLInputElement | null>(null);
+  
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<{ type: PopupType; title: string; message: string }>({ type: 'info', title: '', message: '' });
+
+  const openAlert = (type: PopupType, title: string, message: string) => {
+    setAlertConfig({ type, title, message });
+    setAlertOpen(true);
+  };
   useEffect(() => {
     loadTasks();
   }, []);
@@ -1029,15 +1767,45 @@ const VolunteerDashboard: React.FC<{ user: User }> = ({ user }) => {
       setTasks([]);
     }
   };
+  const handleUpdateTaskStatus = async (taskId: string, status: Task['status']) => {
+    try {
+      await api.updateTaskStatus(taskId, status);
+      loadTasks();
+      if (status === 'picked_up') {
+        openAlert('success', 'Order Picked Up', 'You have successfully picked up the order. Now head to the delivery location!');
+      } else {
+        setSuccessOpen(true);
+      }
+    } catch (err: any) {
+      openAlert('error', 'Update Failed', err.message || 'Failed to update task status.');
+    }
+  };
+
   const handleAccept = async (id: string) => {
-    await api.updateTaskStatus(id, 'accepted');
-    loadTasks();
+    try {
+      await api.updateTaskStatus(id, 'accepted');
+      loadTasks();
+    } catch (err: any) {
+      openAlert('error', 'Acceptance Failed', err.message || 'Could not accept this task.');
+    }
   };
-  const handleComplete = async (id: string) => {
-    await api.updateTaskStatus(id, 'completed');
-    setSuccessOpen(true);
-    loadTasks();
+  
+  const handleDeliveryConfirm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!deliveryConfirmTarget) return;
+    setDeliveryConfirmLoading(true);
+    try {
+      await api.deliverTask(deliveryConfirmTarget.taskId, deliveryConfirmTarget.code);
+      setDeliveryConfirmTarget(null);
+      setSuccessOpen(true);
+      loadTasks();
+    } catch (err: any) {
+      openAlert('error', 'Invalid OTP', err.message || 'The delivery code you entered is incorrect. Please verify with the customer.');
+    } finally {
+      setDeliveryConfirmLoading(false);
+    }
   };
+
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="flex justify-between items-center mb-8">
@@ -1063,11 +1831,14 @@ const VolunteerDashboard: React.FC<{ user: User }> = ({ user }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
             <h3 className="font-bold text-lg dark:text-white border-b pb-2">Available Pickups</h3>
-            {tasks.filter((t) => t.status === 'pending').length === 0 && <p className="text-gray-500">No tasks nearby.</p>}
-            {tasks.filter((t) => t.status === 'pending').map((task) => (
-              <div key={task.id} className="bg-white dark:bg-dark-900 p-5 rounded-xl shadow-sm border dark:border-dark-800">
+            {tasks.filter((t) => t.status === 'ready').length === 0 && <p className="text-gray-500">No tasks ready for pickup right now.</p>}
+            {tasks.filter((t) => t.status === 'ready').map((task) => (
+              <div key={task.id} className={`bg-white dark:bg-dark-900 p-5 rounded-xl shadow-sm border dark:border-dark-800 ${task.status === 'ready' ? 'ring-2 ring-violet-400/50' : ''}`}>
                 <div className="flex justify-between mb-2">
                   <span className="font-bold text-eco-600">{task.weight} Food Rescue</span>
+                  {task.status === 'ready' && (
+                    <span className="bg-violet-100 text-violet-700 text-xs px-2 py-1 rounded font-bold">READY</span>
+                  )}
                 </div>
                 <div className="space-y-3 mb-4 text-sm text-gray-700 dark:text-gray-300">
                   <div>
@@ -1080,8 +1851,19 @@ const VolunteerDashboard: React.FC<{ user: User }> = ({ user }) => {
                     <div className="font-semibold">{task.charityName}</div>
                     <div className="text-xs">{task.dropAddress}</div>
                   </div>
-                  <div className="bg-gray-50 dark:bg-dark-800 p-2 rounded text-xs">
-                    Content: {task.itemsSummary}
+                  <div className="bg-gray-50 dark:bg-dark-800 p-3 rounded-lg text-xs">
+                    <div className="font-bold mb-1 text-gray-500 uppercase tracking-wider">Order Contents:</div>
+                    {task.items && task.items.length > 0 ? (
+                      <ul className="list-disc list-inside space-y-1">
+                        {task.items.map((item, idx) => (
+                          <li key={idx} className="text-gray-700 dark:text-gray-300">
+                            {item.title} <span className="text-gray-400">({item.category})</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <span className="text-gray-600 dark:text-gray-400">{task.itemsSummary}</span>
+                    )}
                   </div>
                 </div>
                 <button onClick={() => handleAccept(task.id)} className="w-full bg-eco-600 text-white py-2 rounded-lg font-bold text-sm hover:bg-eco-700">Accept</button>
@@ -1091,25 +1873,128 @@ const VolunteerDashboard: React.FC<{ user: User }> = ({ user }) => {
 
           <div className="space-y-4">
             <h3 className="font-bold text-lg dark:text-white border-b pb-2">Your Active Tasks</h3>
-            {tasks.filter((t) => t.status === 'accepted').length === 0 && <p className="text-gray-500">No active deliveries.</p>}
-            {tasks.filter((t) => t.status === 'accepted').map((task) => (
-              <div key={task.id} className="bg-blue-50 dark:bg-blue-900/20 p-5 rounded-xl border border-blue-200 dark:border-blue-800">
+            {tasks.filter((t) => t.status === 'accepted' || t.status === 'picked_up').length === 0 && <p className="text-gray-500">No active deliveries.</p>}
+            {tasks.filter((t) => t.status === 'accepted' || t.status === 'picked_up').map((task) => (
+              <div key={task.id} className={`p-5 rounded-xl border ${task.status === 'picked_up' ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'}`}>
                 <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-bold dark:text-white">Current Delivery</h4>
-                  <span className="bg-blue-200 text-blue-800 text-xs px-2 py-1 rounded font-bold">IN PROGRESS</span>
+                  <h4 className="font-bold dark:text-white">{task.status === 'picked_up' ? 'In Transit' : 'On the way to pickup'}</h4>
+                  <span className={`text-xs px-2 py-1 rounded font-bold ${task.status === 'picked_up' ? 'bg-green-200 text-green-800' : 'bg-blue-200 text-blue-800'}`}>
+                    {task.status === 'picked_up' ? 'DELIVERING' : 'HEADING TO STORE'}
+                  </span>
                 </div>
-                <div className="mb-4 text-sm space-y-1">
+                <div className="mb-4 text-sm space-y-2">
+                  <p><strong>Store:</strong> {task.storeName}</p>
                   <p><strong>To:</strong> {task.charityName}</p>
                   <p><strong>Addr:</strong> {task.dropAddress}</p>
+                  
+                  <div className="bg-white/50 dark:bg-black/20 p-3 rounded-lg text-xs mt-3 border border-current opacity-80">
+                    <div className="font-bold mb-1 uppercase tracking-wider">Order Contents:</div>
+                    {task.items && task.items.length > 0 ? (
+                      <ul className="list-disc list-inside space-y-1">
+                        {task.items.map((item, idx) => (
+                          <li key={idx}>{item.title}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <span>{task.itemsSummary}</span>
+                    )}
+                  </div>
                 </div>
-                <button onClick={() => handleComplete(task.id)} className="w-full bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-700">
-                  Mark Delivered
-                </button>
+                
+                {task.status === 'accepted' ? (
+                  <button onClick={() => handleUpdateTaskStatus(task.id, 'picked_up')} className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700">
+                    Confirm Pickup (Mark Picked Up)
+                  </button>
+                ) : (
+                  <button onClick={() => setDeliveryConfirmTarget({ taskId: task.id, code: '' })} className="w-full bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-700">
+                    Submit OTP to Deliver
+                  </button>
+                )}
               </div>
             ))}
           </div>
         </div>
       )}
+
+      <ModalShell open={!!deliveryConfirmTarget} onClose={() => setDeliveryConfirmTarget(null)} maxWidthClassName="max-w-md">
+        {deliveryConfirmTarget && (
+          <div className="space-y-6">
+            <ModalHeader
+              title="Verify Delivery"
+              description="Ask the customer for the 4-digit delivery OTP shown in their order details."
+              icon={<BadgeCheck size={24} />}
+              tone="success"
+              eyebrow="Secure Handover"
+              align="center"
+            />
+
+            <form onSubmit={handleDeliveryConfirm} className="space-y-5">
+              <div className="space-y-3">
+                <label className={`${fieldLabelClassName} text-center`}>Delivery OTP</label>
+                <div
+                  className="relative"
+                  onClick={() => deliveryOtpInputRef.current?.focus()}
+                >
+                  <input
+                    ref={deliveryOtpInputRef}
+                    autoFocus
+                    required
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={4}
+                    className="absolute inset-0 opacity-0"
+                    value={deliveryConfirmTarget.code}
+                    onChange={(e) => setDeliveryConfirmTarget({ ...deliveryConfirmTarget, code: e.target.value.replace(/\D/g, '') })}
+                  />
+                  <div className="grid grid-cols-4 gap-3">
+                    {Array.from({ length: 4 }).map((_, index) => {
+                      const digit = deliveryConfirmTarget.code[index] || '';
+                      const isActive = deliveryConfirmTarget.code.length === index;
+                      return (
+                        <div
+                          key={index}
+                          className={`flex h-16 items-center justify-center rounded-2xl border text-2xl font-black shadow-sm transition-all ${
+                            digit
+                              ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300'
+                              : isActive
+                                ? 'border-emerald-400 bg-white text-slate-700 ring-4 ring-emerald-500/10 dark:bg-dark-800 dark:text-white'
+                                : 'border-slate-200 bg-slate-50 text-slate-300 dark:border-dark-700 dark:bg-dark-800 dark:text-gray-600'
+                          }`}
+                        >
+                          {digit || '0'}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <p className="text-center text-xs text-slate-500 dark:text-gray-400">
+                  Enter digits only. The code is verified before completion.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button
+                  disabled={deliveryConfirmLoading || deliveryConfirmTarget.code.length !== 4}
+                  type="submit"
+                  className={primaryButtonClassName}
+                >
+                  {deliveryConfirmLoading ? 'Confirming...' : 'Confirm Delivery'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeliveryConfirmTarget(null)}
+                  className={secondaryButtonClassName}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+      </ModalShell>
+
+      <AlertPopup open={alertOpen} type={alertConfig.type} title={alertConfig.title} message={alertConfig.message} onClose={() => setAlertOpen(false)} />
       <SuccessPopup open={successOpen} title="Order Delivered" message="Delivery marked as completed successfully." onClose={() => setSuccessOpen(false)} />
     </div>
   );

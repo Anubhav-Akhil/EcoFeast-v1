@@ -131,6 +131,6 @@ This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for d
 ---
 
 <p align="center">
-  Made with ❤️ for a Greener Planet
+  Made with ❤️ by Anubhav for a Greener Planet
 </p>
 

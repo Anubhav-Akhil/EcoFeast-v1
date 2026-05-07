@@ -12,10 +12,12 @@ import { Contact } from './pages/Contact';
 import { Impact } from './pages/Impact';
 import { api } from './services/api';
 import { User, Item, UserRole } from './types';
-import { X, Trash2, CheckCircle, Minus, Plus, Bell, Truck } from 'lucide-react';
+import { X, Trash2, CheckCircle, Minus, Plus, Bell, Truck, XCircle, BadgeCheck } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { socket } from './services/socket';
 import { useNotificationStore } from './services/notificationStore';
+import { AlertPopup, PopupType } from './components/AlertPopup';
+import { ModalHeader, ModalShell, primaryButtonClassName, secondaryButtonClassName } from './components/ui';
 
 interface CartEntry {
   item: Item;
@@ -32,6 +34,13 @@ const App: React.FC = () => {
   const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false);
   const [lastOrderCode, setLastOrderCode] = useState<string>('');
   const [marketplaceRefreshKey, setMarketplaceRefreshKey] = useState(0);
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<{ type: PopupType; title: string; message: string }>({ type: 'info', title: '', message: '' });
+
+  const openAlert = (type: PopupType, title: string, message: string) => {
+    setAlertConfig({ type, title, message });
+    setAlertOpen(true);
+  };
 
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -61,12 +70,23 @@ const App: React.FC = () => {
 
     const handleOrderUpdated = (order: any) => {
       if (user && order.userId === user.id) {
-        const msg = `Your order #${order.code} is now ${order.status.toUpperCase()}.`;
+        const statusTextMap: Record<string, string> = {
+          pending: 'Order confirmed & sent to store',
+          received: 'Retailer has acknowledged your order',
+          packed: 'Your food is packed and being prepared',
+          ready: 'Ready for pickup - Volunteer assigned',
+          accepted: 'Volunteer is on the way to store',
+          picked_up: 'Order picked up! Heading to you now',
+          completed: 'Delivered successfully!',
+          cancelled: 'Order Cancelled by Retailer',
+        };
+        const msg = `Order #${order.code}: ${statusTextMap[String(order.status)] || String(order.status).toUpperCase()}.`;
         
         addNotification({
           type: 'order_update',
           title: 'Order Status Updated',
           message: msg,
+          link: '/dashboard?tab=orders',
         });
 
         setOrderToast(order);
@@ -74,14 +94,45 @@ const App: React.FC = () => {
       }
     };
 
+    const handleNewOrderForStore = (payload: any) => {
+      if (!user || user.role !== 'retailer') return;
+      if (payload?.storeId !== user.id) return;
+
+      const msg = `Order received (#${payload.code}): ${payload.totalQty} item(s). Pickup ${payload.pickupStart || '--'}-${payload.pickupEnd || '--'}.`;
+      addNotification({
+        type: 'new_order',
+        title: 'New Order',
+        message: msg,
+        link: '/dashboard?tab=orders',
+      });
+    };
+
+    const handleTaskUpdatedForStore = (task: any) => {
+      if (!user || user.role !== 'retailer') return;
+      if (task?.storeId !== user.id) return;
+
+      addNotification({
+        type: 'task_update',
+        title: 'Pickup Updated',
+        message: `Pickup is now ${String(task.status || '').toUpperCase()}. ${task.volunteerName ? `Partner: ${task.volunteerName}.` : ''}`,
+        link: '/dashboard?tab=pickups',
+      });
+    };
+
     socket.on('new-item', handleNewItem);
     socket.on('order-updated', handleOrderUpdated);
+    socket.on('new-order', handleNewOrderForStore);
+    socket.on('task-updated', handleTaskUpdatedForStore);
 
     return () => {
       socket.off('new-item', handleNewItem);
       socket.off('order-updated', handleOrderUpdated);
+      socket.off('new-order', handleNewOrderForStore);
+      socket.off('task-updated', handleTaskUpdatedForStore);
     };
   }, [user, addNotification]);
+
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
     const session = api.getSession();
@@ -89,7 +140,10 @@ const App: React.FC = () => {
       setUser(session);
       api.refreshSession().then((fresh) => {
         if (fresh) setUser(fresh);
-      });
+        setIsAuthLoading(false);
+      }).catch(() => setIsAuthLoading(false));
+    } else {
+      setIsAuthLoading(false);
     }
   }, []);
 
@@ -169,9 +223,20 @@ const App: React.FC = () => {
       setIsCartOpen(false);
       setMarketplaceRefreshKey((prev) => prev + 1);
     } catch (e: any) {
-      alert('Order failed: ' + e.message);
+      openAlert('error', 'Checkout Failed', e.message || 'Unable to place your order right now. Please try again.');
     }
   };
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-dark-950 flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="h-16 w-16 border-4 border-eco-500 border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-gray-500 font-medium animate-pulse text-lg">Loading EcoFeast...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Router>
@@ -279,46 +344,42 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <AnimatePresence>
-        {showCheckoutSuccess && (
-          <div className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 12 }}
-              className="bg-white dark:bg-dark-900 rounded-2xl shadow-2xl p-8 max-w-md w-full text-center border dark:border-dark-800"
+      <ModalShell open={showCheckoutSuccess} onClose={() => setShowCheckoutSuccess(false)} maxWidthClassName="max-w-md">
+        <div className="space-y-6">
+          <ModalHeader
+            title="Order Confirmed"
+            description="Your food order was placed successfully and is now ready to track."
+            icon={<CheckCircle size={24} />}
+            tone="success"
+            eyebrow="Checkout Complete"
+            align="center"
+          />
+          {lastOrderCode && (
+            <div className="rounded-[22px] border border-emerald-200 bg-emerald-50 px-4 py-4 text-center dark:border-emerald-900/40 dark:bg-emerald-950/30">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-300">Order Number</p>
+              <p className="mt-2 font-mono text-3xl font-black tracking-[0.18em] text-emerald-700 dark:text-emerald-200">#{lastOrderCode}</p>
+              <p className="mt-2 text-xs text-slate-500 dark:text-gray-400">Use this in your dashboard to follow updates.</p>
+            </div>
+          )}
+          <div className="grid grid-cols-1 gap-3">
+            <a
+              href="/#/dashboard?tab=orders"
+              onClick={() => setShowCheckoutSuccess(false)}
+              className={`w-full text-center ${primaryButtonClassName}`}
             >
-              <div className="mx-auto mb-4 h-14 w-14 rounded-full bg-green-100 text-green-700 flex items-center justify-center">
-                <CheckCircle size={28} />
-              </div>
-              <h3 className="text-2xl font-bold dark:text-white mb-2">Order Confirmed! 🎉</h3>
-              <p className="text-gray-600 dark:text-gray-300 mb-3">Your food order was placed successfully.</p>
-              {lastOrderCode && (
-                <div className="bg-eco-50 dark:bg-eco-900/30 border border-eco-200 dark:border-eco-800 rounded-xl px-4 py-3 mb-6">
-                  <p className="text-xs text-eco-600 dark:text-eco-400 font-semibold uppercase tracking-wide mb-1">Your Order Number</p>
-                  <p className="text-2xl font-bold text-eco-700 dark:text-eco-300 font-mono tracking-wider">#{lastOrderCode}</p>
-                  <p className="text-xs text-gray-500 mt-1">Save this to track your order</p>
-                </div>
-              )}
-              <a
-                href="/#/dashboard?tab=orders"
-                onClick={() => setShowCheckoutSuccess(false)}
-                className="block w-full bg-eco-600 text-white py-3 rounded-xl font-bold hover:bg-eco-700 mb-2 text-center"
-              >
-                Track Your Order
-              </a>
-              <button
-                onClick={() => setShowCheckoutSuccess(false)}
-                className="w-full text-gray-500 py-2 text-sm hover:text-gray-700 dark:hover:text-gray-300"
-              >
-                Continue Shopping
-              </button>
-            </motion.div>
+              Track Your Order
+            </a>
+            <button
+              onClick={() => setShowCheckoutSuccess(false)}
+              className={`w-full ${secondaryButtonClassName}`}
+            >
+              Continue Shopping
+            </button>
           </div>
-        )}
-      </AnimatePresence>
+        </div>
+      </ModalShell>
 
-      {/* Socket.IO Toast Notification */}
+      {/* Socket.IO Toast Notification (New Listings) */}
       <AnimatePresence>
         {toastNotification && (
           <motion.div
@@ -351,18 +412,34 @@ const App: React.FC = () => {
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="fixed bottom-6 right-6 z-[100] bg-white dark:bg-dark-900 border border-blue-200 dark:border-blue-900/50 shadow-2xl rounded-2xl p-4 max-w-sm flex gap-4 cursor-pointer hover:shadow-blue-500/20 transition-shadow"
+            className={`fixed bottom-6 right-6 z-[100] bg-white dark:bg-dark-900 border shadow-2xl rounded-2xl p-4 max-w-sm flex gap-4 cursor-pointer transition-shadow ${
+              orderToast.status === 'cancelled' ? 'border-red-200 dark:border-red-900/50 hover:shadow-red-500/20' : 'border-blue-200 dark:border-blue-900/50 hover:shadow-blue-500/20'
+            }`}
             onClick={() => setOrderToast(null)}
           >
-            <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/50 flex-shrink-0 flex items-center justify-center text-blue-600 dark:text-blue-400">
-              <Truck size={24} />
+            <div className={`h-12 w-12 rounded-full flex-shrink-0 flex items-center justify-center ${
+              orderToast.status === 'cancelled' 
+                ? 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400' 
+                : orderToast.status === 'completed'
+                  ? 'bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400'
+                  : 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400'
+            }`}>
+              {orderToast.status === 'cancelled' ? <XCircle size={24} /> : orderToast.status === 'completed' ? <BadgeCheck size={24} /> : <Truck size={24} />}
             </div>
             <div className="flex-1">
               <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-1">
-                {orderToast.status === 'completed' ? 'Order Delivered!' : 'Order On The Way!'}
+                {orderToast.status === 'completed' 
+                  ? 'Order Delivered!' 
+                  : orderToast.status === 'cancelled'
+                    ? 'Order Cancelled'
+                    : orderToast.status === 'ready'
+                      ? 'Ready for Pickup'
+                      : 'Order Status Updated'}
               </h4>
               <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">
-                Your order <span className="font-bold">#{orderToast.code}</span> has been marked as <span className="font-bold text-blue-600 dark:text-blue-400 uppercase">{orderToast.status}</span>.
+                Your order <span className="font-bold">#{orderToast.code}</span> has been marked as <span className={`font-bold uppercase ${
+                  orderToast.status === 'cancelled' ? 'text-red-600' : 'text-blue-600 dark:text-blue-400'
+                }`}>{orderToast.status}</span>.
               </p>
             </div>
             <button onClick={(e) => { e.stopPropagation(); setOrderToast(null); }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
@@ -371,9 +448,10 @@ const App: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AlertPopup open={alertOpen} type={alertConfig.type} title={alertConfig.title} message={alertConfig.message} onClose={() => setAlertOpen(false)} />
     </Router>
   );
 };
 
 export default App;
-

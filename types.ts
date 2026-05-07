@@ -46,22 +46,45 @@ export interface Reservation {
   id: string;
   itemId: string;
   userId: string;
-  status: 'pending' | 'ready' | 'completed' | 'cancelled';
+  status: 'pending' | 'received' | 'packed' | 'ready' | 'accepted' | 'picked_up' | 'completed' | 'cancelled';
   code: string; // Pickup code
+  deliveryOtp?: string; // OTP for volunteer delivery
   timestamp: string;
+  lastStatus?: string;
   items?: Item[]; // For cart orders
   totalAmount?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Task {
   id: string;
+  orderId?: string | null;
+  storeId?: string | null;
+  volunteerId?: string | null;
+  volunteerName?: string | null;
+  volunteerPhone?: string | null;
+  volunteerVehicleType?: string | null;
   storeName: string;
   pickupAddress: string;
   dropAddress: string;
   charityName: string;
   weight: string; // e.g. "5kg"
-  status: 'pending' | 'accepted' | 'completed';
+  status: 'pending' | 'received' | 'packed' | 'ready' | 'accepted' | 'picked_up' | 'completed' | 'cancelled';
   itemsSummary: string;
+  items?: Item[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface StoreOrder {
+  order: Reservation;
+  storeItems: Item[];
+  pickupStart: string | null;
+  pickupEnd: string | null;
+  totalQty: number;
+  totalAmount: number;
+  task: Task | null;
 }
 
 export interface StatMetric {

@@ -1,4 +1,4 @@
-import { Charity, Item, Reservation, Task, User, UserRole } from "../types";
+import { Charity, Item, Reservation, StoreOrder, Task, User, UserRole } from "../types";
 
 const STORAGE_KEYS = {
   TOKEN: "ecofeast_token",
@@ -106,6 +106,10 @@ export const api = {
     return request<Item[]>("/items", { method: "GET" }, false);
   },
 
+  getMyItems: async (): Promise<Item[]> => {
+    return request<Item[]>("/items/my");
+  },
+
   addItem: async (item: Omit<Item, "id" | "status">): Promise<Item> => {
     return request<Item>("/items", {
       method: "POST",
@@ -135,6 +139,14 @@ export const api = {
     return request<Reservation[]>("/orders/my");
   },
 
+  getStoreOrders: async (): Promise<StoreOrder[]> => {
+    return request<StoreOrder[]>("/orders/store");
+  },
+
+  getFulfillmentData: async (): Promise<{ orders: StoreOrder[]; tasks: Task[] }> => {
+    return request<{ orders: StoreOrder[]; tasks: Task[] }>("/orders/fulfillment");
+  },
+
   getCharities: async (): Promise<Charity[]> => {
     return request<Charity[]>("/charities", { method: "GET" }, false);
   },
@@ -143,11 +155,41 @@ export const api = {
     return request<Task[]>("/tasks");
   },
 
+  getMyTasks: async (): Promise<Task[]> => {
+    return request<Task[]>("/tasks/my");
+  },
+
+  getOrderTasks: async (orderId: string): Promise<Task[]> => {
+    return request<Task[]>(`/orders/${orderId}/tasks`);
+  },
+
+  getStoreTasks: async (): Promise<Task[]> => {
+    return request<Task[]>("/tasks/store");
+  },
+
   updateTaskStatus: async (taskId: string, status: Task["status"]): Promise<void> => {
     await request(`/tasks/${taskId}`, {
       method: "PATCH",
       body: JSON.stringify({ status }),
     });
+  },
+
+  deliverTask: async (taskId: string, otp: string): Promise<void> => {
+    await request(`/tasks/${taskId}/deliver`, {
+      method: "POST",
+      body: JSON.stringify({ otp }),
+    });
+  },
+
+  confirmStorePickup: async (orderId: string, code: string): Promise<void> => {
+    await request(`/orders/${orderId}/confirm-pickup`, {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    });
+  },
+
+  cancelStoreOrder: async (orderId: string): Promise<void> => {
+    await request(`/orders/${orderId}/cancel-store`, { method: "POST" });
   },
 
   sendContactMessage: async (name: string, email: string, message: string): Promise<void> => {

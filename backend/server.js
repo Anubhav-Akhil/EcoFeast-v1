@@ -64,6 +64,62 @@ const nowIso = () => new Date().toISOString();
 const createId = (prefix) =>
   `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
 
+function computeAggregateOrderStatus(taskStatuses) {
+  const statuses = Array.isArray(taskStatuses) ? taskStatuses : [];
+  if (statuses.length === 0) return "pending";
+  if (statuses.every((s) => s === "completed")) return "completed";
+  if (statuses.some((s) => s === "picked_up")) return "picked_up";
+  if (statuses.some((s) => s === "accepted")) return "accepted";
+  if (statuses.some((s) => s === "ready")) return "ready";
+  if (statuses.some((s) => s === "packed")) return "packed";
+  if (statuses.some((s) => s === "received")) return "received";
+  if (statuses.every((s) => s === "cancelled")) return "cancelled";
+  return "pending";
+}
+
+async function recomputeAndPersistOrderStatus(orderId) {
+  if (!orderId) return null;
+  const tasks = await Task.find({ orderId }).lean();
+  const nextStatus = computeAggregateOrderStatus(tasks.map((t) => t.status));
+  const order = await Order.findOne({ id: orderId });
+  if (!order) return null;
+  
+  const STATUS_WEIGHT = {
+    "pending": 1,
+    "received": 2,
+    "packed": 3,
+    "ready": 4,
+    "accepted": 5,
+    "picked_up": 6,
+    "completed": 7,
+    "cancelled": 0
+  };
+
+  const currentLastStatusWeight = STATUS_WEIGHT[order.lastStatus || 'pending'] || 1;
+  const nextStatusWeight = STATUS_WEIGHT[nextStatus] || 1;
+  const oldStatusWeight = STATUS_WEIGHT[order.status || 'pending'] || 1;
+
+  if (nextStatus !== "cancelled") {
+    if (nextStatusWeight > currentLastStatusWeight) {
+      order.lastStatus = nextStatus;
+    }
+  } else {
+    if (oldStatusWeight > currentLastStatusWeight) {
+      order.lastStatus = order.status;
+    }
+  }
+  
+  order.status = nextStatus;
+
+  // Generate delivery OTP if order becomes ready and doesn't have one
+  if (nextStatus === 'ready' && !order.deliveryOtp) {
+    order.deliveryOtp = Math.floor(1000 + Math.random() * 9000).toString();
+  }
+
+  await order.save();
+  return order.toObject();
+}
+
 async function getNextOrderCode() {
   const counter = await Counter.findByIdAndUpdate(
     'orderCode',
@@ -260,6 +316,16 @@ app.post("/api/auth/change-password", requireAuth, async (req, res, next) => {
 app.get("/api/items", async (_req, res, next) => {
   try {
     const items = await Item.find().sort({ createdAt: -1 }).lean();
+    res.json(items);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/items/my", requireAuth, requireRole("retailer", "admin"), async (req, res, next) => {
+  try {
+    const storeId = req.auth.sub;
+    const items = await Item.find({ storeId }).sort({ createdAt: -1 }).lean();
     res.json(items);
   } catch (error) {
     next(error);
@@ -499,11 +565,13 @@ app.post(
       }, {});
 
       for (const storeItems of Object.values(groupedByStore)) {
-        const storeName = storeItems[0]?.storeName || "Store";
+        const storeName = storeItems[0]?.storeName || "HELLO WORLD";
+        const storeId = storeItems[0]?.storeId || null;
         const itemsSummary = storeItems.map((i) => i.title).join(", ");
-        await Task.create({
+        const task = await Task.create({
           id: createId("t"),
           orderId: order.id,
+          storeId,
           storeName,
           pickupAddress: `${storeName} pickup point`,
           dropAddress,
@@ -511,6 +579,17 @@ app.post(
           weight: `${storeItems.length} bags`,
           status: "pending",
           itemsSummary,
+          items: storeItems.map(i => (i.toObject ? i.toObject() : i)),
+        });
+
+        io.emit("new-order", {
+          storeId,
+          orderId: order.id,
+          code: orderCode,
+          status: task.status,
+          totalQty: storeItems.length,
+          pickupStart: storeItems[0]?.pickupStart || null,
+          pickupEnd: storeItems[0]?.pickupEnd || null,
         });
       }
 
@@ -527,6 +606,8 @@ app.post(
           { storeCreditPoints: storeUser.creditPoints }
         );
       }
+
+      io.emit("order-updated", order.toObject());
 
       return res.status(201).json(order.toObject());
     } catch (error) {
@@ -547,6 +628,293 @@ app.get("/api/orders/my", requireAuth, async (req, res, next) => {
 });
 
 // ── Charities ────────────────────────────────────────────────────────────────
+app.get(
+  "/api/orders/fulfillment",
+  requireAuth,
+  requireRole("retailer", "admin"),
+  async (req, res, next) => {
+    try {
+      const storeId = req.auth.sub;
+      const storeUser = await User.findOne({ id: storeId }).lean();
+      const storeNames = [storeUser?.organizationName, storeUser?.name]
+        .filter(Boolean)
+        .map((v) => String(v));
+
+      const orders = await Order.find({ "items.storeId": storeId })
+        .sort({ createdAt: -1 })
+        .lean();
+
+      if (orders.length === 0) return res.json({ orders: [], tasks: [] });
+
+      const orderIds = orders.map((o) => o.id);
+      const tasks = await Task.find({
+        $or: [
+          { orderId: { $in: orderIds }, storeId },
+          { orderId: { $in: orderIds }, storeId: null, storeName: { $in: storeNames } },
+        ],
+      }).lean();
+
+      const taskByOrderId = new Map(tasks.map((t) => [t.orderId, t]));
+
+      const payload = orders.map((order) => {
+        const storeItems = Array.isArray(order.items)
+          ? order.items.filter((i) => i?.storeId === storeId)
+          : [];
+        return {
+          order,
+          storeItems,
+          pickupStart: storeItems[0]?.pickupStart || null,
+          pickupEnd: storeItems[0]?.pickupEnd || null,
+          totalQty: storeItems.length,
+          totalAmount: storeItems.reduce((sum, item) => sum + Number(item?.discountPrice || 0), 0),
+          task: taskByOrderId.get(order.id) || null,
+        };
+      });
+
+      res.json({ orders: payload, tasks });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+app.post(
+  "/api/orders/:orderId/confirm-pickup",
+  requireAuth,
+  requireRole("retailer", "admin"),
+  async (req, res, next) => {
+    try {
+      const { code } = req.body || {};
+      const order = await Order.findOne({ id: req.params.orderId });
+      if (!order) return res.status(404).json({ message: "Order not found" });
+
+      if (order.code !== code) {
+        return res.status(400).json({ message: "Invalid verification code" });
+      }
+
+      // Update all tasks for this store in this order to completed
+      const storeId = req.auth.sub;
+      const tasks = await Task.find({ orderId: order.id });
+      
+      // We only complete tasks belonging to the current retailer
+      const storeUser = await User.findOne({ id: storeId }).lean();
+      const storeNames = [storeUser?.organizationName, storeUser?.name].filter(Boolean);
+
+      for (const task of tasks) {
+        const matchesStore = task.storeId === storeId || storeNames.includes(task.storeName);
+        if (matchesStore) {
+          task.status = "completed";
+          await task.save();
+          io.emit("task-updated", task.toObject());
+        }
+      }
+
+      const updatedOrder = await recomputeAndPersistOrderStatus(order.id);
+      if (updatedOrder) {
+        io.emit("order-updated", updatedOrder);
+      } else {
+        io.emit("order-updated", order.toObject());
+      }
+      
+      return res.status(200).json({ message: "Pickup confirmed successfully" });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+app.get(
+  "/api/orders/store",
+  requireAuth,
+  requireRole("retailer", "admin"),
+  async (req, res, next) => {
+    try {
+      const storeId =
+        req.auth.role === "admin" ? String(req.query.storeId || "").trim() : req.auth.sub;
+      if (!storeId && req.auth.role === "admin") {
+        return res.status(400).json({ message: "storeId query param is required for admin" });
+      }
+
+      const orders = await Order.find({ "items.storeId": storeId })
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const orderIds = orders.map((o) => o.id);
+      let tasksQuery = { orderId: { $in: orderIds }, storeId };
+      if (req.auth.role === "retailer") {
+        const storeUser = await User.findOne({ id: storeId }).lean();
+        const storeNames = [storeUser?.organizationName, storeUser?.name]
+          .filter(Boolean)
+          .map((v) => String(v));
+        tasksQuery = {
+          orderId: { $in: orderIds },
+          $or: [{ storeId }, { storeId: null, storeName: { $in: storeNames } }],
+        };
+      }
+      const tasks = await Task.find(tasksQuery).lean();
+      const taskByOrderId = new Map(tasks.map((t) => [t.orderId, t]));
+
+      const payload = orders.map((order) => {
+        const storeItems = Array.isArray(order.items)
+          ? order.items.filter((i) => i?.storeId === storeId)
+          : [];
+        const pickupStart = storeItems[0]?.pickupStart || null;
+        const pickupEnd = storeItems[0]?.pickupEnd || null;
+        const totalQty = storeItems.length;
+        const totalAmount = storeItems.reduce(
+          (sum, item) => sum + Number(item?.discountPrice || 0),
+          0
+        );
+        return {
+          order,
+          storeItems,
+          pickupStart,
+          pickupEnd,
+          totalQty,
+          totalAmount,
+          task: taskByOrderId.get(order.id) || null,
+        };
+      });
+
+      res.json(payload);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+app.post(
+  "/api/orders/:id/confirm-pickup",
+  requireAuth,
+  requireRole("retailer", "admin"),
+  async (req, res, next) => {
+    try {
+      const storeId =
+        req.auth.role === "admin" ? String(req.body?.storeId || "").trim() : req.auth.sub;
+      if (!storeId && req.auth.role === "admin") {
+        return res.status(400).json({ message: "storeId is required for admin" });
+      }
+
+      const { code } = req.body || {};
+      assertRequired(code, "Pickup code is required");
+
+      const order = await Order.findOne({ id: req.params.id });
+      if (!order) return res.status(404).json({ message: "Order not found" });
+      if (String(order.code) !== String(code)) {
+        return res.status(400).json({ message: "Invalid pickup code" });
+      }
+
+      const storeItems = Array.isArray(order.items)
+        ? order.items.filter((i) => i?.storeId === storeId)
+        : [];
+      if (storeItems.length === 0) {
+        return res.status(403).json({ message: "This order does not include your store items" });
+      }
+
+      let task = await Task.findOne({ orderId: order.id, storeId });
+      if (!task) {
+        const storeUser = await User.findOne({ id: storeId }).lean();
+        const storeNames = [storeUser?.organizationName, storeUser?.name]
+          .filter(Boolean)
+          .map((v) => String(v));
+        task = await Task.findOne({
+          orderId: order.id,
+          storeId: null,
+          storeName: { $in: storeNames },
+        });
+      }
+      if (!task) return res.status(404).json({ message: "Store task not found" });
+      if (task.status !== "ready") {
+        return res.status(409).json({ message: "Task must be READY before confirming pickup" });
+      }
+
+      task.status = "accepted";
+      await task.save();
+
+      const updatedOrder = await recomputeAndPersistOrderStatus(order.id);
+      if (updatedOrder) io.emit("order-updated", updatedOrder);
+      io.emit("task-updated", task.toObject());
+
+      return res.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+app.post(
+  "/api/orders/:id/cancel-store",
+  requireAuth,
+  requireRole("retailer", "admin"),
+  async (req, res, next) => {
+    try {
+      const storeId =
+        req.auth.role === "admin" ? String(req.body?.storeId || "").trim() : req.auth.sub;
+      if (!storeId && req.auth.role === "admin") {
+        return res.status(400).json({ message: "storeId is required for admin" });
+      }
+
+      const order = await Order.findOne({ id: req.params.id });
+      if (!order) return res.status(404).json({ message: "Order not found" });
+
+      const storeItems = Array.isArray(order.items)
+        ? order.items.filter((i) => i?.storeId === storeId)
+        : [];
+      if (storeItems.length === 0) {
+        return res.status(403).json({ message: "This order does not include your store items" });
+      }
+
+      let task = await Task.findOne({ orderId: order.id, storeId });
+      if (!task) {
+        const storeUser = await User.findOne({ id: storeId }).lean();
+        const storeNames = [storeUser?.organizationName, storeUser?.name]
+          .filter(Boolean)
+          .map((v) => String(v));
+        task = await Task.findOne({
+          orderId: order.id,
+          storeId: null,
+          storeName: { $in: storeNames },
+        });
+      }
+      if (!task) return res.status(404).json({ message: "Store task not found" });
+      if (["accepted", "completed", "cancelled"].includes(task.status)) {
+        return res.status(409).json({ message: `Cannot cancel: Task is already ${task.status}` });
+      }
+
+      // Restock original items based on storeItems snapshot
+      const qtyByItemId = new Map();
+      for (const item of storeItems) {
+        if (!item?.id) continue;
+        qtyByItemId.set(item.id, (qtyByItemId.get(item.id) || 0) + 1);
+      }
+      for (const [itemId, qty] of qtyByItemId.entries()) {
+        const dbItem = await Item.findOne({ id: itemId });
+        if (!dbItem) continue;
+        dbItem.quantity = Number(dbItem.quantity || 0) + Number(qty || 0);
+        if (dbItem.quantity > 0) dbItem.status = "available";
+        await dbItem.save();
+      }
+
+      // Capture the task's current status BEFORE cancellation
+      // This is the definitive record of how far the order progressed
+      const taskStatusBeforeCancel = task.status;
+      order.lastStatus = taskStatusBeforeCancel;
+      await order.save();
+
+      task.status = "cancelled";
+      await task.save();
+
+      const updatedOrder = await recomputeAndPersistOrderStatus(order.id);
+      if (updatedOrder) io.emit("order-updated", updatedOrder);
+      io.emit("task-updated", task.toObject());
+
+      return res.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 app.get("/api/charities", async (_req, res, next) => {
   try {
     const charities = await Charity.find().lean();
@@ -569,32 +937,164 @@ app.get("/api/tasks", requireAuth, async (req, res, next) => {
   }
 });
 
+app.get(
+  "/api/tasks/my",
+  requireAuth,
+  requireRole("consumer", "charity", "admin"),
+  async (req, res, next) => {
+    try {
+      const userId = req.auth.sub;
+      const orders = await Order.find({ userId }).select({ id: 1 }).lean();
+      const orderIds = orders.map((o) => o.id);
+      if (orderIds.length === 0) return res.json([]);
+      const tasks = await Task.find({ orderId: { $in: orderIds } })
+        .sort({ createdAt: -1 })
+        .lean();
+      res.json(tasks);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+app.get("/api/orders/:id/tasks", requireAuth, async (req, res, next) => {
+  try {
+    const order = await Order.findOne({ id: req.params.id }).lean();
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    if (req.auth.role !== "admin" && order.userId !== req.auth.sub) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const tasks = await Task.find({ orderId: order.id }).sort({ createdAt: -1 }).lean();
+    res.json(tasks);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get(
+  "/api/tasks/store",
+  requireAuth,
+  requireRole("retailer", "admin"),
+  async (req, res, next) => {
+    try {
+      const storeId =
+        req.auth.role === "admin" ? String(req.query.storeId || "").trim() : req.auth.sub;
+      if (!storeId && req.auth.role === "admin") {
+        return res.status(400).json({ message: "storeId query param is required for admin" });
+      }
+
+      let query = { storeId };
+      if (req.auth.role === "retailer") {
+        const storeUser = await User.findOne({ id: storeId }).lean();
+        const storeNames = [storeUser?.organizationName, storeUser?.name]
+          .filter(Boolean)
+          .map((v) => String(v));
+        query = {
+          $or: [{ storeId }, { storeId: null, storeName: { $in: storeNames } }],
+        };
+      }
+
+      const tasks = await Task.find(query).sort({ createdAt: -1 }).lean();
+      res.json(tasks);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 app.patch(
   "/api/tasks/:id",
   requireAuth,
-  requireRole("volunteer", "admin"),
+  requireRole("volunteer", "retailer", "admin"),
   async (req, res, next) => {
     try {
       const { status } = req.body || {};
-      if (!["pending", "accepted", "completed"].includes(status)) {
+      if (!["pending", "received", "packed", "ready", "accepted", "picked_up", "completed", "cancelled"].includes(status)) {
         return res.status(400).json({ message: "Invalid status" });
       }
       const task = await Task.findOne({ id: req.params.id });
       if (!task) return res.status(404).json({ message: "Task not found" });
-      task.status = status;
-      await task.save();
 
-      if (task.orderId) {
-        const order = await Order.findOne({ id: task.orderId });
-        if (order) {
-          order.status = status;
-          await order.save();
-          // Emit order-updated event
-          io.emit("order-updated", order.toObject());
+      if (req.auth.role === "volunteer" && !["accepted", "picked_up", "completed"].includes(status)) {
+        return res.status(403).json({ message: "Volunteers can only accept, pick up, or complete tasks" });
+      }
+      if (req.auth.role === "retailer") {
+        if (!["received", "packed", "ready", "cancelled"].includes(status)) {
+          return res.status(403).json({ message: "Retailers can only mark tasks as received, packed, ready or cancelled" });
+        }
+        if (task.storeId && task.storeId !== req.auth.sub) {
+          return res.status(403).json({ message: "You can only update tasks for your store" });
+        }
+        if (!task.storeId) {
+          const storeUser = await User.findOne({ id: req.auth.sub }).lean();
+          const storeNames = [storeUser?.organizationName, storeUser?.name]
+            .filter(Boolean)
+            .map((v) => String(v));
+          if (!storeNames.includes(String(task.storeName || ""))) {
+            return res.status(403).json({ message: "You can only update tasks for your store" });
+          }
         }
       }
 
+      task.status = status;
+
+      if (req.auth.role === "volunteer") {
+        const volunteerUser = await User.findOne({ id: req.auth.sub }).lean();
+        if (volunteerUser) {
+          task.volunteerId = volunteerUser.id;
+          task.volunteerName = volunteerUser.name || null;
+          task.volunteerPhone = volunteerUser.phone || null;
+          task.volunteerVehicleType = volunteerUser.vehicleType || null;
+        }
+      }
+      await task.save();
+
+
+
+      if (task.orderId) {
+        const updatedOrder = await recomputeAndPersistOrderStatus(task.orderId);
+        if (updatedOrder) io.emit("order-updated", updatedOrder);
+      }
+
+      io.emit("task-updated", task.toObject());
       return res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// ── Tasks ─────────────────────────────────────────────────────────────────────
+app.post(
+  "/api/tasks/:id/deliver",
+  requireAuth,
+  requireRole("volunteer", "admin"),
+  async (req, res, next) => {
+    try {
+      const { otp } = req.body || {};
+      const task = await Task.findOne({ id: req.params.id });
+      if (!task) return res.status(404).json({ message: "Task not found" });
+      if (task.status !== "picked_up") {
+        return res.status(400).json({ message: "Task must be picked up before delivery" });
+      }
+
+      const order = await Order.findOne({ id: task.orderId });
+      if (!order) return res.status(404).json({ message: "Order not found" });
+
+      if (order.deliveryOtp !== otp && order.code !== otp) {
+        return res.status(400).json({ message: "Invalid OTP" });
+      }
+
+      task.status = "completed";
+      await task.save();
+
+      const updatedOrder = await recomputeAndPersistOrderStatus(order.id);
+      if (updatedOrder) io.emit("order-updated", updatedOrder);
+      io.emit("task-updated", task.toObject());
+
+      return res.json({ ok: true });
     } catch (error) {
       next(error);
     }

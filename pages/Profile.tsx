@@ -3,6 +3,15 @@ import { User } from '../types';
 import { api } from '../services/api';
 import { User as UserIcon, Mail, Phone, MapPin, Building2, Shield, Star, Leaf, Truck, Award, ArrowLeft, Pencil, Check, X, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import {
+  fieldLabelClassName,
+  inputClassName,
+  secondaryButtonClassName,
+  selectClassName,
+  ModalHeader,
+  ModalShell,
+  primaryButtonClassName,
+} from '../components/ui';
 
 interface ProfileProps {
   user: User;
@@ -146,7 +155,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUserUpdate }) => {
   };
 
   // Fields config
-  const fields: { key: keyof typeof form; label: string; icon: React.ReactNode; type?: string; placeholder?: string }[] = [
+  const fields: { key: (keyof typeof form) & string; label: string; icon: React.ReactNode; type?: string; placeholder?: string }[] = [
     { key: 'name', label: 'Full Name', icon: <UserIcon size={16} />, placeholder: 'Your full name' },
     ...(user.role === 'retailer' || user.role === 'charity'
       ? [{ key: 'organizationName' as const, label: 'Organization', icon: <Building2 size={16} />, placeholder: 'Organization name' }]
@@ -264,7 +273,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUserUpdate }) => {
                         <select
                           value={form.vehicleType}
                           onChange={(e) => setForm({ ...form, vehicleType: e.target.value })}
-                          className="w-full border border-gray-200 dark:border-dark-700 rounded-lg p-2 text-sm bg-white dark:bg-dark-800 dark:text-white focus:ring-2 focus:ring-eco-500 outline-none"
+                          className={selectClassName}
                         >
                           <option value="">Select...</option>
                           <option value="bike">Bicycle</option>
@@ -278,7 +287,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUserUpdate }) => {
                           value={form[f.key]}
                           onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
                           placeholder={f.placeholder}
-                          className={`w-full border rounded-lg p-2 text-sm bg-white dark:bg-dark-800 dark:text-white focus:ring-2 focus:ring-eco-500 outline-none transition-colors ${
+                          className={`${inputClassName} ${
                             fieldErrors[f.key] ? 'border-red-400 dark:border-red-600' : 'border-gray-200 dark:border-dark-700'
                           }`}
                         />
@@ -319,99 +328,90 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUserUpdate }) => {
 
       </div>
 
-      {/* Password Change Modal */}
-      {showPasswordModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-          <div className="bg-white dark:bg-dark-900 rounded-2xl p-6 w-full max-w-sm border border-gray-100 dark:border-dark-700 shadow-xl">
-            <div className="flex items-center gap-2 mb-5">
-              <KeyRound size={20} className="text-eco-600" />
-              <h4 className="text-xl font-bold dark:text-white">Change Password</h4>
-            </div>
+      <ModalShell open={showPasswordModal} onClose={() => setShowPasswordModal(false)} maxWidthClassName="max-w-lg">
+        <div className="space-y-6">
+          <ModalHeader
+            title="Change Password"
+            description="Keep your account secure with a fresh password you do not reuse elsewhere."
+            icon={<KeyRound size={22} />}
+            tone="info"
+          />
 
-            {pwSuccess ? (
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 p-4 rounded-xl text-sm font-medium flex items-center gap-2">
-                <Check size={16} /> {pwSuccess}
-              </div>
-            ) : (
-              <form onSubmit={handleChangePassword} className="space-y-4">
-                {pwError && (
-                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 p-3 rounded-xl text-sm">
-                    {pwError}
-                  </div>
-                )}
-                <div>
-                  <label className="block text-sm font-medium mb-1 dark:text-gray-300">Current Password</label>
-                  <div className="relative">
-                    <input
-                      type={showOld ? 'text' : 'password'}
-                      required
-                      value={pwForm.oldPassword}
-                      onChange={(e) => setPwForm({ ...pwForm, oldPassword: e.target.value })}
-                      className="w-full border border-gray-200 dark:border-dark-700 rounded-lg p-2.5 pr-10 text-sm bg-white dark:bg-dark-800 dark:text-white focus:ring-2 focus:ring-eco-500 outline-none"
-                      placeholder="Enter current password"
-                    />
-                    <button type="button" onClick={() => setShowOld(!showOld)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                      {showOld ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
+          {pwSuccess ? (
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 p-4 rounded-xl text-sm font-medium flex items-center gap-2">
+              <Check size={16} /> {pwSuccess}
+            </div>
+          ) : (
+            <form onSubmit={handleChangePassword} className="space-y-5">
+              {pwError && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 p-3 rounded-xl text-sm">
+                  {pwError}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1 dark:text-gray-300">New Password</label>
-                  <div className="relative">
-                    <input
-                      type={showNew ? 'text' : 'password'}
-                      required
-                      minLength={6}
-                      value={pwForm.newPassword}
-                      onChange={(e) => setPwForm({ ...pwForm, newPassword: e.target.value })}
-                      className="w-full border border-gray-200 dark:border-dark-700 rounded-lg p-2.5 pr-10 text-sm bg-white dark:bg-dark-800 dark:text-white focus:ring-2 focus:ring-eco-500 outline-none"
-                      placeholder="Min 6 characters"
-                    />
-                    <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                      {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                  {pwForm.newPassword && pwForm.newPassword.length < 6 && (
-                    <p className="text-xs text-red-500 mt-1">Must be at least 6 characters</p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1 dark:text-gray-300">Confirm New Password</label>
+              )}
+              <div>
+                <label className={fieldLabelClassName}>Current Password</label>
+                <div className="relative">
                   <input
-                    type="password"
+                    type={showOld ? 'text' : 'password'}
                     required
-                    value={pwForm.confirmPassword}
-                    onChange={(e) => setPwForm({ ...pwForm, confirmPassword: e.target.value })}
-                    className={`w-full border rounded-lg p-2.5 text-sm bg-white dark:bg-dark-800 dark:text-white focus:ring-2 focus:ring-eco-500 outline-none ${
-                      pwForm.confirmPassword && pwForm.confirmPassword !== pwForm.newPassword ? 'border-red-400' : 'border-gray-200 dark:border-dark-700'
-                    }`}
-                    placeholder="Re-enter new password"
+                    value={pwForm.oldPassword}
+                    onChange={(e) => setPwForm({ ...pwForm, oldPassword: e.target.value })}
+                    className={`${inputClassName} pr-11`}
+                    placeholder="Enter current password"
                   />
-                  {pwForm.confirmPassword && pwForm.confirmPassword !== pwForm.newPassword && (
-                    <p className="text-xs text-red-500 mt-1">Passwords do not match</p>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <button
-                    disabled={pwSaving}
-                    type="submit"
-                    className="bg-eco-600 text-white py-2.5 rounded-lg font-semibold hover:bg-eco-700 disabled:opacity-60 transition-colors text-sm"
-                  >
-                    {pwSaving ? 'Changing...' : 'Change Password'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowPasswordModal(false)}
-                    className="bg-gray-100 dark:bg-dark-800 text-gray-700 dark:text-gray-300 py-2.5 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-dark-700 transition-colors text-sm"
-                  >
-                    Cancel
+                  <button type="button" onClick={() => setShowOld(!showOld)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    {showOld ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-              </form>
-            )}
-          </div>
+              </div>
+              <div>
+                <label className={fieldLabelClassName}>New Password</label>
+                <div className="relative">
+                  <input
+                    type={showNew ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    value={pwForm.newPassword}
+                    onChange={(e) => setPwForm({ ...pwForm, newPassword: e.target.value })}
+                    className={`${inputClassName} pr-11`}
+                    placeholder="Minimum 6 characters"
+                  />
+                  <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                {pwForm.newPassword && pwForm.newPassword.length < 6 && (
+                  <p className="text-xs text-red-500 mt-1">Must be at least 6 characters</p>
+                )}
+              </div>
+              <div>
+                <label className={fieldLabelClassName}>Confirm New Password</label>
+                <input
+                  type="password"
+                  required
+                  value={pwForm.confirmPassword}
+                  onChange={(e) => setPwForm({ ...pwForm, confirmPassword: e.target.value })}
+                  className={`${inputClassName} ${
+                    pwForm.confirmPassword && pwForm.confirmPassword !== pwForm.newPassword ? 'border-red-400' : 'border-gray-200 dark:border-dark-700'
+                  }`}
+                  placeholder="Re-enter new password"
+                />
+                {pwForm.confirmPassword && pwForm.confirmPassword !== pwForm.newPassword && (
+                  <p className="text-xs text-red-500 mt-1">Passwords do not match</p>
+                )}
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button disabled={pwSaving} type="submit" className={primaryButtonClassName}>
+                  {pwSaving ? 'Changing...' : 'Change Password'}
+                </button>
+                <button type="button" onClick={() => setShowPasswordModal(false)} className={secondaryButtonClassName}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
         </div>
-      )}
+      </ModalShell>
     </div>
   );
 };

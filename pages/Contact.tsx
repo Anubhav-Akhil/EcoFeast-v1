@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, MapPin, Phone } from 'lucide-react';
 import { api } from '../services/api';
+import { fieldLabelClassName, inputClassName, primaryButtonClassName, textareaClassName } from '../components/ui';
 
 export const Contact: React.FC = () => {
     const [form, setForm] = useState({ name: '', email: '', message: '' });
@@ -58,38 +59,41 @@ export const Contact: React.FC = () => {
                 <div className="bg-gray-50 dark:bg-dark-900 p-8 rounded-xl shadow-sm border border-gray-100 dark:border-dark-800">
                     <form className="space-y-4" onSubmit={submit}>
                         <div>
-                            <label className="block text-sm font-medium mb-1 dark:text-gray-300">Name</label>
+                            <label className={fieldLabelClassName}>Name</label>
                             <input
                                 type="text"
                                 required
                                 value={form.name}
                                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                className="w-full border p-3 rounded-lg dark:bg-dark-800 dark:border-dark-700 dark:text-white"
+                                className={inputClassName}
+                                placeholder="Your full name"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-1 dark:text-gray-300">Email</label>
+                            <label className={fieldLabelClassName}>Email</label>
                             <input
                                 type="email"
                                 required
                                 value={form.email}
                                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                                className="w-full border p-3 rounded-lg dark:bg-dark-800 dark:border-dark-700 dark:text-white"
+                                className={inputClassName}
+                                placeholder="you@example.com"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-1 dark:text-gray-300">Message</label>
+                            <label className={fieldLabelClassName}>Message</label>
                             <textarea
-                                rows={4}
+                                rows={5}
                                 required
                                 value={form.message}
                                 onChange={(e) => setForm({ ...form, message: e.target.value })}
-                                className="w-full border p-3 rounded-lg dark:bg-dark-800 dark:border-dark-700 dark:text-white"
+                                className={textareaClassName}
+                                placeholder="Tell us how we can help."
                             ></textarea>
                         </div>
                         <button
                             disabled={loading}
-                            className="w-full bg-eco-600 text-white py-3 rounded-lg font-bold hover:bg-eco-700 disabled:opacity-70"
+                            className={`w-full ${primaryButtonClassName}`}
                         >
                             {loading ? 'Sending...' : 'Send Message'}
                         </button>

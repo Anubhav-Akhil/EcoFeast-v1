@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Search, MapPin, Clock, Tag, Filter, AlertCircle, ShoppingCart, Info, Star } from 'lucide-react';
 import { api } from '../services/api';
 import { Item, User } from '../types';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { inputClassName, ModalShell, primaryButtonClassName } from '../components/ui';
 
 interface MarketplaceProps {
   user: User | null;
@@ -138,7 +139,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
                             <input 
                                 type="text" 
                                 placeholder="Search meals, retailers..." 
-                                className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-dark-800 border border-gray-200 dark:border-dark-700 rounded-lg focus:ring-2 focus:ring-eco-500 outline-none text-gray-900 dark:text-white"
+                                className={`${inputClassName} pl-10`}
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                             />
@@ -314,98 +315,99 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
       </div>
 
       {/* Item Details Modal */}
-      <AnimatePresence>
-          {selectedItem && (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <motion.div 
-                    initial={{opacity: 0, scale: 0.9}}
-                    animate={{opacity: 1, scale: 1}}
-                    exit={{opacity: 0, scale: 0.9}}
-                    className="bg-white dark:bg-dark-900 rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden"
-                >
-                    <div className="relative h-64">
-                         <img src={selectedItem.image} className="w-full h-full object-cover" />
-                         <button onClick={() => setSelectedItem(null)} className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full hover:bg-black/70">
-                             <span className="sr-only">Close</span>
-                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                         </button>
+      <ModalShell
+        open={!!selectedItem}
+        onClose={() => setSelectedItem(null)}
+        maxWidthClassName="max-w-3xl"
+        panelClassName="overflow-hidden"
+        contentClassName="p-0"
+      >
+        {selectedItem && (
+          <div>
+            <div className="relative h-64 sm:h-72">
+              <img src={selectedItem.image} className="h-full w-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/15 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
+                <div className="flex flex-wrap items-end justify-between gap-4">
+                  <div>
+                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-white/70">Listing Details</p>
+                    <h2 className="text-3xl font-black text-white">{selectedItem.title}</h2>
+                    <p className="mt-2 text-sm font-medium text-emerald-200">{selectedItem.storeName}</p>
+                  </div>
+                  <div className="rounded-[22px] bg-white/14 px-4 py-3 text-right backdrop-blur-md">
+                    <div className="text-3xl font-black text-white">
+                      {selectedItem.discountPrice === 0 ? 'FREE' : `INR ${selectedItem.discountPrice}`}
                     </div>
-                    <div className="p-8">
-                        <div className="flex justify-between items-start mb-4">
-                            <div>
-                                <h2 className="text-2xl font-bold dark:text-white mb-2">{selectedItem.title}</h2>
-                                <div className="text-eco-600 font-medium text-lg">{selectedItem.storeName}</div>
-                            </div>
-                            <div className="text-right">
-                                <div className="text-3xl font-bold text-eco-600">
-                                    {selectedItem.discountPrice === 0 ? 'FREE' : `₹${selectedItem.discountPrice}`}
-                                </div>
-                                <div className="text-gray-400 line-through">₹{selectedItem.originalPrice}</div>
-                            </div>
-                        </div>
-                        
-                        <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
-                            {selectedItem.description}
-                        </p>
-
-                        <div className="grid grid-cols-2 gap-4 mb-6">
-                            <div className="bg-gray-50 dark:bg-dark-800 p-3 rounded-lg">
-                                <div className="text-xs text-gray-500 uppercase font-bold mb-1">Pickup Time</div>
-                                <div className="dark:text-white flex items-center gap-2">
-                                    <Clock size={16}/> {selectedItem.pickupStart} - {selectedItem.pickupEnd} Today
-                                </div>
-                            </div>
-                            <div className="bg-gray-50 dark:bg-dark-800 p-3 rounded-lg">
-                                <div className="text-xs text-gray-500 uppercase font-bold mb-1">Category</div>
-                                <div className="dark:text-white capitalize">{selectedItem.category}</div>
-                            </div>
-                        </div>
-
-                        {selectedItem.forAnimalFeed && (
-                            <div className="bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200 p-4 rounded-lg mb-6 flex gap-3">
-                                <Info className="shrink-0" />
-                                <div className="text-sm">
-                                    <strong>Note:</strong> This item is designated for animal feed or composting only. Not fit for human consumption.
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="flex gap-4 items-center">
-                            {user?.role === 'retailer' ? (
-                              <div className="flex-1 bg-gray-100 dark:bg-dark-800 text-gray-500 dark:text-gray-400 py-3 rounded-xl font-semibold text-center text-sm">
-                                You are viewing as a Retailer (view-only)
-                              </div>
-                            ) : (
-                              <>
-                                <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-dark-700 overflow-hidden">
-                                    <button
-                                        onClick={() => setItemDesiredQty(selectedItem, getDesiredQty(selectedItem) - 1)}
-                                        className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-dark-700"
-                                    >
-                                        -
-                                    </button>
-                                    <span className="px-3 font-semibold dark:text-white">{getDesiredQty(selectedItem)}</span>
-                                    <button
-                                        onClick={() => setItemDesiredQty(selectedItem, getDesiredQty(selectedItem) + 1)}
-                                        className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-dark-700"
-                                    >
-                                        +
-                                    </button>
-                                </div>
-                                <button 
-                                    onClick={() => { onAddToCart(selectedItem, getDesiredQty(selectedItem)); setSelectedItem(null); }}
-                                    className="flex-1 bg-eco-600 text-white py-3 rounded-xl font-bold hover:bg-eco-700 transition"
-                                >
-                                    Add to Cart
-                                </button>
-                              </>
-                            )}
-                        </div>
-                    </div>
-                </motion.div>
+                    <div className="text-sm text-white/60 line-through">INR {selectedItem.originalPrice}</div>
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
-      </AnimatePresence>
+
+            <div className="space-y-6 p-6 sm:p-8">
+              <p className="text-sm leading-7 text-slate-600 dark:text-gray-300">{selectedItem.description}</p>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="rounded-[22px] border border-slate-200/70 bg-slate-50/80 p-4 dark:border-dark-800 dark:bg-dark-950/60">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-gray-500">Pickup Window</div>
+                  <div className="mt-2 flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-white">
+                    <Clock size={16} /> {selectedItem.pickupStart} - {selectedItem.pickupEnd} Today
+                  </div>
+                </div>
+                <div className="rounded-[22px] border border-slate-200/70 bg-slate-50/80 p-4 dark:border-dark-800 dark:bg-dark-950/60">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-gray-500">Category</div>
+                  <div className="mt-2 text-sm font-semibold capitalize text-slate-800 dark:text-white">{selectedItem.category}</div>
+                </div>
+              </div>
+
+              {selectedItem.forAnimalFeed && (
+                <div className="rounded-[22px] border border-orange-200 bg-orange-50 p-4 text-orange-900 dark:border-orange-900/40 dark:bg-orange-950/30 dark:text-orange-100">
+                  <div className="flex gap-3">
+                    <Info className="mt-0.5 shrink-0" />
+                    <div className="text-sm leading-6">
+                      <strong>Animal-feed only:</strong> This item is designated for animal feed or composting and is not fit for human consumption.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                {user?.role === 'retailer' ? (
+                  <div className="flex-1 rounded-[22px] border border-slate-200 bg-slate-100/90 px-4 py-3 text-center text-sm font-semibold text-slate-500 dark:border-dark-700 dark:bg-dark-800 dark:text-gray-400">
+                    You are browsing this listing in retailer view-only mode.
+                  </div>
+                ) : (
+                  <>
+                    <div className="inline-flex items-center overflow-hidden rounded-2xl border border-slate-200 dark:border-dark-700">
+                      <button
+                        onClick={() => setItemDesiredQty(selectedItem, getDesiredQty(selectedItem) - 1)}
+                        className="px-4 py-3 text-slate-600 transition hover:bg-slate-100 dark:text-gray-300 dark:hover:bg-dark-700"
+                      >
+                        -
+                      </button>
+                      <span className="min-w-[54px] px-4 text-center text-sm font-bold text-slate-900 dark:text-white">{getDesiredQty(selectedItem)}</span>
+                      <button
+                        onClick={() => setItemDesiredQty(selectedItem, getDesiredQty(selectedItem) + 1)}
+                        className="px-4 py-3 text-slate-600 transition hover:bg-slate-100 dark:text-gray-300 dark:hover:bg-dark-700"
+                      >
+                        +
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => { onAddToCart(selectedItem, getDesiredQty(selectedItem)); setSelectedItem(null); }}
+                      className={`flex-1 ${primaryButtonClassName}`}
+                    >
+                      {selectedItem.discountPrice === 0 ? 'Claim Item' : 'Add to Cart'}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </ModalShell>
     </div>
   );
 };
+
+
