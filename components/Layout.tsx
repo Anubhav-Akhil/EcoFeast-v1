@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, User as UserIcon, LogOut, Sun, Moon, ShoppingCart, Bell, Trash2, CheckCircle, LayoutDashboard, Store, Package, Truck } from 'lucide-react';
 import { User, UserRole, Item } from '../types';
 import { useNotificationStore } from '../services/notificationStore';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   fieldLabelClassName,
   helperTextClassName,
@@ -105,12 +106,12 @@ export const Layout: React.FC<LayoutProps> = ({
     return `${days}d ago`;
   };
 
-  const notifIcon = (type: string) => {
-    if (type === 'new_item') return <Package size={16} />;
-    if (type === 'new_order') return <Bell size={16} />;
-    if (type === 'task_update') return <Truck size={16} />;
-    if (type === 'order_update') return <CheckCircle size={16} />;
-    return <Bell size={16} />;
+  const notifColors: Record<string, string> = {
+    new_item: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
+    new_order: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+    order_update: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
+    task_update: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+    system: 'bg-gray-100 text-gray-600 dark:bg-dark-800 dark:text-gray-300',
   };
 
   return (
@@ -168,102 +169,116 @@ export const Layout: React.FC<LayoutProps> = ({
                       )}
                     </button>
 
-                    {/* Dropdown */}
+                    {/* Notification Dropdown — animated */}
+                    <AnimatePresence>
                     {isNotificationsOpen && (
                       <>
                         <div className="fixed inset-0 z-40" onClick={() => setIsNotificationsOpen(false)} />
-                        <div className="absolute right-0 mt-2 w-[22rem] bg-white dark:bg-dark-900 border border-gray-200 dark:border-dark-800 rounded-2xl shadow-2xl z-50 overflow-hidden">
-                          <div className="p-4 border-b border-gray-100 dark:border-dark-800 bg-gray-50 dark:bg-dark-950">
+                        <motion.div
+                          initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                          transition={{ duration: 0.18, ease: 'easeOut' }}
+                          className="absolute right-0 mt-2 w-[24rem] bg-white dark:bg-dark-900 border border-gray-200 dark:border-dark-800 rounded-2xl shadow-2xl z-50 overflow-hidden"
+                        >
+                          {/* Panel header */}
+                          <div className="px-5 pt-4 pb-3 border-b border-gray-100 dark:border-dark-800">
                             <div className="flex justify-between items-center">
                               <div>
-                                <h3 className="font-bold text-gray-900 dark:text-white">Notifications</h3>
+                                <h3 className="font-black text-gray-900 dark:text-white">Notifications</h3>
                                 <p className="text-xs text-gray-400 mt-0.5">
-                                  {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
+                                  {unreadCount > 0 ? `${unreadCount} unread` : 'You\'re all caught up 🎉'}
                                 </p>
                               </div>
-                              <div className="flex gap-2">
+                              <div className="flex gap-3">
                                 {unreadCount > 0 && (
                                   <button
                                     onClick={markAllAsRead}
-                                    className="text-xs font-semibold text-eco-600 hover:underline flex items-center gap-1"
+                                    className="text-xs font-bold text-eco-600 hover:underline"
                                   >
-                                    <CheckCircle size={12} /> Mark all
+                                    Mark all read
                                   </button>
                                 )}
                                 <button
                                   onClick={clearAll}
-                                  className="text-xs font-semibold text-red-500 hover:underline flex items-center gap-1"
+                                  className="text-xs font-bold text-red-500 hover:underline"
                                 >
-                                  <Trash2 size={12} /> Clear
+                                  Clear
                                 </button>
                               </div>
                             </div>
-
-                            <div className="mt-3 flex gap-2">
-                              <button
-                                onClick={() => setNotifView('all')}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
-                                  notifView === 'all'
-                                    ? 'bg-white dark:bg-dark-900 border-gray-200 dark:border-dark-700 text-gray-900 dark:text-white'
-                                    : 'bg-transparent border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                                }`}
-                              >
-                                All
-                              </button>
-                              <button
-                                onClick={() => setNotifView('unread')}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
-                                  notifView === 'unread'
-                                    ? 'bg-white dark:bg-dark-900 border-gray-200 dark:border-dark-700 text-gray-900 dark:text-white'
-                                    : 'bg-transparent border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                                }`}
-                              >
-                                Unread
-                              </button>
+                            <div className="mt-3 flex gap-1.5">
+                              {(['all', 'unread'] as const).map((v) => (
+                                <button
+                                  key={v}
+                                  onClick={() => setNotifView(v)}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition capitalize ${
+                                    notifView === v
+                                      ? 'bg-eco-600 text-white'
+                                      : 'bg-gray-100 dark:bg-dark-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-dark-700'
+                                  }`}
+                                >
+                                  {v}
+                                </button>
+                              ))}
                             </div>
                           </div>
 
-                          <div className="max-h-[65vh] overflow-y-auto">
+                          <div className="max-h-[70vh] overflow-y-auto divide-y divide-gray-100 dark:divide-dark-800">
                             {visibleNotifications.length === 0 ? (
-                              <div className="p-10 text-center text-gray-500 text-sm">
-                                {notifView === 'unread' ? 'No unread notifications.' : 'No notifications yet.'}
+                              <div className="py-14 text-center">
+                                <div className="text-4xl mb-3">🔔</div>
+                                <p className="text-sm font-medium text-gray-500">
+                                  {notifView === 'unread' ? 'No unread notifications.' : 'Nothing here yet.'}
+                                </p>
                               </div>
                             ) : (
-                              <div className="divide-y divide-gray-100 dark:divide-dark-800">
-                                {visibleNotifications.map((notif) => (
-                                  <button
-                                    key={notif.id}
-                                    onClick={() => {
-                                      markAsRead(notif.id);
-                                      setIsNotificationsOpen(false);
-                                      if (notif.link) navigate(notif.link);
-                                    }}
-                                    className={`w-full text-left p-4 hover:bg-gray-50 dark:hover:bg-dark-800 transition-colors ${
-                                      !notif.read ? 'bg-blue-50/40 dark:bg-blue-900/10' : ''
-                                    }`}
-                                  >
-                                    <div className="flex gap-3">
-                                      <div className={`h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                                        !notif.read ? 'bg-eco-100 text-eco-700 dark:bg-eco-900/40 dark:text-eco-300' : 'bg-gray-100 text-gray-500 dark:bg-dark-800 dark:text-gray-300'
-                                      }`}>
-                                        {notifIcon(notif.type)}
-                                      </div>
-                                      <div className="min-w-0 flex-1">
-                                        <div className="flex justify-between items-start gap-3">
-                                          <span className="font-bold text-sm text-gray-900 dark:text-white truncate">{notif.title}</span>
-                                          <span className="text-[10px] text-gray-400 flex-shrink-0">{formatTimeAgo(notif.timestamp)}</span>
-                                        </div>
-                                        <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 mt-0.5">{notif.message}</p>
-                                      </div>
+                              visibleNotifications.map((notif, idx) => (
+                                <motion.button
+                                  key={notif.id}
+                                  initial={{ opacity: 0, x: -10 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: idx * 0.03 }}
+                                  onClick={() => {
+                                    markAsRead(notif.id);
+                                    setIsNotificationsOpen(false);
+                                    if (notif.link) navigate(notif.link);
+                                  }}
+                                  className={`w-full text-left px-5 py-4 hover:bg-gray-50 dark:hover:bg-dark-800 transition-colors ${
+                                    !notif.read ? 'bg-eco-50/60 dark:bg-eco-900/8' : ''
+                                  }`}
+                                >
+                                  <div className="flex gap-3.5 items-start">
+                                    {/* Emoji badge */}
+                                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 ${
+                                      notifColors[notif.type] || 'bg-gray-100 dark:bg-dark-800'
+                                    }`}>
+                                      {notif.emoji || '🔔'}
                                     </div>
-                                  </button>
-                                ))}
-                              </div>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex justify-between items-start gap-2">
+                                        <span className={`text-sm font-black leading-snug ${
+                                          notif.read ? 'text-gray-700 dark:text-gray-200' : 'text-gray-950 dark:text-white'
+                                        }`}>{notif.title}</span>
+                                        <span className="text-[10px] text-gray-400 flex-shrink-0 mt-0.5">{formatTimeAgo(notif.timestamp)}</span>
+                                      </div>
+                                      <p className="text-xs text-gray-500 dark:text-gray-400 leading-snug mt-0.5 line-clamp-2">{notif.message}</p>
+                                      {notif.subtitle && (
+                                        <p className="text-[11px] font-semibold text-eco-600 dark:text-eco-400 mt-1">{notif.subtitle}</p>
+                                      )}
+                                    </div>
+                                    {!notif.read && (
+                                      <div className="h-2 w-2 rounded-full bg-eco-500 flex-shrink-0 mt-1.5" />
+                                    )}
+                                  </div>
+                                </motion.button>
+                              ))
                             )}
                           </div>
-                        </div>
+                        </motion.div>
                       </>
                     )}
+                    </AnimatePresence>
                   </div>
 
                   {user.role === 'consumer' && (
