@@ -1,6 +1,6 @@
 import React from 'react';
+import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 import { ModalShell } from './ui';
-import { motion } from 'framer-motion';
 
 export type PopupType = 'success' | 'error' | 'warning' | 'info';
 
@@ -21,79 +21,77 @@ interface SuccessPopupProps {
 
 const typeConfig = {
   success: {
-    emoji: '✅',
-    gradient: 'from-emerald-500 to-teal-500',
-    glow: 'rgba(16,185,129,0.25)',
-    badge: 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/50',
-    btn: 'bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white shadow-[0_4px_20px_rgba(16,185,129,0.35)]',
+    Icon: CheckCircle,
+    topBar: 'from-emerald-500 to-teal-400',
+    iconBg: 'bg-emerald-50 dark:bg-emerald-950/40',
+    iconColor: 'text-emerald-600 dark:text-emerald-400',
+    badgeText: 'text-emerald-600 dark:text-emerald-400',
+    btn: 'bg-emerald-600 hover:bg-emerald-500 text-white',
     label: 'Success',
   },
   error: {
-    emoji: '❌',
-    gradient: 'from-rose-500 to-red-600',
-    glow: 'rgba(244,63,94,0.25)',
-    badge: 'bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900/50',
-    btn: 'bg-gradient-to-r from-rose-600 to-red-500 hover:from-rose-500 hover:to-red-400 text-white shadow-[0_4px_20px_rgba(244,63,94,0.35)]',
+    Icon: XCircle,
+    topBar: 'from-rose-500 to-red-500',
+    iconBg: 'bg-rose-50 dark:bg-rose-950/40',
+    iconColor: 'text-rose-600 dark:text-rose-400',
+    badgeText: 'text-rose-600 dark:text-rose-400',
+    btn: 'bg-rose-600 hover:bg-rose-500 text-white',
     label: 'Error',
   },
   warning: {
-    emoji: '⚠️',
-    gradient: 'from-amber-500 to-orange-500',
-    glow: 'rgba(245,158,11,0.25)',
-    badge: 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900/50',
-    btn: 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white shadow-[0_4px_20px_rgba(245,158,11,0.35)]',
+    Icon: AlertTriangle,
+    topBar: 'from-amber-500 to-orange-400',
+    iconBg: 'bg-amber-50 dark:bg-amber-950/40',
+    iconColor: 'text-amber-600 dark:text-amber-400',
+    badgeText: 'text-amber-600 dark:text-amber-400',
+    btn: 'bg-amber-500 hover:bg-amber-400 text-white',
     label: 'Warning',
   },
   info: {
-    emoji: 'ℹ️',
-    gradient: 'from-sky-500 to-blue-600',
-    glow: 'rgba(14,165,233,0.25)',
-    badge: 'bg-sky-50 dark:bg-sky-950/30 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-900/50',
-    btn: 'bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white shadow-[0_4px_20px_rgba(14,165,233,0.35)]',
+    Icon: Info,
+    topBar: 'from-sky-500 to-blue-500',
+    iconBg: 'bg-sky-50 dark:bg-sky-950/40',
+    iconColor: 'text-sky-600 dark:text-sky-400',
+    badgeText: 'text-sky-600 dark:text-sky-400',
+    btn: 'bg-sky-600 hover:bg-sky-500 text-white',
     label: 'Info',
   },
 };
 
 export const AlertPopup: React.FC<AlertPopupProps> = ({ open, type, title, message, onClose }) => {
   const c = typeConfig[type];
+  const Icon = c.Icon;
+
   return (
     <ModalShell open={open} onClose={onClose} maxWidthClassName="max-w-sm" contentClassName="p-0">
-      <div className="relative overflow-hidden rounded-3xl">
-        {/* gradient top bar */}
-        <div className={`h-1.5 w-full bg-gradient-to-r ${c.gradient}`} />
-        <div className="px-7 py-8 text-center space-y-5">
-          {/* emoji icon with glow */}
-          <motion.div
-            initial={{ scale: 0.6, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            className="flex justify-center"
-          >
-            <div
-              className="h-16 w-16 rounded-2xl flex items-center justify-center text-3xl"
-              style={{ background: `linear-gradient(135deg, ${c.glow}, transparent)`, boxShadow: `0 8px 32px ${c.glow}` }}
-            >
-              {c.emoji}
-            </div>
-          </motion.div>
+      <div className="overflow-hidden rounded-3xl">
+        {/* colour bar */}
+        <div className={`h-1 w-full bg-gradient-to-r ${c.topBar}`} />
 
-          {/* badge label */}
-          <div className="flex justify-center">
-            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-black uppercase tracking-widest ${c.badge}`}>
-              {c.label}
-            </span>
+        <div className="px-6 pt-6 pb-7">
+          {/* close */}
+          <div className="flex justify-end mb-4">
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* icon + label */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className={`h-11 w-11 rounded-2xl flex items-center justify-center flex-shrink-0 ${c.iconBg}`}>
+              <Icon size={22} className={c.iconColor} />
+            </div>
+            <span className={`text-xs font-black uppercase tracking-widest ${c.badgeText}`}>{c.label}</span>
           </div>
 
           {/* text */}
-          <div>
-            <h3 className="text-xl font-black text-slate-950 dark:text-white mb-2">{title}</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{message}</p>
-          </div>
+          <h3 className="text-lg font-black text-slate-900 dark:text-white mb-2 leading-snug">{title}</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{message}</p>
 
-          {/* action button */}
+          {/* action */}
           <button
             onClick={onClose}
-            className={`w-full rounded-xl px-4 py-3 text-sm font-black transition-all hover:-translate-y-0.5 ${c.btn}`}
+            className={`mt-6 w-full rounded-xl px-4 py-3 text-sm font-bold transition-all ${c.btn}`}
           >
             Got it
           </button>

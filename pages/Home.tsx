@@ -3,30 +3,30 @@ import { motion, useScroll, useTransform, useSpring, AnimatePresence } from 'fra
 import { ArrowRight, Leaf, Zap, Heart, ShoppingBag, Building2, Users, Truck, Star, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-// Floating food emoji icons
+// Floating accent icons (Lucide names rendered in the component)
 const floatingItems = [
-  { emoji: '🥦', x: 8, y: 18, dur: 7, delay: 0 },
-  { emoji: '🍞', x: 88, y: 12, dur: 9, delay: 1.2 },
-  { emoji: '🥕', x: 75, y: 55, dur: 8, delay: 0.5 },
-  { emoji: '🍎', x: 15, y: 65, dur: 10, delay: 2 },
-  { emoji: '🧀', x: 55, y: 8, dur: 6, delay: 1.5 },
-  { emoji: '🥗', x: 92, y: 78, dur: 11, delay: 0.8 },
-  { emoji: '🌽', x: 4, y: 88, dur: 8, delay: 3 },
-  { emoji: '🫐', x: 48, y: 90, dur: 7, delay: 2.5 },
+  { icon: 'leaf', x: 8, y: 18, dur: 7, delay: 0 },
+  { icon: 'shopping-bag', x: 88, y: 12, dur: 9, delay: 1.2 },
+  { icon: 'heart', x: 75, y: 55, dur: 8, delay: 0.5 },
+  { icon: 'zap', x: 15, y: 65, dur: 10, delay: 2 },
+  { icon: 'star', x: 55, y: 8, dur: 6, delay: 1.5 },
+  { icon: 'truck', x: 92, y: 78, dur: 11, delay: 0.8 },
+  { icon: 'leaf', x: 4, y: 88, dur: 8, delay: 3 },
+  { icon: 'heart', x: 48, y: 90, dur: 7, delay: 2.5 },
 ];
 
 const tickerItems = [
-  '2.5M+ meals rescued', '🌍', '1.2M kg CO₂ avoided', '⚡', '4,200 partner stores',
-  '🌱', '70% average savings', '💚', '500+ charities served', '🚛', '92% pickup completion',
-  '♻️', '2.5M+ meals rescued', '🌍', '1.2M kg CO₂ avoided', '⚡', '4,200 partner stores',
-  '🌱', '70% average savings', '💚', '500+ charities served', '🚛', '92% pickup completion', '♻️',
+  '2.5M+ meals rescued', '·', '1.2M kg CO₂ avoided', '·', '4,200 partner stores',
+  '·', '70% average savings', '·', '500+ charities served', '·', '92% pickup completion',
+  '·', '2.5M+ meals rescued', '·', '1.2M kg CO₂ avoided', '·', '4,200 partner stores',
+  '·', '70% average savings', '·', '500+ charities served', '·', '92% pickup completion', '·',
 ];
 
 const roles = [
   { label: 'For Consumers', icon: <ShoppingBag size={20} />, color: 'from-emerald-500 to-teal-500', link: '/marketplace', cta: 'Shop Now', desc: 'Save up to 70% on quality surplus food from local stores.' },
   { label: 'For Retailers', icon: <Building2 size={20} />, color: 'from-violet-500 to-purple-600', link: '/partners', cta: 'Partner Up', desc: 'Turn unsold inventory into revenue, not landfill.' },
   { label: 'For Charities', icon: <Heart size={20} />, color: 'from-rose-500 to-pink-600', link: '/charities', cta: 'Connect', desc: 'Access donation-ready food faster and feed more people.' },
-  { label: 'For Volunteers', icon: <Users size={20} />, color: 'from-amber-500 to-orange-500', link: '/marketplace', cta: 'Help Out', desc: 'Close the last-mile gap and make your community stronger.' },
+  { label: 'For Volunteers', icon: <Users size={20} />, color: 'from-amber-500 to-orange-500', link: '/volunteers', cta: 'Help Out', desc: 'Close the last-mile gap and make your community stronger.' },
 ];
 
 const workflowSteps = [
@@ -81,16 +81,20 @@ export const Home: React.FC = () => {
         {/* Dot grid */}
         <div className="dot-grid absolute inset-0 opacity-40 dark:opacity-30" />
 
-        {/* Floating food emojis */}
-        {floatingItems.map((item, i) => (
-          <div
-            key={i}
-            className="float-icon pointer-events-none absolute select-none text-2xl opacity-40 dark:opacity-25"
-            style={{ left: `${item.x}%`, top: `${item.y}%`, '--dur': `${item.dur}s`, '--delay': `${item.delay}s` } as React.CSSProperties}
-          >
-            {item.emoji}
-          </div>
-        ))}
+        {/* Floating accent icons */}
+        {floatingItems.map((item, i) => {
+          const IconMap: Record<string, any> = { 'leaf': Leaf, 'shopping-bag': ShoppingBag, 'heart': Heart, 'zap': Zap, 'star': Star, 'truck': Truck };
+          const Icon = IconMap[item.icon] || Leaf;
+          return (
+            <div
+              key={i}
+              className="float-icon pointer-events-none absolute select-none opacity-[0.12] dark:opacity-[0.08] text-emerald-600 dark:text-emerald-400"
+              style={{ left: `${item.x}%`, top: `${item.y}%`, '--dur': `${item.dur}s`, '--delay': `${item.delay}s` } as React.CSSProperties}
+            >
+              <Icon size={22} />
+            </div>
+          );
+        })}
 
         {/* Morphing blob behind title */}
         <motion.div
@@ -127,7 +131,7 @@ export const Home: React.FC = () => {
             transition={{ duration: 0.7, delay: 0.25 }}
             className="mx-auto mt-6 max-w-2xl text-lg text-slate-600 dark:text-slate-300 md:text-xl"
           >
-            EcoFeast connects surplus food from retailers to consumers, charities, and volunteers — 
+            EcoFeast connects surplus food from retailers to consumers, charities, and volunteers —
             turning what would be waste into measurable community value.
           </motion.p>
 
@@ -216,11 +220,10 @@ export const Home: React.FC = () => {
                   onClick={() => setActiveRole(i)}
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
-                  className={`perspective-card rounded-3xl p-6 text-left transition-all duration-300 ${
-                    activeRole === i
+                  className={`perspective-card rounded-3xl p-6 text-left transition-all duration-300 ${activeRole === i
                       ? 'bg-gradient-to-br ' + role.color + ' text-white shadow-2xl'
                       : 'border border-slate-200/80 bg-slate-50/80 text-slate-700 hover:border-emerald-200 dark:border-dark-800 dark:bg-dark-900/70 dark:text-slate-200'
-                  }`}
+                    }`}
                 >
                   <div className={`mb-3 flex h-12 w-12 items-center justify-center rounded-2xl ${activeRole === i ? 'bg-white/20' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'}`}>
                     {role.icon}

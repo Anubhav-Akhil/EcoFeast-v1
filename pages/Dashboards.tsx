@@ -96,13 +96,13 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
     const handleNewOrder = (payload: any) => {
       if (payload?.storeId === user.id) {
         // For new orders, a full refresh is safest to get all aggregate fields.
-        refreshFulfillment(true); 
+        refreshFulfillment(true);
         openSuccess('New Order Received!', `Order #${payload.code} has just arrived for your store.`);
       }
     };
     const handleTaskUpdated = (task: Task) => {
       if (task?.storeId !== user.id) return;
-      
+
       setStoreTasks(prev => prev.map(t => t.id === task.id ? task : t));
       setStoreOrders(prev => prev.map(so => {
         if (so.order.id === task.orderId) {
@@ -204,8 +204,8 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
 
   const generateImage = () => {
     if (!newItem.title) {
-       openAlert('warning', 'Missing Details', "Please enter an Item Name first to generate an image.");
-       return;
+      openAlert('warning', 'Missing Details', "Please enter an Item Name first to generate an image.");
+      return;
     }
     setIsGeneratingImg(true);
     setTimeout(() => {
@@ -213,11 +213,11 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
       let keyword = title.toLowerCase();
       if (keyword.includes('sushi')) keyword += ',korean,japanese,food,delicious';
       else keyword = keyword.split(' ').join(',');
-      
+
       // Deterministic lock based on title string
       const lock = title.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 1000;
       const url = `https://loremflickr.com/800/600/${encodeURIComponent(keyword)}?lock=${lock}`;
-      
+
       setNewItem(prev => ({ ...prev, image: url }));
       setIsGeneratingImg(false);
       setHighlightImage(false);
@@ -227,7 +227,7 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
   const handleSubmit = async (e?: React.FormEvent, skipImageCheck = false) => {
     if (e) e.preventDefault();
     if (!newItem.title || !newItem.description) return;
-    
+
     if (!newItem.image && !skipImageCheck) {
       setImagePromptOpen(true);
       return;
@@ -349,7 +349,7 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
     // Optimistic update
     setStoreTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'received' } : t));
     setStoreOrders(prev => prev.map(so => (so.task?.id === taskId ? { ...so, task: { ...so.task, status: 'received' } as Task } : so)));
-    
+
     try {
       await api.updateTaskStatus(taskId, 'received');
       openSuccess('Order Received', 'Order status updated to RECEIVED.');
@@ -446,18 +446,16 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
             <button
               key={tab.key}
               onClick={() => setSearchParams({ tab: tab.key })}
-              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                activeTab === tab.key
+              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === tab.key
                   ? 'bg-emerald-600 text-white shadow-[0_0_16px_rgba(16,185,129,0.25)]'
                   : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
+                }`}
             >
               <tab.icon size={15} />
               {tab.label}
               {tab.count > 0 && (
-                <span className={`rounded-full px-2 py-0.5 text-xs font-black ${
-                  activeTab === tab.key ? 'bg-white/20 text-white' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
-                }`}>{tab.count}</span>
+                <span className={`rounded-full px-2 py-0.5 text-xs font-black ${activeTab === tab.key ? 'bg-white/20 text-white' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+                  }`}>{tab.count}</span>
               )}
             </button>
           ))}
@@ -465,369 +463,368 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
       </div>
       <div className="p-6">
 
-      {activeTab === 'listings' && (
-      <>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {[
-          { label: 'Total Listings', value: items.length, color: 'emerald', sub: 'live on platform' },
-          { label: 'Live Units', value: totalUnits, color: 'blue', sub: 'units available now' },
-          { label: 'Charity Items', value: charityCount, color: 'violet', sub: 'marked for NGOs' },
-          { label: 'Sold / Rescued', value: soldQuantity, color: 'rose', sub: 'units rescued total' },
-        ].map(s => (
-          <div key={s.label} className={`p-5 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-${s.color}-300 dark:hover:border-${s.color}-800 transition-all`}>
-            <div className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">{s.label}</div>
-            <div className="text-3xl font-black text-slate-950 dark:text-white mt-2">{s.value}</div>
-            <div className="text-xs text-slate-400 mt-1">{s.sub}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
-        <div className="xl:col-span-3 bg-white dark:bg-dark-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-800">
-          <div className="flex flex-col gap-4 mb-5">
-            <div className="flex flex-wrap gap-2">
+        {activeTab === 'listings' && (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
               {[
-                { key: 'all', label: 'All Listings', icon: Layers3 },
-                { key: 'customer', label: 'Customer', icon: Package },
-                { key: 'charity', label: 'Charity', icon: Sparkles },
-                { key: 'animal', label: 'Animal Use', icon: Leaf },
-              ].map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setListingFilter(tab.key as any)}
-                  className={`px-3 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition ${
-                    listingFilter === tab.key
-                      ? 'bg-eco-600 text-white'
-                      : 'bg-gray-100 dark:bg-dark-800 text-gray-700 dark:text-gray-200'
-                  }`}
-                >
-                  <tab.icon size={16} />
-                  {tab.label}
-                </button>
+                { label: 'Total Listings', value: items.length, color: 'emerald', sub: 'live on platform' },
+                { label: 'Live Units', value: totalUnits, color: 'blue', sub: 'units available now' },
+                { label: 'Charity Items', value: charityCount, color: 'violet', sub: 'marked for NGOs' },
+                { label: 'Sold / Rescued', value: soldQuantity, color: 'rose', sub: 'units rescued total' },
+              ].map(s => (
+                <div key={s.label} className={`p-5 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-${s.color}-300 dark:hover:border-${s.color}-800 transition-all`}>
+                  <div className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">{s.label}</div>
+                  <div className="text-3xl font-black text-slate-950 dark:text-white mt-2">{s.value}</div>
+                  <div className="text-xs text-slate-400 mt-1">{s.sub}</div>
+                </div>
               ))}
             </div>
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search your listings..."
-                className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 dark:border-dark-700 bg-white dark:bg-dark-800 text-gray-800 dark:text-gray-100"
-              />
-            </div>
-          </div>
 
-          <div className="space-y-4">
-            {filteredItems.map((item) => (
-              <div key={item.id} className="p-4 border dark:border-dark-700 rounded-xl bg-white dark:bg-dark-900">
-                <div className="flex gap-4">
-                  <img src={item.image} className="w-20 h-20 rounded-lg object-cover" />
-                  <div className="flex-1">
-                    <div className="font-bold dark:text-white">{item.title}</div>
-                    <div className="text-sm text-gray-500">{item.quantity} left • Pickup till {item.pickupEnd}</div>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {item.forAnimalFeed && <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded">Animal Feed</span>}
-                      {item.forCharity && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Charity Item</span>}
-                      {!item.forAnimalFeed && !item.forCharity && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Customer Listing</span>}
-                      <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded capitalize">{item.category}</span>
-                    </div>
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+              <div className="xl:col-span-3 bg-white dark:bg-dark-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-800">
+                <div className="flex flex-col gap-4 mb-5">
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { key: 'all', label: 'All Listings', icon: Layers3 },
+                      { key: 'customer', label: 'Customer', icon: Package },
+                      { key: 'charity', label: 'Charity', icon: Sparkles },
+                      { key: 'animal', label: 'Animal Use', icon: Leaf },
+                    ].map((tab) => (
+                      <button
+                        key={tab.key}
+                        onClick={() => setListingFilter(tab.key as any)}
+                        className={`px-3 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition ${listingFilter === tab.key
+                            ? 'bg-eco-600 text-white'
+                            : 'bg-gray-100 dark:bg-dark-800 text-gray-700 dark:text-gray-200'
+                          }`}
+                      >
+                        <tab.icon size={16} />
+                        {tab.label}
+                      </button>
+                    ))}
                   </div>
-                  <div className="text-right min-w-[120px]">
-                    <div className="text-lg font-bold text-eco-600">{item.discountPrice === 0 ? 'FREE' : `INR ${item.discountPrice}`}</div>
-                    <div className="text-xs text-gray-400 line-through">{item.discountPrice > 0 ? `INR ${item.originalPrice}` : ''}</div>
+                  <div className="relative">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Search your listings..."
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 dark:border-dark-700 bg-white dark:bg-dark-800 text-gray-800 dark:text-gray-100"
+                    />
                   </div>
                 </div>
 
-                <div className="mt-4 flex flex-wrap items-center gap-2">
-                  {item.quantity === 0 ? (
-                    <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">Sold Out</span>
-                  ) : (
-                    <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">Active</span>
-                  )}
-                  <div className="flex items-center gap-1 border border-gray-200 dark:border-dark-700 rounded-lg p-0.5 bg-gray-50 dark:bg-dark-800">
-                    <button 
-                      onClick={() => handleQuickRestock(item, -1)} 
-                      disabled={item.quantity === 0} 
-                      className="w-7 h-7 flex items-center justify-center rounded-md bg-transparent text-gray-600 dark:text-gray-300 hover:bg-orange-100 hover:text-orange-700 dark:hover:bg-orange-900/40 dark:hover:text-orange-400 disabled:opacity-30 transition-colors font-bold text-lg leading-none pb-0.5" 
-                      title="Decrease Stock"
-                    >
-                      -
-                    </button>
-                    <span className="text-xs font-bold w-16 text-center text-gray-800 dark:text-white" title="Current Stock">Stock: {item.quantity}</span>
-                    <button 
-                      onClick={() => handleQuickRestock(item, 1)} 
-                      className="w-7 h-7 flex items-center justify-center rounded-md bg-transparent text-gray-600 dark:text-gray-300 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-900/40 dark:hover:text-emerald-400 transition-colors font-bold text-lg leading-none pb-0.5" 
-                      title="Increase Stock"
-                    >
-                      +
-                    </button>
-                  </div>
-                  <button onClick={() => { setRestockTarget(item); setRestockQty(item.quantity); }} className="px-3 py-1.5 text-xs rounded-lg bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200 flex items-center gap-1" title="Set exact stock amount">
-                    <PackagePlus size={14} /> Edit Stock
-                  </button>
-                  <button onClick={() => openPriceEditor(item)} className="px-3 py-1.5 text-xs rounded-lg bg-violet-100 text-violet-700 font-semibold hover:bg-violet-200 flex items-center gap-1">
-                    <BadgeIndianRupee size={14} /> Change Price
-                  </button>
-                  <button onClick={() => handleDelete(item.id)} className="ml-auto p-2 text-red-500 hover:bg-red-50 rounded" title="Delete Item">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-            ))}
-            {filteredItems.length === 0 && <div className="text-gray-500 text-center py-8">No listings match this view.</div>}
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <div className="bg-white dark:bg-dark-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-800">
-            <h3 className="font-bold mb-4 dark:text-white flex items-center gap-2"><TrendingUp size={18} /> Weekly Impact</h3>
-            <div className="h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={[{ name: 'M', value: 10 }, { name: 'T', value: 25 }, { name: 'W', value: 15 }, { name: 'T', value: 30 }, { name: 'F', value: 45 }, { name: 'S', value: 20 }]}>
-                  <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                  <Bar dataKey="value" fill="#16a34a" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg text-xs text-yellow-800 dark:text-yellow-200">
-              Marking items for charity builds social trust and impact.
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-dark-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-800">
-            <h3 className="font-bold mb-2 dark:text-white">Charity Points Gained</h3>
-            <div className="text-4xl font-black text-purple-700 dark:text-purple-300">{charityPointsEarned}</div>
-            <p className="text-xs text-gray-500 mt-2">
-              You earn 5 points for each charity-marked unit successfully claimed by a charity.
-            </p>
-          </div>
-
-          <div className="bg-white dark:bg-dark-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-800">
-            <h3 className="font-bold mb-2 dark:text-white">Low Stock Alerts</h3>
-            <div className="text-4xl font-black text-orange-700 dark:text-orange-300">{lowStockItems.length}</div>
-            <p className="text-xs text-gray-500 mt-2">
-              Listings currently at 2 or fewer units. Use stock controls to restock quickly.
-            </p>
-            <div className="mt-3 space-y-1">
-              {lowStockItems.length === 0 ? (
-                <p className="text-xs text-gray-400">No low-stock items right now.</p>
-              ) : (
-                lowStockItems.slice(0, 4).map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => { setRestockTarget(item); setRestockQty(item.quantity); }}
-                    className="block w-full text-left text-xs rounded-md px-2 py-1 bg-orange-50 hover:bg-orange-100 text-orange-800"
-                  >
-                    {item.title}: {item.quantity}
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-      </>
-      )}
-
-      {activeTab === 'orders' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-5 rounded-2xl bg-white dark:bg-dark-900 border border-gray-200 dark:border-dark-800 shadow-sm">
-              <div className="text-sm font-semibold text-gray-500">Total Orders</div>
-              <div className="text-3xl font-black mt-1 dark:text-white">{orderCounts.total}</div>
-            </div>
-            <div className="p-5 rounded-2xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 shadow-sm">
-              <div className="text-sm font-semibold text-amber-700 dark:text-amber-300">New / Pending</div>
-              <div className="text-3xl font-black mt-1 text-amber-800 dark:text-amber-200">{orderCounts.pending + orderCounts.received}</div>
-            </div>
-            <div className="p-5 rounded-2xl bg-violet-50 dark:bg-violet-900/10 border border-violet-200 dark:border-violet-900/30 shadow-sm">
-              <div className="text-sm font-semibold text-violet-700 dark:text-violet-300">Ready to Pickup</div>
-              <div className="text-3xl font-black mt-1 text-violet-800 dark:text-violet-200">{orderCounts.ready}</div>
-            </div>
-            <div className="p-5 rounded-2xl bg-sky-50 dark:bg-sky-900/10 border border-sky-200 dark:border-sky-900/30 shadow-sm">
-              <div className="text-sm font-semibold text-sky-700 dark:text-sky-300">Out for Delivery</div>
-              <div className="text-3xl font-black mt-1 text-sky-800 dark:text-sky-200">{orderCounts.accepted + orderCounts.picked_up}</div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-dark-900 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-dark-800">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <h3 className="font-bold dark:text-white flex items-center gap-2"><ClipboardList size={18} /> Store Orders</h3>
-            </div>
-
-            {ordersLoading ? (
-              <div className="py-16 text-center space-y-4">
-                <div className="flex justify-center">
-                  <RefreshCw className="text-eco-500 animate-spin" size={40} />
-                </div>
-                <div className="text-gray-500 font-medium animate-pulse">Fetching your latest orders...</div>
-              </div>
-            ) : storeOrders.length === 0 ? (
-              <div className="py-10 text-center text-gray-500">No orders for your store yet.</div>
-            ) : (
-              <div className="space-y-4">
-                {[...storeOrders].sort((a, b) => {
-                  // Sort by most-recently-updated task, then order
-                  const tA = new Date(a.task?.updatedAt || a.order.createdAt || 0).getTime();
-                  const tB = new Date(b.task?.updatedAt || b.order.createdAt || 0).getTime();
-                  return tB - tA;
-                }).map((row) => {
-                  const status = row.task?.status || row.order.status || 'pending';
-                  const date = row.order.timestamp ? new Date(row.order.timestamp) : null;
-                  const dateStr = date ? date.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
-                  return (
-                    <div key={row.order.id} className="p-4 rounded-2xl border border-gray-200 dark:border-dark-800 bg-gray-50 dark:bg-dark-950/30">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-mono font-black text-gray-900 dark:text-white">#{row.order.code}</span>
-                            <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-md ${statusBadge(status)}`}>{String(status).toUpperCase()}</span>
-                            {dateStr && <span className="text-xs text-gray-400">{dateStr}</span>}
+                <div className="space-y-4">
+                  {filteredItems.map((item) => (
+                    <div key={item.id} className="p-4 border dark:border-dark-700 rounded-xl bg-white dark:bg-dark-900">
+                      <div className="flex gap-4">
+                        <img src={item.image} className="w-20 h-20 rounded-lg object-cover" />
+                        <div className="flex-1">
+                          <div className="font-bold dark:text-white">{item.title}</div>
+                          <div className="text-sm text-gray-500">{item.quantity} left • Pickup till {item.pickupEnd}</div>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {item.forAnimalFeed && <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded">Animal Feed</span>}
+                            {item.forCharity && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Charity Item</span>}
+                            {!item.forAnimalFeed && !item.forCharity && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Customer Listing</span>}
+                            <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded capitalize">{item.category}</span>
                           </div>
-                          <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-x-3 gap-y-1">
-                            <span className="inline-flex items-center gap-1"><Package size={14} /> {row.totalQty} unit(s)</span>
-                            <span className="inline-flex items-center gap-1"><BadgeIndianRupee size={14} /> INR {row.totalAmount}</span>
-                            {(row.pickupStart || row.pickupEnd) && (
-                              <span className="inline-flex items-center gap-1"><Clock size={14} /> Pickup {row.pickupStart || '--'}-{row.pickupEnd || '--'}</span>
+                        </div>
+                        <div className="text-right min-w-[120px]">
+                          <div className="text-lg font-bold text-eco-600">{item.discountPrice === 0 ? 'FREE' : `INR ${item.discountPrice}`}</div>
+                          <div className="text-xs text-gray-400 line-through">{item.discountPrice > 0 ? `INR ${item.originalPrice}` : ''}</div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
+                        {item.quantity === 0 ? (
+                          <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">Sold Out</span>
+                        ) : (
+                          <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">Active</span>
+                        )}
+                        <div className="flex items-center gap-1 border border-gray-200 dark:border-dark-700 rounded-lg p-0.5 bg-gray-50 dark:bg-dark-800">
+                          <button
+                            onClick={() => handleQuickRestock(item, -1)}
+                            disabled={item.quantity === 0}
+                            className="w-7 h-7 flex items-center justify-center rounded-md bg-transparent text-gray-600 dark:text-gray-300 hover:bg-orange-100 hover:text-orange-700 dark:hover:bg-orange-900/40 dark:hover:text-orange-400 disabled:opacity-30 transition-colors font-bold text-lg leading-none pb-0.5"
+                            title="Decrease Stock"
+                          >
+                            -
+                          </button>
+                          <span className="text-xs font-bold w-16 text-center text-gray-800 dark:text-white" title="Current Stock">Stock: {item.quantity}</span>
+                          <button
+                            onClick={() => handleQuickRestock(item, 1)}
+                            className="w-7 h-7 flex items-center justify-center rounded-md bg-transparent text-gray-600 dark:text-gray-300 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-900/40 dark:hover:text-emerald-400 transition-colors font-bold text-lg leading-none pb-0.5"
+                            title="Increase Stock"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <button onClick={() => { setRestockTarget(item); setRestockQty(item.quantity); }} className="px-3 py-1.5 text-xs rounded-lg bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200 flex items-center gap-1" title="Set exact stock amount">
+                          <PackagePlus size={14} /> Edit Stock
+                        </button>
+                        <button onClick={() => openPriceEditor(item)} className="px-3 py-1.5 text-xs rounded-lg bg-violet-100 text-violet-700 font-semibold hover:bg-violet-200 flex items-center gap-1">
+                          <BadgeIndianRupee size={14} /> Change Price
+                        </button>
+                        <button onClick={() => handleDelete(item.id)} className="ml-auto p-2 text-red-500 hover:bg-red-50 rounded" title="Delete Item">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {filteredItems.length === 0 && <div className="text-gray-500 text-center py-8">No listings match this view.</div>}
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="bg-white dark:bg-dark-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-800">
+                  <h3 className="font-bold mb-4 dark:text-white flex items-center gap-2"><TrendingUp size={18} /> Weekly Impact</h3>
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={[{ name: 'M', value: 10 }, { name: 'T', value: 25 }, { name: 'W', value: 15 }, { name: 'T', value: 30 }, { name: 'F', value: 45 }, { name: 'S', value: 20 }]}>
+                        <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                        <Bar dataKey="value" fill="#16a34a" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg text-xs text-yellow-800 dark:text-yellow-200">
+                    Marking items for charity builds social trust and impact.
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-dark-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-800">
+                  <h3 className="font-bold mb-2 dark:text-white">Charity Points Gained</h3>
+                  <div className="text-4xl font-black text-purple-700 dark:text-purple-300">{charityPointsEarned}</div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    You earn 5 points for each charity-marked unit successfully claimed by a charity.
+                  </p>
+                </div>
+
+                <div className="bg-white dark:bg-dark-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-800">
+                  <h3 className="font-bold mb-2 dark:text-white">Low Stock Alerts</h3>
+                  <div className="text-4xl font-black text-orange-700 dark:text-orange-300">{lowStockItems.length}</div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Listings currently at 2 or fewer units. Use stock controls to restock quickly.
+                  </p>
+                  <div className="mt-3 space-y-1">
+                    {lowStockItems.length === 0 ? (
+                      <p className="text-xs text-gray-400">No low-stock items right now.</p>
+                    ) : (
+                      lowStockItems.slice(0, 4).map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => { setRestockTarget(item); setRestockQty(item.quantity); }}
+                          className="block w-full text-left text-xs rounded-md px-2 py-1 bg-orange-50 hover:bg-orange-100 text-orange-800"
+                        >
+                          {item.title}: {item.quantity}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {activeTab === 'orders' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-5 rounded-2xl bg-white dark:bg-dark-900 border border-gray-200 dark:border-dark-800 shadow-sm">
+                <div className="text-sm font-semibold text-gray-500">Total Orders</div>
+                <div className="text-3xl font-black mt-1 dark:text-white">{orderCounts.total}</div>
+              </div>
+              <div className="p-5 rounded-2xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 shadow-sm">
+                <div className="text-sm font-semibold text-amber-700 dark:text-amber-300">New / Pending</div>
+                <div className="text-3xl font-black mt-1 text-amber-800 dark:text-amber-200">{orderCounts.pending + orderCounts.received}</div>
+              </div>
+              <div className="p-5 rounded-2xl bg-violet-50 dark:bg-violet-900/10 border border-violet-200 dark:border-violet-900/30 shadow-sm">
+                <div className="text-sm font-semibold text-violet-700 dark:text-violet-300">Ready to Pickup</div>
+                <div className="text-3xl font-black mt-1 text-violet-800 dark:text-violet-200">{orderCounts.ready}</div>
+              </div>
+              <div className="p-5 rounded-2xl bg-sky-50 dark:bg-sky-900/10 border border-sky-200 dark:border-sky-900/30 shadow-sm">
+                <div className="text-sm font-semibold text-sky-700 dark:text-sky-300">Out for Delivery</div>
+                <div className="text-3xl font-black mt-1 text-sky-800 dark:text-sky-200">{orderCounts.accepted + orderCounts.picked_up}</div>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-dark-900 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-dark-800">
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <h3 className="font-bold dark:text-white flex items-center gap-2"><ClipboardList size={18} /> Store Orders</h3>
+              </div>
+
+              {ordersLoading ? (
+                <div className="py-16 text-center space-y-4">
+                  <div className="flex justify-center">
+                    <RefreshCw className="text-eco-500 animate-spin" size={40} />
+                  </div>
+                  <div className="text-gray-500 font-medium animate-pulse">Fetching your latest orders...</div>
+                </div>
+              ) : storeOrders.length === 0 ? (
+                <div className="py-10 text-center text-gray-500">No orders for your store yet.</div>
+              ) : (
+                <div className="space-y-4">
+                  {[...storeOrders].sort((a, b) => {
+                    // Sort by most-recently-updated task, then order
+                    const tA = new Date(a.task?.updatedAt || a.order.createdAt || 0).getTime();
+                    const tB = new Date(b.task?.updatedAt || b.order.createdAt || 0).getTime();
+                    return tB - tA;
+                  }).map((row) => {
+                    const status = row.task?.status || row.order.status || 'pending';
+                    const date = row.order.timestamp ? new Date(row.order.timestamp) : null;
+                    const dateStr = date ? date.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+                    return (
+                      <div key={row.order.id} className="p-4 rounded-2xl border border-gray-200 dark:border-dark-800 bg-gray-50 dark:bg-dark-950/30">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-mono font-black text-gray-900 dark:text-white">#{row.order.code}</span>
+                              <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-md ${statusBadge(status)}`}>{String(status).toUpperCase()}</span>
+                              {dateStr && <span className="text-xs text-gray-400">{dateStr}</span>}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                              <span className="inline-flex items-center gap-1"><Package size={14} /> {row.totalQty} unit(s)</span>
+                              <span className="inline-flex items-center gap-1"><BadgeIndianRupee size={14} /> INR {row.totalAmount}</span>
+                              {(row.pickupStart || row.pickupEnd) && (
+                                <span className="inline-flex items-center gap-1"><Clock size={14} /> Pickup {row.pickupStart || '--'}-{row.pickupEnd || '--'}</span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            {row.task?.id && status === 'pending' && (
+                              <button
+                                onClick={() => handleMarkReceived(row.task!.id)}
+                                className="px-3 py-2 rounded-xl text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
+                              >
+                                <BadgeCheck size={16} /> Mark Received
+                              </button>
+                            )}
+                            {row.task?.id && status === 'received' && (
+                              <button
+                                onClick={() => handleMarkPacked(row.task!.id)}
+                                className="px-3 py-2 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 flex items-center gap-2"
+                              >
+                                <BadgeCheck size={16} /> Mark Packed
+                              </button>
+                            )}
+                            {row.task?.id && status === 'packed' && (
+                              <button
+                                onClick={() => handleMarkReady(row.task!.id)}
+                                className="px-3 py-2 rounded-xl text-sm font-bold bg-eco-600 text-white hover:bg-eco-700 flex items-center gap-2"
+                              >
+                                <BadgeCheck size={16} /> Confirm Pickup
+                              </button>
+                            )}
+                            {(status === 'pending' || status === 'ready') && (
+                              <button
+                                onClick={() => handleCancelOrder(row.order.id)}
+                                className="px-3 py-2 rounded-xl text-sm font-bold bg-white dark:bg-dark-900 border border-gray-200 dark:border-dark-800 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 flex items-center gap-2"
+                              >
+                                <XCircle size={16} /> Cancel
+                              </button>
                             )}
                           </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2">
-                          {row.task?.id && status === 'pending' && (
-                            <button
-                              onClick={() => handleMarkReceived(row.task!.id)}
-                              className="px-3 py-2 rounded-xl text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
-                            >
-                              <BadgeCheck size={16} /> Mark Received
-                            </button>
-                          )}
-                          {row.task?.id && status === 'received' && (
-                            <button
-                              onClick={() => handleMarkPacked(row.task!.id)}
-                              className="px-3 py-2 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 flex items-center gap-2"
-                            >
-                              <BadgeCheck size={16} /> Mark Packed
-                            </button>
-                          )}
-                          {row.task?.id && status === 'packed' && (
-                            <button
-                              onClick={() => handleMarkReady(row.task!.id)}
-                              className="px-3 py-2 rounded-xl text-sm font-bold bg-eco-600 text-white hover:bg-eco-700 flex items-center gap-2"
-                            >
-                              <BadgeCheck size={16} /> Confirm Pickup
-                            </button>
-                          )}
-                          {(status === 'pending' || status === 'ready') && (
-                            <button
-                              onClick={() => handleCancelOrder(row.order.id)}
-                              className="px-3 py-2 rounded-xl text-sm font-bold bg-white dark:bg-dark-900 border border-gray-200 dark:border-dark-800 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 flex items-center gap-2"
-                            >
-                              <XCircle size={16} /> Cancel
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {row.storeItems?.length > 0 && (
-                        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {row.storeItems.slice(0, 6).map((item, idx) => (
-                            <div key={`${row.order.id}_${item.id}_${idx}`} className="flex items-center gap-3 bg-white dark:bg-dark-900 rounded-xl p-3 border border-gray-200 dark:border-dark-800">
-                              <img src={item.image} alt={item.title} className="h-10 w-10 rounded-lg object-cover flex-shrink-0" />
-                              <div className="min-w-0 flex-1">
-                                <div className="text-sm font-bold text-gray-900 dark:text-white truncate">{item.title}</div>
-                                <div className="text-xs text-gray-400 capitalize">{item.category}</div>
+                        {row.storeItems?.length > 0 && (
+                          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {row.storeItems.slice(0, 6).map((item, idx) => (
+                              <div key={`${row.order.id}_${item.id}_${idx}`} className="flex items-center gap-3 bg-white dark:bg-dark-900 rounded-xl p-3 border border-gray-200 dark:border-dark-800">
+                                <img src={item.image} alt={item.title} className="h-10 w-10 rounded-lg object-cover flex-shrink-0" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-sm font-bold text-gray-900 dark:text-white truncate">{item.title}</div>
+                                  <div className="text-xs text-gray-400 capitalize">{item.category}</div>
+                                </div>
+                                <div className="text-sm font-black text-eco-600 dark:text-eco-400">{item.discountPrice === 0 ? 'FREE' : `INR ${item.discountPrice}`}</div>
                               </div>
-                              <div className="text-sm font-black text-eco-600 dark:text-eco-400">{item.discountPrice === 0 ? 'FREE' : `INR ${item.discountPrice}`}</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'pickups' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-5 rounded-2xl bg-white dark:bg-dark-900 border border-gray-200 dark:border-dark-800 shadow-sm">
-              <div className="text-sm font-semibold text-gray-500">Total Pickups</div>
-              <div className="text-3xl font-black mt-1 dark:text-white">{taskCounts.total}</div>
-            </div>
-            <div className="p-5 rounded-2xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 shadow-sm">
-              <div className="text-sm font-semibold text-amber-700 dark:text-amber-300">Waiting for Ready</div>
-              <div className="text-3xl font-black mt-1 text-amber-800 dark:text-amber-200">{taskCounts.pending + taskCounts.received + taskCounts.packed}</div>
-            </div>
-            <div className="p-5 rounded-2xl bg-violet-50 dark:bg-violet-900/10 border border-violet-200 dark:border-violet-900/30 shadow-sm">
-              <div className="text-sm font-semibold text-violet-700 dark:text-violet-300">Available to Partners</div>
-              <div className="text-3xl font-black mt-1 text-violet-800 dark:text-violet-200">{taskCounts.ready}</div>
-            </div>
-            <div className="p-5 rounded-2xl bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 shadow-sm">
-              <div className="text-sm font-semibold text-blue-700 dark:text-blue-300">In Transit</div>
-              <div className="text-3xl font-black mt-1 text-blue-800 dark:text-blue-200">{taskCounts.accepted}</div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-dark-900 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-dark-800">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <h3 className="font-bold dark:text-white flex items-center gap-2"><Truck size={18} /> Pickups For My Store</h3>
-            </div>
-
-            {tasksLoading ? (
-              <div className="py-16 text-center space-y-4">
-                <div className="flex justify-center">
-                  <RefreshCw className="text-eco-500 animate-spin" size={40} />
-                </div>
-                <div className="text-gray-500 font-medium animate-pulse">Loading pickup tasks...</div>
-              </div>
-            ) : storeTasks.length === 0 ? (
-              <div className="py-10 text-center text-gray-500">No pickup tasks yet.</div>
-            ) : (
-              <div className="space-y-3">
-                {[...storeTasks].sort((a, b) => {
-                  // Most recently updated first
-                  const tA = new Date(a.updatedAt || a.createdAt || 0).getTime();
-                  const tB = new Date(b.updatedAt || b.createdAt || 0).getTime();
-                  return tB - tA;
-                }).map((task) => (
-                  <div key={task.id} className="p-4 rounded-2xl border border-gray-200 dark:border-dark-800 bg-gray-50 dark:bg-dark-950/30">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-gray-900 dark:text-white">{task.storeName}</span>
-                          <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-md ${statusBadge(task.status)}`}>{String(task.status).toUpperCase()}</span>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1 space-y-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="inline-flex items-center gap-1"><Truck size={14} /> {task.weight}</span>
-                            {task.orderId && <span className="font-mono text-gray-400">order:{task.orderId}</span>}
+                            ))}
                           </div>
-                          <div className="text-gray-500">Drop: <span className="font-semibold text-gray-700 dark:text-gray-200">{task.charityName}</span></div>
-                          <div className="text-gray-500">Items: <span className="text-gray-700 dark:text-gray-200">{task.itemsSummary}</span></div>
-                        </div>
+                        )}
                       </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'pickups' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-5 rounded-2xl bg-white dark:bg-dark-900 border border-gray-200 dark:border-dark-800 shadow-sm">
+                <div className="text-sm font-semibold text-gray-500">Total Pickups</div>
+                <div className="text-3xl font-black mt-1 dark:text-white">{taskCounts.total}</div>
+              </div>
+              <div className="p-5 rounded-2xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 shadow-sm">
+                <div className="text-sm font-semibold text-amber-700 dark:text-amber-300">Waiting for Ready</div>
+                <div className="text-3xl font-black mt-1 text-amber-800 dark:text-amber-200">{taskCounts.pending + taskCounts.received + taskCounts.packed}</div>
+              </div>
+              <div className="p-5 rounded-2xl bg-violet-50 dark:bg-violet-900/10 border border-violet-200 dark:border-violet-900/30 shadow-sm">
+                <div className="text-sm font-semibold text-violet-700 dark:text-violet-300">Available to Partners</div>
+                <div className="text-3xl font-black mt-1 text-violet-800 dark:text-violet-200">{taskCounts.ready}</div>
+              </div>
+              <div className="p-5 rounded-2xl bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 shadow-sm">
+                <div className="text-sm font-semibold text-blue-700 dark:text-blue-300">In Transit</div>
+                <div className="text-3xl font-black mt-1 text-blue-800 dark:text-blue-200">{taskCounts.accepted}</div>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-dark-900 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-dark-800">
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <h3 className="font-bold dark:text-white flex items-center gap-2"><Truck size={18} /> Pickups For My Store</h3>
+              </div>
+
+              {tasksLoading ? (
+                <div className="py-16 text-center space-y-4">
+                  <div className="flex justify-center">
+                    <RefreshCw className="text-eco-500 animate-spin" size={40} />
+                  </div>
+                  <div className="text-gray-500 font-medium animate-pulse">Loading pickup tasks...</div>
+                </div>
+              ) : storeTasks.length === 0 ? (
+                <div className="py-10 text-center text-gray-500">No pickup tasks yet.</div>
+              ) : (
+                <div className="space-y-3">
+                  {[...storeTasks].sort((a, b) => {
+                    // Most recently updated first
+                    const tA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+                    const tB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+                    return tB - tA;
+                  }).map((task) => (
+                    <div key={task.id} className="p-4 rounded-2xl border border-gray-200 dark:border-dark-800 bg-gray-50 dark:bg-dark-950/30">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-gray-900 dark:text-white">{task.storeName}</span>
+                            <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-md ${statusBadge(task.status)}`}>{String(task.status).toUpperCase()}</span>
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1 space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="inline-flex items-center gap-1"><Truck size={14} /> {task.weight}</span>
+                              {task.orderId && <span className="font-mono text-gray-400">order:{task.orderId}</span>}
+                            </div>
+                            <div className="text-gray-500">Drop: <span className="font-semibold text-gray-700 dark:text-gray-200">{task.charityName}</span></div>
+                            <div className="text-gray-500">Items: <span className="text-gray-700 dark:text-gray-200">{task.itemsSummary}</span></div>
+                          </div>
+                        </div>
 
                         {task.status === 'ready' && (
                           <div className="text-xs font-bold text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/20 px-3 py-2 rounded-xl border border-violet-100 dark:border-violet-800 flex items-center gap-2">
-                             <Clock size={14} /> Waiting for delivery partner to pickup
+                            <Clock size={14} /> Waiting for delivery partner to pickup
                           </div>
                         )}
                         {task.status === 'accepted' && (
                           <div className="text-xs font-bold text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 px-3 py-2 rounded-xl border border-cyan-100 dark:border-cyan-800 flex items-center gap-2">
-                             <Truck size={14} /> {task.volunteerName || 'Volunteer'} is coming to pick up the order
+                            <Truck size={14} /> {task.volunteerName || 'Volunteer'} is coming to pick up the order
                           </div>
                         )}
                         {task.status === 'picked_up' && (
                           <div className="text-xs font-bold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-900/20 px-3 py-2 rounded-xl border border-sky-100 dark:border-sky-800 flex items-center gap-2">
-                             <BadgeCheck size={14} /> Order Picked Up
+                            <BadgeCheck size={14} /> Order Picked Up
                           </div>
                         )}
-                        
+
                         <div className="flex flex-wrap items-center gap-2 mt-1">
                           {task.status === 'pending' && (
                             <button
@@ -862,62 +859,62 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
                             </button>
                           )}
                         </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      <ModalShell open={!!restockTarget} onClose={() => setRestockTarget(null)} maxWidthClassName="max-w-md">
-        {restockTarget && (
-          <div className="space-y-6">
-            <ModalHeader
-              title="Adjust Inventory"
-              description={`Set the exact live stock level for ${restockTarget.title}.`}
-              eyebrow="Listing Controls"
-            />
-            <form onSubmit={handleRestockSubmit} className="space-y-5">
-              <div>
-                <label className={fieldLabelClassName}>Available Units</label>
-                <input
-                  type="number"
-                  min={0}
-                  value={restockQty}
-                  onChange={(e) => setRestockQty(Number(e.target.value))}
-                  className={inputClassName}
-                />
-                <p className={helperTextClassName}>Use `0` to mark the listing as sold out without deleting it.</p>
-              </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <button disabled={restockLoading} type="submit" className={primaryButtonClassName}>
-                  {restockLoading ? 'Saving...' : 'Update Stock'}
-                </button>
-                <button type="button" onClick={() => setRestockTarget(null)} className={secondaryButtonClassName}>
-                  Cancel
-                </button>
-              </div>
-            </form>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
-      </ModalShell>
 
-      <ModalShell
-        open={showAdd}
-        onClose={() => setShowAdd(false)}
-        maxWidthClassName="max-w-2xl"
-        panelClassName="max-h-[92vh]"
-        contentClassName="max-h-[92vh] overflow-y-auto p-6 sm:p-8"
-      >
-        <div className="space-y-6">
-          <ModalHeader
-            title="List New Surplus"
-            description="Create a polished listing with strong details, clear pricing, and better photo coverage."
-            eyebrow="New Listing"
-          />
-          <form onSubmit={handleSubmit} className="space-y-5">
+        <ModalShell open={!!restockTarget} onClose={() => setRestockTarget(null)} maxWidthClassName="max-w-md">
+          {restockTarget && (
+            <div className="space-y-6">
+              <ModalHeader
+                title="Adjust Inventory"
+                description={`Set the exact live stock level for ${restockTarget.title}.`}
+                eyebrow="Listing Controls"
+              />
+              <form onSubmit={handleRestockSubmit} className="space-y-5">
+                <div>
+                  <label className={fieldLabelClassName}>Available Units</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={restockQty}
+                    onChange={(e) => setRestockQty(Number(e.target.value))}
+                    className={inputClassName}
+                  />
+                  <p className={helperTextClassName}>Use `0` to mark the listing as sold out without deleting it.</p>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <button disabled={restockLoading} type="submit" className={primaryButtonClassName}>
+                    {restockLoading ? 'Saving...' : 'Update Stock'}
+                  </button>
+                  <button type="button" onClick={() => setRestockTarget(null)} className={secondaryButtonClassName}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+        </ModalShell>
+
+        <ModalShell
+          open={showAdd}
+          onClose={() => setShowAdd(false)}
+          maxWidthClassName="max-w-2xl"
+          panelClassName="max-h-[92vh]"
+          contentClassName="max-h-[92vh] overflow-y-auto p-6 sm:p-8"
+        >
+          <div className="space-y-6">
+            <ModalHeader
+              title="List New Surplus"
+              description="Create a polished listing with strong details, clear pricing, and better photo coverage."
+              eyebrow="New Listing"
+            />
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className={fieldLabelClassName}>Item Name</label>
                 <div className="flex gap-2">
@@ -955,7 +952,7 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
                       <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files?.[0])} />
                     </label>
                     <span className="hidden text-gray-300 dark:text-gray-600 sm:block">or</span>
-                    <button 
+                    <button
                       type="button"
                       onClick={generateImage}
                       disabled={isGeneratingImg || !newItem.title}
@@ -1033,100 +1030,100 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
               <button type="button" onClick={() => setShowAdd(false)} className={`w-full ${secondaryButtonClassName}`}>Cancel</button>
             </form>
           </div>
-      </ModalShell>
+        </ModalShell>
 
-      <ModalShell open={!!priceTarget} onClose={() => setPriceTarget(null)} maxWidthClassName="max-w-md">
-        {priceTarget && (
+        <ModalShell open={!!priceTarget} onClose={() => setPriceTarget(null)} maxWidthClassName="max-w-md">
+          {priceTarget && (
+            <div className="space-y-6">
+              <ModalHeader
+                title="Update Pricing"
+                description={`Refine how ${priceTarget.title} appears to customers and charity partners.`}
+                eyebrow="Pricing"
+              />
+              <form onSubmit={handlePriceUpdate} className="space-y-5">
+                <div>
+                  <label className={fieldLabelClassName}>Original Price (INR)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={priceForm.originalPrice}
+                    onChange={(e) => setPriceForm((prev) => ({ ...prev, originalPrice: Number(e.target.value) }))}
+                    className={inputClassName}
+                  />
+                </div>
+                <div>
+                  <label className={fieldLabelClassName}>Discount Price (INR)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    disabled={!!priceTarget.forCharity}
+                    value={priceTarget.forCharity ? 0 : priceForm.discountPrice}
+                    onChange={(e) => setPriceForm((prev) => ({ ...prev, discountPrice: Number(e.target.value) }))}
+                    className={`${inputClassName} disabled:opacity-60`}
+                  />
+                  {priceTarget.forCharity && (
+                    <p className={helperTextClassName}>Charity listings stay free to keep donation claims frictionless.</p>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <button disabled={priceSaving} type="submit" className={primaryButtonClassName}>
+                    {priceSaving ? 'Saving...' : 'Save Changes'}
+                  </button>
+                  <button type="button" onClick={() => setPriceTarget(null)} className={secondaryButtonClassName}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+        </ModalShell>
+
+        {confirmConfig && (
+          <ConfirmPopup
+            open={!!confirmConfig}
+            title={confirmConfig.title}
+            message={confirmConfig.message}
+            isDestructive={confirmConfig.isDestructive}
+            onConfirm={confirmConfig.onConfirm}
+            onCancel={() => setConfirmConfig(null)}
+          />
+        )}
+
+        <ModalShell open={imagePromptOpen} onClose={() => setImagePromptOpen(false)} maxWidthClassName="max-w-md">
           <div className="space-y-6">
             <ModalHeader
-              title="Update Pricing"
-              description={`Refine how ${priceTarget.title} appears to customers and charity partners.`}
-              eyebrow="Pricing"
+              title="Add a Listing Image?"
+              description="A clear photo makes surplus items feel trustworthy and helps reservations convert faster."
+              icon={<Camera size={24} />}
+              tone="warning"
+              eyebrow="Recommended"
             />
-            <form onSubmit={handlePriceUpdate} className="space-y-5">
-              <div>
-                <label className={fieldLabelClassName}>Original Price (INR)</label>
-                <input
-                  type="number"
-                  min={0}
-                  value={priceForm.originalPrice}
-                  onChange={(e) => setPriceForm((prev) => ({ ...prev, originalPrice: Number(e.target.value) }))}
-                  className={inputClassName}
-                />
-              </div>
-              <div>
-                <label className={fieldLabelClassName}>Discount Price (INR)</label>
-                <input
-                  type="number"
-                  min={0}
-                  disabled={!!priceTarget.forCharity}
-                  value={priceTarget.forCharity ? 0 : priceForm.discountPrice}
-                  onChange={(e) => setPriceForm((prev) => ({ ...prev, discountPrice: Number(e.target.value) }))}
-                  className={`${inputClassName} disabled:opacity-60`}
-                />
-                {priceTarget.forCharity && (
-                  <p className={helperTextClassName}>Charity listings stay free to keep donation claims frictionless.</p>
-                )}
-              </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <button disabled={priceSaving} type="submit" className={primaryButtonClassName}>
-                  {priceSaving ? 'Saving...' : 'Save Changes'}
-                </button>
-                <button type="button" onClick={() => setPriceTarget(null)} className={secondaryButtonClassName}>
-                  Cancel
-                </button>
-              </div>
-            </form>
+            <div className="grid grid-cols-1 gap-3">
+              <button
+                onClick={() => {
+                  setImagePromptOpen(false);
+                  setHighlightImage(true);
+                  setTimeout(() => setHighlightImage(false), 3000);
+                }}
+                className={primaryButtonClassName}
+              >
+                Upload or Generate Image
+              </button>
+              <button
+                onClick={() => {
+                  setImagePromptOpen(false);
+                  handleSubmit(undefined, true);
+                }}
+                className={secondaryButtonClassName}
+              >
+                Continue Without Image
+              </button>
+            </div>
           </div>
-        )}
-      </ModalShell>
+        </ModalShell>
 
-      {confirmConfig && (
-        <ConfirmPopup
-          open={!!confirmConfig}
-          title={confirmConfig.title}
-          message={confirmConfig.message}
-          isDestructive={confirmConfig.isDestructive}
-          onConfirm={confirmConfig.onConfirm}
-          onCancel={() => setConfirmConfig(null)}
-        />
-      )}
-
-      <ModalShell open={imagePromptOpen} onClose={() => setImagePromptOpen(false)} maxWidthClassName="max-w-md">
-        <div className="space-y-6">
-          <ModalHeader
-            title="Add a Listing Image?"
-            description="A clear photo makes surplus items feel trustworthy and helps reservations convert faster."
-            icon={<Camera size={24} />}
-            tone="warning"
-            eyebrow="Recommended"
-          />
-          <div className="grid grid-cols-1 gap-3">
-            <button
-              onClick={() => {
-                setImagePromptOpen(false);
-                setHighlightImage(true);
-                setTimeout(() => setHighlightImage(false), 3000);
-              }}
-              className={primaryButtonClassName}
-            >
-              Upload or Generate Image
-            </button>
-            <button
-              onClick={() => {
-                setImagePromptOpen(false);
-                handleSubmit(undefined, true);
-              }}
-              className={secondaryButtonClassName}
-            >
-              Continue Without Image
-            </button>
-          </div>
-        </div>
-      </ModalShell>
-
-          <AlertPopup open={alertOpen} type={alertConfig.type} title={alertConfig.title} message={alertConfig.message} onClose={() => setAlertOpen(false)} />
-          <SuccessPopup open={successOpen} title={successTitle} message={successMessage} onClose={() => setSuccessOpen(false)} />
+        <AlertPopup open={alertOpen} type={alertConfig.type} title={alertConfig.title} message={alertConfig.message} onClose={() => setAlertOpen(false)} />
+        <SuccessPopup open={successOpen} title={successTitle} message={successMessage} onClose={() => setSuccessOpen(false)} />
       </div>
     </div>
   );
@@ -1213,37 +1210,37 @@ const OrdersAccordion: React.FC<{ reservations: Reservation[]; viewer?: User; lo
         const currentStatus = res.status === 'cancelled' ? (res.lastStatus || 'pending') : res.status;
         const orderTasks = tasksByOrderId[res.id] || [];
         const taskStatuses = orderTasks.map(t => t.status);
-        
+
         // Find the most advanced status among all tasks
-        const getStep = (s: string) => 
-          s === 'completed' ? 8 : 
-          s === 'picked_up' ? 7 :
-          s === 'accepted' ? 6 : 
-          s === 'ready' ? 5 : 
-          s === 'packed' ? 4 : 
-          s === 'received' ? 3 : 
-          s === 'pending' ? 2 : 1;
+        const getStep = (s: string) =>
+          s === 'completed' ? 8 :
+            s === 'picked_up' ? 7 :
+              s === 'accepted' ? 6 :
+                s === 'ready' ? 5 :
+                  s === 'packed' ? 4 :
+                    s === 'received' ? 3 :
+                      s === 'pending' ? 2 : 1;
 
         let statusStep = Math.max(1, ...taskStatuses.map(getStep));
-        
+
         // If it's cancelled, we want to know how far it got before cancellation
         // If all tasks are cancelled, statusStep will be 1 (from getStep('cancelled'))
         // So we fall back to res.lastStatus or 1
         if (res.status === 'cancelled' && statusStep <= 2) {
-           statusStep = getStep(res.lastStatus || 'pending');
+          statusStep = getStep(res.lastStatus || 'pending');
         } else if (res.status !== 'cancelled') {
-           // Standard case: statusStep is already calculated from tasks
+          // Standard case: statusStep is already calculated from tasks
         }
 
         const statusConfig: Record<string, { label: string; badge: string; bar: string }> = {
-          pending:   { label: 'Order Received', badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300', bar: 'bg-amber-400' },
-          received:  { label: 'Confirmed',      badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300', bar: 'bg-blue-400' },
-          packed:    { label: 'Packed',         badge: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300', bar: 'bg-indigo-400' },
-          ready:     { label: 'Ready',          badge: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300', bar: 'bg-violet-500' },
-          accepted:  { label: 'On The Way',      badge: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300',    bar: 'bg-cyan-500'  },
-          picked_up: { label: 'Out for Delivery',badge: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300', bar: 'bg-orange-500' },
-          completed: { label: 'Delivered',       badge: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300', bar: 'bg-green-500' },
-          cancelled: { label: 'Cancelled',       badge: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',         bar: 'bg-red-500'  },
+          pending: { label: 'Order Received', badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300', bar: 'bg-amber-400' },
+          received: { label: 'Confirmed', badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300', bar: 'bg-blue-400' },
+          packed: { label: 'Packed', badge: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300', bar: 'bg-indigo-400' },
+          ready: { label: 'Ready', badge: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300', bar: 'bg-violet-500' },
+          accepted: { label: 'On The Way', badge: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300', bar: 'bg-cyan-500' },
+          picked_up: { label: 'Out for Delivery', badge: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300', bar: 'bg-orange-500' },
+          completed: { label: 'Delivered', badge: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300', bar: 'bg-green-500' },
+          cancelled: { label: 'Cancelled', badge: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300', bar: 'bg-red-500' },
         };
         const sc = statusConfig[res.status] || { label: res.status, badge: 'bg-gray-100 text-gray-600', bar: 'bg-gray-400' };
 
@@ -1259,23 +1256,23 @@ const OrdersAccordion: React.FC<{ reservations: Reservation[]; viewer?: User; lo
         const timeStr = orderDate ? orderDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
 
         const steps = [
-          { label: 'Order Placed',   desc: 'Your request is in the system.',     done: statusStep >= 1 },
-          { label: 'Store Received', desc: 'Retailer is preparing items.',       done: statusStep >= 3 },
-          { label: 'Packed & Ready', desc: 'Items are bagged for pickup.',       done: statusStep >= 4 },
+          { label: 'Order Placed', desc: 'Your request is in the system.', done: statusStep >= 1 },
+          { label: 'Store Received', desc: 'Retailer is preparing items.', done: statusStep >= 3 },
+          { label: 'Packed & Ready', desc: 'Items are bagged for pickup.', done: statusStep >= 4 },
           { label: 'Partner Assigned', desc: 'A volunteer is coming to pick up.', done: statusStep >= 6 },
-          { label: 'Picked Up',      desc: 'Order is on the way to you.',        done: statusStep >= 7 },
-          { label: 'Delivered',      desc: 'Enjoy your rescued food!',           done: statusStep >= 8 },
+          { label: 'Picked Up', desc: 'Order is on the way to you.', done: statusStep >= 7 },
+          { label: 'Delivered', desc: 'Enjoy your rescued food!', done: statusStep >= 8 },
         ];
 
         if (res.status === 'cancelled') {
           // Find where the progress stopped and insert "Cancelled" there
           const lastDoneIndex = [...steps].reverse().findIndex(s => s.done);
           const insertIndex = lastDoneIndex === -1 ? 0 : steps.length - lastDoneIndex;
-          steps.splice(insertIndex, 0, { 
-            label: 'Order Cancelled', 
-            desc: 'This order was cancelled by the retailer.', 
+          steps.splice(insertIndex, 0, {
+            label: 'Order Cancelled',
+            desc: 'This order was cancelled by the retailer.',
             done: true,
-            isError: true 
+            isError: true
           });
         }
 
@@ -1328,16 +1325,16 @@ const OrdersAccordion: React.FC<{ reservations: Reservation[]; viewer?: User; lo
                                 orderTasks.find((t) => storeId && t.storeId === storeId) ||
                                 orderTasks.find((t) => t.storeName === storeName);
                               const s = matchingTask?.status || 'pending';
-                                const labelMap: Record<string, string> = {
-                                  pending: 'Order sent to store',
-                                  received: 'Order confirmed by store',
-                                  packed: 'Order packed',
-                                  ready: 'Waiting for delivery partner to pickup',
-                                  accepted: `${matchingTask?.volunteerName || 'Partner'} is coming to pick up the order`,
-                                  picked_up: 'He is on the way. Give delivery OTP at the time of delivery.',
-                                  completed: 'Delivered',
-                                  cancelled: 'Cancelled by store',
-                                };
+                              const labelMap: Record<string, string> = {
+                                pending: 'Order sent to store',
+                                received: 'Order confirmed by store',
+                                packed: 'Order packed',
+                                ready: 'Waiting for delivery partner to pickup',
+                                accepted: `${matchingTask?.volunteerName || 'Partner'} is coming to pick up the order`,
+                                picked_up: 'He is on the way. Give delivery OTP at the time of delivery.',
+                                completed: 'Delivered',
+                                cancelled: 'Cancelled by store',
+                              };
                               return (
                                 <div className="p-3 rounded-xl bg-white dark:bg-dark-900 border border-gray-200 dark:border-dark-800">
                                   <div className="flex items-center justify-between gap-3">
@@ -1354,8 +1351,8 @@ const OrdersAccordion: React.FC<{ reservations: Reservation[]; viewer?: User; lo
                                   {matchingTask?.volunteerName && (['accepted', 'picked_up', 'completed'].includes(s)) && (
                                     <div className="mt-2 text-xs text-gray-600 dark:text-gray-300 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-900/30">
                                       <div className="flex items-center gap-2 mb-1">
-                                         <Truck size={12} className="text-blue-500" />
-                                         <span className="font-bold text-blue-700 dark:text-blue-300">Delivery Partner Details</span>
+                                        <Truck size={12} className="text-blue-500" />
+                                        <span className="font-bold text-blue-700 dark:text-blue-300">Delivery Partner Details</span>
                                       </div>
                                       <div className="ml-5">
                                         <p>Name: <span className="font-bold text-gray-900 dark:text-white">{matchingTask.volunteerName}</span></p>
@@ -1394,11 +1391,10 @@ const OrdersAccordion: React.FC<{ reservations: Reservation[]; viewer?: User; lo
                     <div className="absolute left-2 top-1.5 bottom-1.5 w-0.5 bg-gray-200 dark:bg-dark-700 rounded-full" />
                     {steps.map((step, i) => (
                       <div key={i} className={`relative flex items-start gap-3 ${i < steps.length - 1 ? 'pb-5' : ''}`}>
-                        <div className={`absolute -left-5 mt-1 h-3 w-3 rounded-full border-2 z-10 ${
-                          step.done
+                        <div className={`absolute -left-5 mt-1 h-3 w-3 rounded-full border-2 z-10 ${step.done
                             ? `${(step as any).isError ? 'bg-red-500' : sc.bar} border-white dark:border-dark-900 shadow-[0_0_8px_rgba(0,0,0,0.1)]`
                             : 'bg-gray-200 dark:bg-dark-700 border-white dark:border-dark-900'
-                        }`} />
+                          }`} />
                         <div>
                           <p className={`text-sm font-bold leading-tight ${step.done ? ((step as any).isError ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white') : 'text-gray-400 dark:text-gray-600'}`}>{step.label}</p>
                           <p className={`text-xs mt-0.5 ${step.done ? ((step as any).isError ? 'text-red-400 dark:text-red-500/60' : 'text-gray-500 dark:text-gray-400') : 'text-gray-300 dark:text-gray-700'}`}>{step.desc}</p>
@@ -1485,21 +1481,19 @@ const ConsumerDashboard: React.FC<{ user: User }> = ({ user }) => {
       <div className="flex gap-2 mb-8 border-b border-gray-200 dark:border-dark-800">
         <button
           onClick={() => setSearchParams({})}
-          className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${
-            activeTab === 'overview'
+          className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${activeTab === 'overview'
               ? 'border-eco-500 text-eco-600 dark:text-eco-400'
               : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-          }`}
+            }`}
         >
           Overview
         </button>
         <button
           onClick={() => setSearchParams({ tab: 'orders' })}
-          className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === 'orders'
+          className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'orders'
               ? 'border-eco-500 text-eco-600 dark:text-eco-400'
               : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-          }`}
+            }`}
         >
           Your Orders
           {reservations.length > 0 && (
@@ -1688,11 +1682,10 @@ const CharityDashboard: React.FC<{ user: User }> = ({ user }) => {
             <button
               key={tab.key}
               onClick={() => setSearchParams(tab.key === 'overview' ? {} : { tab: tab.key })}
-              className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                activeTab === tab.key
+              className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === tab.key
                   ? 'bg-rose-500 text-white shadow-[0_0_16px_rgba(244,63,94,0.25)]'
                   : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
+                }`}
             >
               {tab.label}
             </button>
@@ -1701,40 +1694,40 @@ const CharityDashboard: React.FC<{ user: User }> = ({ user }) => {
       </div>
 
       <div className="p-6">
-      {activeTab === 'overview' && (
-        <div className="mb-8">
-          {donations.length === 0 ? (
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-12 text-center">
-              <div className="text-5xl mb-4">🤝</div>
-              <h3 className="text-lg font-black text-slate-900 dark:text-white mb-2">No donations available right now</h3>
-              <p className="text-slate-500">Check back soon — retailers add new donations throughout the day.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {donations.map((d) => (
-                <div key={d.id} className="group rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-emerald-300 dark:hover:border-emerald-800 hover:-translate-y-1 transition-all shadow-sm">
-                  <div className="relative h-40 overflow-hidden">
-                    <img src={d.image} alt={d.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    <span className="absolute top-3 left-3 rounded-full bg-rose-500 px-3 py-1 text-xs font-black text-white">FREE DONATION</span>
-                    <span className="absolute bottom-3 right-3 rounded-full bg-black/60 backdrop-blur px-2.5 py-1 text-xs font-bold text-white">{d.quantity} units</span>
+        {activeTab === 'overview' && (
+          <div className="mb-8">
+            {donations.length === 0 ? (
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-12 text-center">
+                <div className="text-5xl mb-4">🤝</div>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white mb-2">No donations available right now</h3>
+                <p className="text-slate-500">Check back soon — retailers add new donations throughout the day.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {donations.map((d) => (
+                  <div key={d.id} className="group rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-emerald-300 dark:hover:border-emerald-800 hover:-translate-y-1 transition-all shadow-sm">
+                    <div className="relative h-40 overflow-hidden">
+                      <img src={d.image} alt={d.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      <span className="absolute top-3 left-3 rounded-full bg-rose-500 px-3 py-1 text-xs font-black text-white">FREE DONATION</span>
+                      <span className="absolute bottom-3 right-3 rounded-full bg-black/60 backdrop-blur px-2.5 py-1 text-xs font-bold text-white">{d.quantity} units</span>
+                    </div>
+                    <div className="p-4">
+                      <h4 className="font-black text-slate-950 dark:text-white mb-1">{d.title}</h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{d.storeName} · Pickup by {d.pickupEnd}</p>
+                      <button onClick={() => handleClaimDonation(d)} className="w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-bold text-white hover:bg-emerald-500 transition-all">
+                        Claim Donation
+                      </button>
+                    </div>
                   </div>
-                  <div className="p-4">
-                    <h4 className="font-black text-slate-950 dark:text-white mb-1">{d.title}</h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{d.storeName} · Pickup by {d.pickupEnd}</p>
-                    <button onClick={() => handleClaimDonation(d)} className="w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-bold text-white hover:bg-emerald-500 transition-all">
-                      Claim Donation
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-      {activeTab === 'orders' && (
-        <OrdersAccordion reservations={reservations} viewer={user} loading={isLoading} />
-      )}
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {activeTab === 'orders' && (
+          <OrdersAccordion reservations={reservations} viewer={user} loading={isLoading} />
+        )}
       </div>
 
       <AlertPopup open={alertOpen} type={alertConfig.type} title={alertConfig.title} message={alertConfig.message} onClose={() => setAlertOpen(false)} />
@@ -1750,7 +1743,7 @@ const VolunteerDashboard: React.FC<{ user: User }> = ({ user }) => {
   const [deliveryConfirmTarget, setDeliveryConfirmTarget] = useState<{ taskId: string; code: string } | null>(null);
   const [deliveryConfirmLoading, setDeliveryConfirmLoading] = useState(false);
   const deliveryOtpInputRef = useRef<HTMLInputElement | null>(null);
-  
+
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertConfig, setAlertConfig] = useState<{ type: PopupType; title: string; message: string }>({ type: 'info', title: '', message: '' });
 
@@ -1791,7 +1784,7 @@ const VolunteerDashboard: React.FC<{ user: User }> = ({ user }) => {
       openAlert('error', 'Acceptance Failed', err.message || 'Could not accept this task.');
     }
   };
-  
+
   const handleDeliveryConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!deliveryConfirmTarget) return;
@@ -1819,11 +1812,10 @@ const VolunteerDashboard: React.FC<{ user: User }> = ({ user }) => {
         </div>
         <button
           onClick={() => setIsAvailable(!isAvailable)}
-          className={`relative inline-flex items-center gap-3 rounded-2xl px-5 py-3 font-bold text-sm transition-all ${
-            isAvailable
+          className={`relative inline-flex items-center gap-3 rounded-2xl px-5 py-3 font-bold text-sm transition-all ${isAvailable
               ? 'bg-emerald-600 text-white shadow-[0_0_24px_rgba(16,185,129,0.4)]'
               : 'border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300'
-          }`}
+            }`}
         >
           <span className={`h-2.5 w-2.5 rounded-full ${isAvailable ? 'bg-white animate-pulse' : 'bg-slate-400'}`} />
           {isAvailable ? 'Online — Taking Pickups' : 'Go Online'}
@@ -1831,117 +1823,224 @@ const VolunteerDashboard: React.FC<{ user: User }> = ({ user }) => {
       </div>
 
       <div className="p-6">
-      {!isAvailable ? (
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-16 text-center">
-          <div className="text-6xl mb-4">🚗</div>
-          <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">You're offline</h3>
-          <p className="text-slate-500 mb-6">Tap "Go Online" to see available food rescue pickups near you.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Available Pickups */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-black text-slate-950 dark:text-white">Available Pickups</h3>
-              <span className="rounded-full bg-violet-100 dark:bg-violet-900/30 px-3 py-1 text-xs font-black text-violet-700 dark:text-violet-300">
-                {tasks.filter(t => t.status === 'ready').length} ready
-              </span>
-            </div>
-            {tasks.filter(t => t.status === 'ready').length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center text-slate-400">
-                <div className="text-4xl mb-2">📦</div>
-                <p className="text-sm font-medium">No pickups ready right now.</p>
-                <p className="text-xs mt-1">Check back in a few minutes.</p>
+        {!isAvailable ? (
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-16 text-center">
+            <div className="flex justify-center mb-4">
+              <div className="h-16 w-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                <Truck size={32} className="text-slate-300 dark:text-slate-600" />
               </div>
-            ) : tasks.filter(t => t.status === 'ready').map(task => (
-              <div key={task.id} className="rounded-2xl border border-violet-200 dark:border-violet-900/40 bg-white dark:bg-slate-900 p-5 shadow-sm hover:border-violet-400 dark:hover:border-violet-700 transition-all">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="font-black text-slate-950 dark:text-white">{task.weight} — Food Rescue</span>
-                  <span className="rounded-full bg-violet-600 px-3 py-1 text-xs font-black text-white">READY</span>
+            </div>
+            <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">You're offline</h3>
+            <p className="text-slate-500 mb-6">Tap "Go Online" to see available food rescue pickups near you.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* ── Available Pickups ────────────────────── */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-black text-slate-950 dark:text-white">Available Pickups</h3>
+                <span className="rounded-full bg-violet-100 dark:bg-violet-900/30 px-3 py-1 text-xs font-black text-violet-700 dark:text-violet-300">
+                  {tasks.filter(t => t.status === 'ready').length} ready
+                </span>
+              </div>
+              {tasks.filter(t => t.status === 'ready').length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center text-slate-400">
+                  <div className="flex justify-center mb-3">
+                    <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                      <Package size={24} className="text-slate-300 dark:text-slate-600" />
+                    </div>
+                  </div>
+                  <p className="text-sm font-medium">No pickups ready right now.</p>
+                  <p className="text-xs mt-1">Check back in a few minutes.</p>
                 </div>
-                <div className="space-y-3 text-sm mb-4">
-                  <div className="rounded-xl bg-slate-50 dark:bg-slate-800 p-3">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">📦 Pickup From</p>
-                    <p className="font-bold text-slate-900 dark:text-white">{task.storeName}</p>
-                    <p className="text-xs text-slate-500">{task.pickupAddress}</p>
+              ) : tasks.filter(t => t.status === 'ready').map(task => (
+                <div key={task.id} className="rounded-3xl border border-violet-500/20 bg-slate-50 dark:bg-slate-950 p-6 shadow-sm hover:border-violet-500/40 transition-all group">
+                  {/* Header */}
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-violet-500 animate-pulse" />
+                      <span className="text-[10px] font-black tracking-widest text-violet-500 uppercase">Available Task</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-black text-emerald-600 dark:text-emerald-400">
+                      <Sparkles size={12} /> +12 pts
+                    </div>
                   </div>
-                  <div className="rounded-xl bg-rose-50 dark:bg-rose-950/20 p-3">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-rose-400 mb-1">🤝 Drop Off At</p>
-                    <p className="font-bold text-slate-900 dark:text-white">{task.charityName}</p>
-                    <p className="text-xs text-slate-500">{task.dropAddress}</p>
+
+                  <h4 className="text-lg font-black text-slate-950 dark:text-white mb-1">{task.weight} — Food Rescue</h4>
+                  <p className="text-xs text-slate-400 mb-4">Pickup and deliver to charity partner</p>
+
+                  {/* Route Timeline */}
+                  <div className="space-y-0 mb-5 relative">
+                    <div className="absolute left-[15px] top-8 bottom-8 w-px border-l-2 border-dashed border-slate-200 dark:border-slate-700" />
+
+                    <div className="flex items-start gap-4 relative pb-4">
+                      <div className="h-8 w-8 rounded-full bg-violet-600 flex items-center justify-center shrink-0 border-2 border-slate-50 dark:border-slate-950 z-10 shadow">
+                        <Package size={14} className="text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Pickup From</p>
+                        <p className="font-bold text-slate-900 dark:text-white text-sm">{task.storeName}</p>
+                        <p className="text-xs text-slate-500 truncate">{task.pickupAddress}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-4 relative">
+                      <div className="h-8 w-8 rounded-full bg-rose-600 flex items-center justify-center shrink-0 border-2 border-slate-50 dark:border-slate-950 z-10 shadow">
+                        <Leaf size={14} className="text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Deliver To</p>
+                        <p className="font-bold text-slate-900 dark:text-white text-sm">{task.charityName}</p>
+                        <p className="text-xs text-slate-500 truncate">{task.dropAddress}</p>
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Order Contents */}
                   {task.items && task.items.length > 0 && (
-                    <div className="rounded-xl bg-slate-50 dark:bg-slate-800 p-3">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Contents</p>
+                    <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-3 mb-4">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-2">Order Contents</p>
                       <div className="flex flex-wrap gap-1.5">
                         {task.items.map((item, idx) => (
-                          <span key={idx} className="rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 text-xs font-medium text-slate-700 dark:text-slate-300">{item.title}</span>
+                          <span key={idx} className="inline-flex items-center gap-1 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 px-2 py-1 text-xs font-medium text-slate-700 dark:text-slate-300">
+                            <Package size={10} className="text-slate-400" /> {item.title}
+                          </span>
                         ))}
                       </div>
                     </div>
                   )}
-                </div>
-                <button onClick={() => handleAccept(task.id)} className="w-full rounded-xl bg-violet-600 py-2.5 text-sm font-bold text-white hover:bg-violet-500 transition-all">
-                  Accept This Pickup
-                </button>
-              </div>
-            ))}
-          </div>
 
-          {/* Active Tasks */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-black text-slate-950 dark:text-white">Your Active Tasks</h3>
-              <span className="rounded-full bg-sky-100 dark:bg-sky-900/30 px-3 py-1 text-xs font-black text-sky-700 dark:text-sky-300">
-                {tasks.filter(t => t.status === 'accepted' || t.status === 'picked_up').length} active
-              </span>
+                  {/* Meta Info */}
+                  <div className="grid grid-cols-3 gap-2 mb-5">
+                    <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-2.5 text-center">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Distance</p>
+                      <p className="font-bold text-slate-900 dark:text-white text-sm">2.4 km</p>
+                    </div>
+                    <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-2.5 text-center">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Est. Time</p>
+                      <p className="font-bold text-slate-900 dark:text-white text-sm">18 min</p>
+                    </div>
+                    <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-2.5 text-center">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Weight</p>
+                      <p className="font-bold text-slate-900 dark:text-white text-sm">{task.weight || 'N/A'}</p>
+                    </div>
+                  </div>
+
+                  <button onClick={() => handleAccept(task.id)} className="w-full rounded-2xl bg-violet-600 py-3 text-sm font-black text-white hover:bg-violet-500 transition-all shadow-lg hover:shadow-violet-600/25 flex items-center justify-center gap-2">
+                    Accept Pickup <CheckSquare size={16} />
+                  </button>
+                </div>
+              ))}
             </div>
-            {tasks.filter(t => t.status === 'accepted' || t.status === 'picked_up').length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center text-slate-400">
-                <div className="text-4xl mb-2">✅</div>
-                <p className="text-sm font-medium">No active deliveries.</p>
-                <p className="text-xs mt-1">Accept a pickup to get started.</p>
+
+            {/* ── Active Tasks ────────────────────────── */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-black text-slate-950 dark:text-white">Your Active Tasks</h3>
+                <span className="rounded-full bg-sky-100 dark:bg-sky-900/30 px-3 py-1 text-xs font-black text-sky-700 dark:text-sky-300">
+                  {tasks.filter(t => t.status === 'accepted' || t.status === 'picked_up').length} active
+                </span>
               </div>
-            ) : tasks.filter(t => t.status === 'accepted' || t.status === 'picked_up').map(task => (
-              <div key={task.id} className={`rounded-2xl border p-5 shadow-sm ${
-                task.status === 'picked_up'
-                  ? 'border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/10'
-                  : 'border-sky-200 dark:border-sky-900/40 bg-sky-50/50 dark:bg-sky-950/10'
-              }`}>
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-black text-slate-950 dark:text-white">
-                    {task.status === 'picked_up' ? '📍 In Transit' : '🚗 Heading to Store'}
-                  </h4>
-                  <span className={`rounded-full px-3 py-1 text-xs font-black ${
-                    task.status === 'picked_up' ? 'bg-emerald-600 text-white' : 'bg-sky-600 text-white'
+              {tasks.filter(t => t.status === 'accepted' || t.status === 'picked_up').length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center text-slate-400">
+                  <div className="flex justify-center mb-3">
+                    <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                      <CheckSquare size={24} className="text-slate-300 dark:text-slate-600" />
+                    </div>
+                  </div>
+                  <p className="text-sm font-medium">No active deliveries.</p>
+                  <p className="text-xs mt-1">Accept a pickup to get started.</p>
+                </div>
+              ) : tasks.filter(t => t.status === 'accepted' || t.status === 'picked_up').map(task => (
+                <div key={task.id} className={`rounded-3xl border p-6 shadow-sm ${task.status === 'picked_up'
+                    ? 'border-emerald-500/20 bg-emerald-50/30 dark:bg-emerald-950/10'
+                    : 'border-sky-500/20 bg-sky-50/30 dark:bg-sky-950/10'
                   }`}>
-                    {task.status === 'picked_up' ? 'DELIVERING' : 'EN ROUTE'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
-                  <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">Store</p>
-                    <p className="font-bold text-slate-900 dark:text-white text-xs">{task.storeName}</p>
+                  {/* Status Header */}
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="flex items-center gap-2">
+                      <div className={`h-2 w-2 rounded-full animate-pulse ${task.status === 'picked_up' ? 'bg-emerald-500' : 'bg-sky-500'}`} />
+                      <h4 className="font-black text-slate-950 dark:text-white text-sm">
+                        {task.status === 'picked_up' ? 'In Transit — Delivering' : 'En Route — Heading to Store'}
+                      </h4>
+                    </div>
+                    <span className={`rounded-full px-3 py-1 text-xs font-black text-white ${task.status === 'picked_up' ? 'bg-emerald-600' : 'bg-sky-600'}`}>
+                      {task.status === 'picked_up' ? 'DELIVERING' : 'EN ROUTE'}
+                    </span>
                   </div>
-                  <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">Deliver To</p>
-                    <p className="font-bold text-slate-900 dark:text-white text-xs">{task.charityName}</p>
+
+                  {/* Route Timeline */}
+                  <div className="space-y-0 mb-5 relative">
+                    <div className="absolute left-[15px] top-8 bottom-8 w-px border-l-2 border-dashed border-slate-200 dark:border-slate-700" />
+
+                    <div className="flex items-start gap-4 relative pb-4">
+                      <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 border-2 z-10 shadow ${task.status === 'picked_up' ? 'bg-emerald-600 border-emerald-50 dark:border-slate-950' : 'bg-sky-600 border-sky-50 dark:border-slate-950'}`}>
+                        <Package size={14} className="text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Pickup</p>
+                        <p className="font-bold text-slate-900 dark:text-white text-sm">{task.storeName}</p>
+                        <p className="text-xs text-slate-500 truncate">{task.pickupAddress}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-4 relative">
+                      <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 border-2 z-10 shadow ${task.status === 'picked_up' ? 'bg-rose-600 border-emerald-50 dark:border-slate-950' : 'bg-rose-400 border-sky-50 dark:border-slate-950'}`}>
+                        <Leaf size={14} className="text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Drop Off</p>
+                        <p className="font-bold text-slate-900 dark:text-white text-sm">{task.charityName}</p>
+                        <p className="text-xs text-slate-500 truncate">{task.dropAddress}</p>
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Order Contents */}
+                  {task.items && task.items.length > 0 && (
+                    <div className="rounded-2xl bg-white/80 dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-3 mb-4">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-2">Order Contents</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {task.items.map((item, idx) => (
+                          <span key={idx} className="inline-flex items-center gap-1 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 px-2 py-1 text-xs font-medium text-slate-700 dark:text-slate-300">
+                            <Package size={10} className="text-slate-400" /> {item.title}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Meta row */}
+                  <div className="grid grid-cols-3 gap-2 mb-5">
+                    <div className="rounded-xl bg-white/80 dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-2.5 text-center">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Distance</p>
+                      <p className="font-bold text-slate-900 dark:text-white text-sm">2.4 km</p>
+                    </div>
+                    <div className="rounded-xl bg-white/80 dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-2.5 text-center">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Est. Time</p>
+                      <p className="font-bold text-slate-900 dark:text-white text-sm">18 min</p>
+                    </div>
+                    <div className="rounded-xl bg-white/80 dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-2.5 text-center">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Weight</p>
+                      <p className="font-bold text-slate-900 dark:text-white text-sm">{task.weight || 'N/A'}</p>
+                    </div>
+                  </div>
+
+                  {/* Action Button */}
+                  {task.status === 'accepted' ? (
+                    <button onClick={() => handleUpdateTaskStatus(task.id, 'picked_up')} className="w-full rounded-2xl bg-sky-600 py-3 text-sm font-black text-white hover:bg-sky-500 transition-all shadow-lg hover:shadow-sky-600/25 flex items-center justify-center gap-2">
+                      <CheckSquare size={16} /> Confirm Pickup — I have the order
+                    </button>
+                  ) : (
+                    <button onClick={() => setDeliveryConfirmTarget({ taskId: task.id, code: '' })} className="w-full rounded-2xl bg-emerald-600 py-3 text-sm font-black text-white hover:bg-emerald-500 transition-all shadow-lg hover:shadow-emerald-600/25 flex items-center justify-center gap-2">
+                      <BadgeCheck size={16} /> Enter OTP to Complete Delivery
+                    </button>
+                  )}
                 </div>
-                {task.status === 'accepted' ? (
-                  <button onClick={() => handleUpdateTaskStatus(task.id, 'picked_up')} className="w-full rounded-xl bg-sky-600 py-2.5 text-sm font-bold text-white hover:bg-sky-500 transition-all">
-                    ✅ Confirm Pickup — I have the order
-                  </button>
-                ) : (
-                  <button onClick={() => setDeliveryConfirmTarget({ taskId: task.id, code: '' })} className="w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-bold text-white hover:bg-emerald-500 transition-all">
-                    🔑 Enter OTP to Complete Delivery
-                  </button>
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
 
       <ModalShell open={!!deliveryConfirmTarget} onClose={() => setDeliveryConfirmTarget(null)} maxWidthClassName="max-w-md">
@@ -1982,13 +2081,12 @@ const VolunteerDashboard: React.FC<{ user: User }> = ({ user }) => {
                       return (
                         <div
                           key={index}
-                          className={`flex h-16 items-center justify-center rounded-2xl border text-2xl font-black shadow-sm transition-all ${
-                            digit
+                          className={`flex h-16 items-center justify-center rounded-2xl border text-2xl font-black shadow-sm transition-all ${digit
                               ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300'
                               : isActive
                                 ? 'border-emerald-400 bg-white text-slate-700 ring-4 ring-emerald-500/10 dark:bg-dark-800 dark:text-white'
                                 : 'border-slate-200 bg-slate-50 text-slate-300 dark:border-dark-700 dark:bg-dark-800 dark:text-gray-600'
-                          }`}
+                            }`}
                         >
                           {digit || '0'}
                         </div>

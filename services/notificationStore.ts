@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 export type NotifType = 'new_item' | 'new_order' | 'task_update' | 'order_update' | 'system';
 
@@ -7,8 +8,8 @@ export interface NotificationItem {
   type: NotifType;
   title: string;
   message: string;
-  subtitle?: string;   // Secondary detail line
-  emoji?: string;      // Lead emoji for the notification
+  subtitle?: string;
+  emoji?: string;
   timestamp: number;
   read: boolean;
   link?: string;
@@ -22,32 +23,40 @@ interface NotificationState {
   clearAll: () => void;
 }
 
-export const useNotificationStore = create<NotificationState>((set) => ({
-  notifications: [],
-  addNotification: (notification) =>
-    set((state) => ({
-      notifications: [
-        {
-          ...notification,
-          id: Math.random().toString(36).substring(2, 9),
-          timestamp: Date.now(),
-          read: false,
-        },
-        ...state.notifications,
-      ].slice(0, 50),
-    })),
-  markAsRead: (id) =>
-    set((state) => ({
-      notifications: state.notifications.map((n) =>
-        n.id === id ? { ...n, read: true } : n
-      ),
-    })),
-  markAllAsRead: () =>
-    set((state) => ({
-      notifications: state.notifications.map((n) => ({ ...n, read: true })),
-    })),
-  clearAll: () => set({ notifications: [] }),
-}));
+export const useNotificationStore = create<NotificationState>()(
+  persist(
+    (set) => ({
+      notifications: [],
+      addNotification: (notification) =>
+        set((state) => ({
+          notifications: [
+            {
+              ...notification,
+              id: Math.random().toString(36).substring(2, 9),
+              timestamp: Date.now(),
+              read: false,
+            },
+            ...state.notifications,
+          ].slice(0, 80),
+        })),
+      markAsRead: (id) =>
+        set((state) => ({
+          notifications: state.notifications.map((n) =>
+            n.id === id ? { ...n, read: true } : n
+          ),
+        })),
+      markAllAsRead: () =>
+        set((state) => ({
+          notifications: state.notifications.map((n) => ({ ...n, read: true })),
+        })),
+      clearAll: () => set({ notifications: [] }),
+    }),
+    {
+      name: 'ecofeast-notifications',
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+);
 
 // ── Human-friendly notification message factory ───────────────────────────────
 export function buildNotification(
@@ -68,104 +77,114 @@ export function buildNotification(
       return {
         type,
         emoji: '🛍️',
-        title: `Fresh drop from ${storeName || 'a local store'}`,
+        title: 'New Surplus Listed',
         message: itemTitle
-          ? `${itemTitle} is now live — grab it before someone else does!`
-          : 'New surplus items have just been listed near you.',
-        subtitle: 'Tap to view in Marketplace',
+          ? `${storeName || 'A store'} just added "${itemTitle}" to the marketplace.`
+          : `${storeName || 'A local store'} added new surplus items.`,
+        subtitle: 'Check Marketplace before it sells out',
       };
 
     case 'new_order':
       return {
         type,
-        emoji: '🎉',
-        title: 'New order just came in!',
+        emoji: '🧾',
+        title: 'New Order Received',
         message: orderCode
-          ? `Order #${orderCode} is waiting to be packed. Someone's counting on you.`
-          : 'A new customer order has arrived for your store.',
-        subtitle: 'Go to Orders to confirm',
+          ? `Order #${orderCode} has arrived. Pack it up and mark it ready for pickup.`
+          : 'A new order has been placed at your store.',
+        subtitle: 'Go to Orders tab to confirm',
       };
 
     case 'order_update': {
       const map: Record<string, { emoji: string; title: string; message: string; subtitle?: string }> = {
         received: {
           emoji: '📦',
-          title: 'Your order is being prepared',
-          message: `The team at ${storeName || 'the store'} is carefully packing your items right now.`,
-          subtitle: 'Usually ready within the hour',
+          title: 'Order Acknowledged',
+          message: `${storeName || 'The store'} has received your order and started preparing it.`,
+          subtitle: orderCode ? `Order #${orderCode} · Usually ready within the hour` : 'Usually ready within the hour',
         },
         packed: {
           emoji: '✅',
-          title: 'Packed and good to go!',
+          title: 'Order Packed',
           message: 'Your bag is sealed and waiting for a volunteer to pick it up.',
-          subtitle: 'A volunteer will be assigned shortly',
+          subtitle: orderCode ? `Order #${orderCode} · A volunteer will be assigned shortly` : 'A volunteer will be assigned shortly',
         },
         ready: {
           emoji: '🔔',
-          title: 'Your order is ready for pickup!',
-          message: `Your bag is at ${storeName || 'the store'} — a volunteer is heading over soon.`,
-          subtitle: 'Stay close to your delivery address',
+          title: 'Order Ready',
+          message: `Your order is packed and ready at ${storeName || 'the store'}. A volunteer is on their way.`,
+          subtitle: orderCode ? `Order #${orderCode} · Stay near your delivery address` : 'Stay near your delivery address',
         },
         accepted: {
           emoji: '🚴',
-          title: `${volunteerName || 'A volunteer'} is on their way!`,
-          message: 'Your order has been accepted by a volunteer and will be delivered shortly.',
-          subtitle: 'Real-time tracking coming soon',
+          title: 'Volunteer En Route',
+          message: `${volunteerName || 'A volunteer'} has accepted your delivery and is heading to the store.`,
+          subtitle: orderCode ? `Order #${orderCode} · Pickup in progress` : 'Pickup in progress',
         },
         picked_up: {
           emoji: '📍',
-          title: 'Order picked up — en route!',
-          message: `${volunteerName || 'Your volunteer'} has picked up your order and is heading to you now.`,
-          subtitle: 'Estimated delivery: within 30 min',
+          title: 'Order Picked Up',
+          message: `${volunteerName || 'Your volunteer'} has picked up your order and is on the way to you.`,
+          subtitle: orderCode ? `Order #${orderCode} · Estimated delivery: within 30 min` : 'Estimated delivery: within 30 min',
         },
         completed: {
           emoji: '🌱',
-          title: 'Delivered! You saved some food today.',
-          message: 'Your order was successfully delivered. You helped rescue food from going to waste.',
-          subtitle: 'Rate your experience in Orders',
+          title: 'Order Delivered',
+          message: 'Your order was successfully delivered. You helped rescue food from going to waste!',
+          subtitle: orderCode ? `Order #${orderCode} · Thank you for making a difference` : 'Thank you for making a difference',
         },
         cancelled: {
-          emoji: '❌',
-          title: 'Order was cancelled',
+          emoji: '✕',
+          title: 'Order Cancelled',
           message: 'Your order has been cancelled. If you paid, a refund will be processed shortly.',
-          subtitle: 'Browse Marketplace for more options',
+          subtitle: orderCode ? `Order #${orderCode} · Browse Marketplace for more options` : 'Browse Marketplace for more options',
         },
       };
       const entry = map[status || ''] || {
         emoji: '📋',
-        title: 'Order status updated',
-        message: `Your order is now marked as "${status || 'updated'}".`,
+        title: 'Order Updated',
+        message: `Your order${orderCode ? ` #${orderCode}` : ''} status changed to "${status || 'updated'}".`,
       };
       return { type, ...entry };
     }
 
     case 'task_update': {
-      const taskMap: Record<string, { emoji: string; title: string; message: string }> = {
+      const taskMap: Record<string, { emoji: string; title: string; message: string; subtitle?: string }> = {
         accepted: {
           emoji: '🚗',
-          title: "You've accepted a delivery task",
-          message: `Head to ${storeName || 'the store'} to pick up the order. Bag is packed and ready.`,
+          title: 'Delivery Accepted',
+          message: `Head to ${storeName || 'the store'} to pick up the packed order.`,
+          subtitle: 'Bag is sealed and waiting for you',
         },
         picked_up: {
           emoji: '📦',
-          title: 'Picked up! Now deliver it.',
-          message: 'The order is in your hands. Drop it off at the customer\'s address to complete the task.',
+          title: 'Order Picked Up',
+          message: 'Drop it off at the delivery address to complete the task.',
+          subtitle: "You're almost done — great work!",
         },
         completed: {
           emoji: '🏆',
-          title: 'Task complete — great work!',
-          message: 'You successfully completed a food rescue delivery. Every trip makes a difference.',
+          title: 'Delivery Complete',
+          message: 'You successfully completed a food rescue delivery.',
+          subtitle: 'Every trip makes a real difference',
         },
         cancelled: {
-          emoji: '⚠️',
-          title: 'Delivery task cancelled',
+          emoji: '✕',
+          title: 'Task Cancelled',
           message: 'This pickup task has been cancelled by the store or customer.',
+          subtitle: 'Check for other available pickups',
+        },
+        ready: {
+          emoji: '🔔',
+          title: 'Pickup Ready',
+          message: `A food rescue bag is packed and waiting at ${storeName || 'a nearby store'}.`,
+          subtitle: 'Accept the task to get started',
         },
       };
       const entry = taskMap[status || ''] || {
         emoji: '🚛',
-        title: `Task updated to ${status || 'new status'}`,
-        message: `Your delivery task status has changed to "${status}".`,
+        title: 'Task Updated',
+        message: `Your delivery task has been updated to "${status}".`,
       };
       return { type, ...entry };
     }

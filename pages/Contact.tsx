@@ -214,11 +214,10 @@ export const Contact: React.FC = () => {
                               key={t.label}
                               type="button"
                               onClick={() => { setActiveTopic(t.label); setForm(f => ({ ...f, topic: t.label })); }}
-                              className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold transition-all ${
-                                activeTopic === t.label
+                              className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold transition-all ${activeTopic === t.label
                                   ? 'bg-emerald-600 text-white shadow-[0_0_16px_rgba(16,185,129,0.3)]'
                                   : 'border border-slate-200 bg-white text-slate-600 hover:border-emerald-300 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-emerald-700 dark:hover:text-emerald-300'
-                              }`}
+                                }`}
                             >
                               {t.icon} {t.label}
                             </button>

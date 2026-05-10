@@ -3,16 +3,16 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 
 export const surfaceCardClassName =
-  'rounded-[28px] border border-gray-200/70 bg-white/95 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur dark:border-white/10 dark:bg-dark-900/95 dark:shadow-[0_28px_80px_rgba(0,0,0,0.45)]';
+  'rounded-[28px] border border-gray-200/70 bg-slate-50/95 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur dark:border-white/10 dark:bg-dark-900/95 dark:shadow-[0_28px_80px_rgba(0,0,0,0.45)]';
 
 export const fieldLabelClassName =
   'mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-gray-400';
 
 export const inputClassName =
-  'w-full rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3.5 text-sm text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.04)] outline-none transition-all placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-dark-700 dark:bg-dark-800/90 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-emerald-400 dark:focus:ring-emerald-400/15';
+  'w-full rounded-2xl border border-slate-200/80 bg-slate-50/95 px-4 py-3.5 text-sm text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.04)] outline-none transition-all placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-dark-700 dark:bg-dark-800/90 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-emerald-400 dark:focus:ring-emerald-400/15';
 
 export const inputCompactClassName =
-  'w-full rounded-xl border border-slate-200/80 bg-white/95 px-3.5 py-2.5 text-sm text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.04)] outline-none transition-all placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-dark-700 dark:bg-dark-800/90 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-emerald-400 dark:focus:ring-emerald-400/15';
+  'w-full rounded-xl border border-slate-200/80 bg-slate-50/95 px-3.5 py-2.5 text-sm text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.04)] outline-none transition-all placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:border-dark-700 dark:bg-dark-800/90 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-emerald-400 dark:focus:ring-emerald-400/15';
 
 export const selectClassName = `${inputClassName} appearance-none`;
 export const selectCompactClassName = `${inputCompactClassName} appearance-none`;

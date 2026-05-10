@@ -116,7 +116,7 @@ export const About: React.FC = () => {
     <div className="overflow-x-hidden bg-white dark:bg-[#020917] text-slate-900 dark:text-white">
 
       {/* ── HERO: FULL-BLEED TYPOGRAPHIC ─────────────────── */}
-      <section className="relative min-h-[70vh] flex items-end overflow-hidden pb-20 pt-32 px-4 sm:px-6 lg:px-8"
+      <section className="relative min-h-[50vh] flex items-end overflow-hidden pb-20 pt-20 px-4 sm:px-6 lg:px-8"
         style={{ background: 'linear-gradient(160deg, #020917 60%, #042b1e 100%)' }}
       >
         {/* Subtle dot grid instead of clashing watermark */}

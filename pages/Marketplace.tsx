@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Search, MapPin, Clock, Tag, Filter, ShoppingCart, Info, Star, Flame, Leaf, X, ChevronDown } from 'lucide-react';
+import { Search, MapPin, Clock, Tag, Filter, ShoppingCart, Info, Star, Flame, Leaf, X, ChevronDown, ShoppingBag, Package, RefreshCw } from 'lucide-react';
 import { api } from '../services/api';
 import { Item, User } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,8 +14,8 @@ interface MarketplaceProps {
 
 const CATEGORIES = ['all', 'bakery', 'meals', 'produce', 'grocery', 'compost'] as const;
 
-const catEmoji: Record<string, string> = {
-  all: '🛒', bakery: '🥖', meals: '🍱', produce: '🥦', grocery: '🛍️', compost: '♻️',
+const catIcon: Record<string, any> = {
+  all: ShoppingCart, bakery: Package, meals: ShoppingBag, produce: Leaf, grocery: Tag, compost: RefreshCw,
 };
 
 export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, refreshKey = 0 }) => {
@@ -158,7 +158,10 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
                     : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'
                 }`}
               >
-                <span>{catEmoji[cat]}</span>
+                {(() => {
+                  const Icon = catIcon[cat];
+                  return <Icon size={14} className={filter === cat ? 'text-white' : 'text-slate-400'} />;
+                })()}
                 <span className="capitalize">{cat}</span>
               </button>
             ))}
@@ -181,7 +184,11 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
           <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/20 dark:text-rose-300">{error}</div>
         ) : filtered.length === 0 ? (
           <div className="py-24 text-center">
-            <div className="text-5xl mb-4">🔍</div>
+            <div className="flex justify-center mb-4">
+              <div className="h-20 w-20 rounded-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center border border-slate-100 dark:border-white/5">
+                <Search size={40} className="text-slate-300 dark:text-slate-700" />
+              </div>
+            </div>
             <p className="text-xl font-black text-slate-950 dark:text-white">No items found</p>
             <p className="text-slate-500 mt-2">Try a different category or search term.</p>
           </div>
@@ -223,7 +230,9 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
                       </span>
                     )}
                     {item.forAnimalFeed && (
-                      <span className="rounded-full bg-orange-500 px-2.5 py-1 text-xs font-black text-white">🐾 Animal</span>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-orange-500 px-2.5 py-1 text-xs font-black text-white">
+                        <RefreshCw size={11} /> Animal Feed
+                      </span>
                     )}
                   </div>
 
@@ -330,7 +339,13 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
                 </div>
                 <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-900">
                   <div className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Category</div>
-                  <div className="text-sm font-black text-slate-900 dark:text-white capitalize">{catEmoji[selectedItem.category]} {selectedItem.category}</div>
+                  <div className="text-sm font-black text-slate-900 dark:text-white capitalize flex items-center gap-2">
+                    {(() => {
+                       const Icon = catIcon[selectedItem.category];
+                       return <Icon size={15} className="text-slate-400" />;
+                    })()}
+                    {selectedItem.category}
+                  </div>
                 </div>
               </div>
 

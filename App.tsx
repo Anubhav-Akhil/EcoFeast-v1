@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { Home } from './pages/Home';
@@ -10,9 +10,10 @@ import { Dashboards } from './pages/Dashboards';
 import { Profile } from './pages/Profile';
 import { Contact } from './pages/Contact';
 import { Impact } from './pages/Impact';
+import { Volunteer } from './pages/Volunteer';
 import { api } from './services/api';
 import { User, Item, UserRole } from './types';
-import { X, Trash2, CheckCircle, Minus, Plus, Bell, Truck, XCircle, BadgeCheck } from 'lucide-react';
+import { X, Trash2, CheckCircle, Minus, Plus, ShoppingBag, Package, Truck, XCircle, BadgeCheck, ClipboardList } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { socket } from './services/socket';
 import { useNotificationStore, buildNotification } from './services/notificationStore';
@@ -228,6 +229,7 @@ const App: React.FC = () => {
 
           <Route path="/partners" element={<Partners onOpenAuth={handleOpenAuth} />} />
           <Route path="/charities" element={<Charities />} />
+          <Route path="/volunteers" element={<Volunteer onOpenAuth={handleOpenAuth} />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/impact" element={<Impact />} />
@@ -338,25 +340,23 @@ const App: React.FC = () => {
       {/* Toast: New Item */}
       <AnimatePresence>
         {toastNotification && (
-          <motion.div
-            initial={{ opacity: 0, y: 60, scale: 0.92 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 40, scale: 0.92 }}
-            transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-            className="fixed bottom-6 right-6 z-[100] w-[22rem] rounded-2xl border border-white/10 bg-slate-950/95 backdrop-blur-xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] p-4 cursor-pointer"
-            onClick={() => setToastNotification(null)}
+          <ToastCard
+            key={toastNotification.id}
+            onDismiss={() => setToastNotification(null)}
+            duration={6000}
+            barColor="from-violet-500 to-teal-400"
           >
             <div className="flex gap-3.5 items-start">
-              <div className="h-12 w-12 rounded-xl bg-violet-500/20 flex items-center justify-center text-2xl flex-shrink-0">🛍️</div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-black uppercase tracking-widest text-violet-400 mb-0.5">New Surplus</p>
-                <p className="text-sm font-black text-white leading-snug">{toastNotification.storeName} just dropped new food!</p>
-                <p className="text-xs text-slate-400 mt-0.5 truncate">{toastNotification.title} is now live on the marketplace</p>
+              <div className="h-11 w-11 rounded-xl bg-violet-500/15 flex items-center justify-center flex-shrink-0">
+                <ShoppingBag size={20} className="text-violet-400" />
               </div>
-              <button onClick={e => { e.stopPropagation(); setToastNotification(null); }} className="text-slate-500 hover:text-white mt-0.5"><X size={15} /></button>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-0.5">New Surplus</p>
+                <p className="text-sm font-bold text-white leading-snug">{toastNotification.storeName}</p>
+                <p className="text-xs text-slate-400 mt-0.5 truncate">Just listed: {toastNotification.title}</p>
+              </div>
             </div>
-            <div className="mt-3 h-0.5 rounded-full bg-gradient-to-r from-violet-500 to-emerald-500" style={{ width: '100%' }} />
-          </motion.div>
+          </ToastCard>
         )}
       </AnimatePresence>
 
@@ -365,42 +365,90 @@ const App: React.FC = () => {
         {orderToast && (() => {
           const notif = orderToast._notif || {};
           const statusColorMap: Record<string, string> = {
-            completed: 'from-emerald-500 to-teal-500',
-            cancelled: 'from-rose-500 to-red-600',
-            ready: 'from-violet-500 to-purple-600',
-            accepted: 'from-sky-500 to-cyan-500',
-            picked_up: 'from-orange-500 to-amber-500',
+            completed: 'from-emerald-500 to-teal-400',
+            cancelled: 'from-rose-500 to-red-500',
+            ready: 'from-violet-500 to-purple-500',
+            accepted: 'from-sky-500 to-cyan-400',
+            picked_up: 'from-orange-500 to-amber-400',
           };
-          const grad = statusColorMap[orderToast.status] || 'from-sky-500 to-blue-600';
+          const barColor = statusColorMap[orderToast.status] || 'from-sky-500 to-blue-400';
+          const StatusIcon = orderToast.status === 'cancelled' ? XCircle
+            : orderToast.status === 'completed' ? BadgeCheck
+            : orderToast.status === 'ready' || orderToast.status === 'packed' ? Package
+            : Truck;
+          const iconColor = orderToast.status === 'cancelled' ? 'text-rose-400'
+            : orderToast.status === 'completed' ? 'text-emerald-400'
+            : 'text-sky-400';
           return (
-            <motion.div
-              initial={{ opacity: 0, y: 60, scale: 0.92 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 40, scale: 0.92 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-              className="fixed bottom-6 right-6 z-[100] w-[22rem] rounded-2xl border border-white/10 bg-slate-950/95 backdrop-blur-xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] p-4 cursor-pointer"
-              onClick={() => setOrderToast(null)}
+            <ToastCard
+              key={orderToast.code + orderToast.status}
+              onDismiss={() => setOrderToast(null)}
+              duration={7000}
+              barColor={barColor}
             >
               <div className="flex gap-3.5 items-start">
-                <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${grad} flex items-center justify-center text-2xl flex-shrink-0`}>
-                  {notif.emoji || '📦'}
+                <div className="h-11 w-11 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0">
+                  <StatusIcon size={20} className={iconColor} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-0.5">Order #{orderToast.code}</p>
-                  <p className="text-sm font-black text-white leading-snug">{notif.title || 'Order Updated'}</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-0.5">Order #{orderToast.code}</p>
+                  <p className="text-sm font-bold text-white leading-snug">{notif.title || 'Order Updated'}</p>
                   <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{notif.message}</p>
-                  {notif.subtitle && <p className="text-[11px] font-bold text-emerald-400 mt-1">{notif.subtitle}</p>}
                 </div>
-                <button onClick={e => { e.stopPropagation(); setOrderToast(null); }} className="text-slate-500 hover:text-white mt-0.5"><X size={15} /></button>
               </div>
-              <div className={`mt-3 h-0.5 rounded-full bg-gradient-to-r ${grad}`} />
-            </motion.div>
+            </ToastCard>
           );
         })()}
       </AnimatePresence>
 
       <AlertPopup open={alertOpen} type={alertConfig.type} title={alertConfig.title} message={alertConfig.message} onClose={() => setAlertOpen(false)} />
     </Router>
+  );
+};
+
+// ── Reusable animated toast card with progress bar ────────────────────────────
+const ToastCard: React.FC<{
+  children: React.ReactNode;
+  onDismiss: () => void;
+  duration: number;
+  barColor: string;
+}> = ({ children, onDismiss, duration, barColor }) => {
+  const barRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Start drain animation on next frame so browser picks up the transition
+    const raf = requestAnimationFrame(() => {
+      if (barRef.current) barRef.current.style.width = '0%';
+    });
+    const timer = setTimeout(onDismiss, duration);
+    return () => { cancelAnimationFrame(raf); clearTimeout(timer); };
+  }, [duration, onDismiss]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 64, scale: 0.94 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 32, scale: 0.94 }}
+      transition={{ type: 'spring', stiffness: 340, damping: 28 }}
+      className="fixed bottom-6 right-6 z-[100] w-80 rounded-2xl border border-white/8 bg-[#0d1117] shadow-[0_24px_64px_rgba(0,0,0,0.6)] overflow-hidden"
+    >
+      <div className="relative p-5">
+        {children}
+        <button
+          onClick={onDismiss}
+          className="absolute top-4 right-4 text-slate-600 hover:text-white transition-colors"
+        >
+          <X size={14} />
+        </button>
+      </div>
+      <div className="h-[3px] w-full bg-white/5">
+        <div
+          ref={barRef}
+          className={`h-full w-full bg-gradient-to-r ${barColor} transition-all ease-linear`}
+          style={{ transitionDuration: `${duration}ms` }}
+        />
+      </div>
+    </motion.div>
   );
 };
 
