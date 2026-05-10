@@ -83,13 +83,13 @@ function PrincipleCard({ p, i }: { p: (typeof principles)[0]; i: number }) {
       initial={{ opacity: 0, y: 30 }}
       animate={inView ? { opacity: 1, y: 0 } : {}}
       transition={{ delay: i * 0.1, duration: 0.5 }}
-      className="group perspective-card rounded-3xl border border-slate-200/70 bg-white p-7 shadow-sm dark:border-white/8 dark:bg-white/3 hover:border-emerald-300 dark:hover:border-emerald-800 transition-all"
+      className="group rounded-3xl border border-slate-200 bg-white p-7 shadow-sm dark:border-emerald-900/30 dark:bg-slate-900 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all"
     >
-      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 group-hover:bg-emerald-500 group-hover:text-white transition-all">
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 group-hover:bg-emerald-500 group-hover:text-white transition-all">
         {p.icon}
       </div>
-      <h3 className="text-lg font-black text-slate-950 dark:text-white mb-3">{p.title}</h3>
-      <p className="text-sm leading-7 text-slate-600 dark:text-slate-400">{p.body}</p>
+      <h3 className="text-lg font-black text-slate-900 dark:text-white mb-3">{p.title}</h3>
+      <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">{p.body}</p>
     </motion.div>
   );
 }
@@ -119,12 +119,8 @@ export const About: React.FC = () => {
       <section className="relative min-h-[70vh] flex items-end overflow-hidden pb-20 pt-32 px-4 sm:px-6 lg:px-8"
         style={{ background: 'linear-gradient(160deg, #020917 60%, #042b1e 100%)' }}
       >
-        {/* Large background text */}
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center select-none overflow-hidden">
-          <div className="text-[18vw] font-black text-white/3 whitespace-nowrap leading-none tracking-tighter">
-            ECOFEAST
-          </div>
-        </div>
+        {/* Subtle dot grid instead of clashing watermark */}
+        <div className="dot-grid absolute inset-0 opacity-20" />
         {/* Orbs */}
         <div className="ambient-orb left-[5%] top-20 h-80 w-80 bg-emerald-500/20" />
         <div className="ambient-orb animation-delay-2000 right-[10%] bottom-0 h-64 w-64 bg-teal-400/15" />

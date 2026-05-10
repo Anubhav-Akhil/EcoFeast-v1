@@ -293,7 +293,7 @@ export const Home: React.FC = () => {
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1, type: 'spring', stiffness: 100 }}
-                className="rounded-3xl border border-slate-200/70 bg-slate-50/80 p-8 text-center dark:border-white/8 dark:bg-white/3 hover:border-emerald-300 dark:hover:border-emerald-800 transition-colors"
+                className="rounded-3xl border border-slate-200 bg-white p-8 text-center dark:border-emerald-900/30 dark:bg-slate-900 hover:border-emerald-300 dark:hover:border-emerald-700/60 transition-all hover:-translate-y-1"
               >
                 <div className="text-4xl font-black text-emerald-600 dark:text-emerald-400 md:text-5xl">{stat.value}</div>
                 <div className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">{stat.label}</div>

@@ -69,10 +69,7 @@ export const Partners: React.FC<PartnersProps> = ({ onOpenAuth }) => {
         <div className="ambient-orb left-[15%] top-20 h-96 w-96 bg-emerald-500/25" />
         <div className="ambient-orb animation-delay-4000 right-[5%] bottom-10 h-80 w-80 bg-teal-400/15" />
 
-        {/* HUGE background number */}
-        <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 select-none text-[20vw] font-black text-white/3 leading-none pr-8">
-          4.2K
-        </div>
+
 
         <div className="relative z-10 mx-auto max-w-7xl w-full">
           <div className="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
