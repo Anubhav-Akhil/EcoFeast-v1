@@ -132,18 +132,13 @@ const App: React.FC = () => {
     };
   }, [user, addNotification]);
 
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
-
   useEffect(() => {
     const session = api.getSession();
     if (session) {
       setUser(session);
       api.refreshSession().then((fresh) => {
         if (fresh) setUser(fresh);
-        setIsAuthLoading(false);
-      }).catch(() => setIsAuthLoading(false));
-    } else {
-      setIsAuthLoading(false);
+      }).catch(() => { /* session expired – logout handled inside refreshSession */ });
     }
   }, []);
 
@@ -226,17 +221,6 @@ const App: React.FC = () => {
       openAlert('error', 'Checkout Failed', e.message || 'Unable to place your order right now. Please try again.');
     }
   };
-
-  if (isAuthLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-dark-950 flex items-center justify-center">
-        <div className="flex flex-col items-center">
-          <div className="h-16 w-16 border-4 border-eco-500 border-t-transparent rounded-full animate-spin mb-4" />
-          <p className="text-gray-500 font-medium animate-pulse text-lg">Loading EcoFeast...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <Router>

@@ -1,0 +1,221 @@
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgba(22, 163, 74, 0.22);
+  color: inherit;
+}
+
+/* ─── Glass Panel ─── */
+.glass-panel {
+  background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.72));
+  backdrop-filter: blur(18px);
+}
+.dark .glass-panel {
+  background: linear-gradient(180deg, rgba(15,23,42,0.78), rgba(3,7,18,0.72));
+}
+
+/* ─── Hero Grid ─── */
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(148,163,184,0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148,163,184,0.12) 1px, transparent 1px);
+  background-position: center;
+  background-size: 44px 44px;
+  mask-image: linear-gradient(180deg, rgba(0,0,0,0.7), transparent 88%);
+}
+
+/* ─── Dot Grid ─── */
+.dot-grid {
+  background-image: radial-gradient(circle, rgba(22,163,74,0.2) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+.dark .dot-grid {
+  background-image: radial-gradient(circle, rgba(52,211,153,0.15) 1px, transparent 1px);
+}
+
+/* ─── Ambient Orbs ─── */
+.ambient-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(72px);
+  animation: floatOrb 14s ease-in-out infinite;
+  pointer-events: none;
+}
+.animation-delay-2000 { animation-delay: 2s; }
+.animation-delay-4000 { animation-delay: 4s; }
+
+/* ─── Ticker Tape ─── */
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: tickerScroll 28s linear infinite;
+}
+.ticker-track:hover { animation-play-state: paused; }
+
+/* ─── Blob Morphing ─── */
+.animate-blob {
+  animation: blob 9s infinite;
+}
+.animate-morph {
+  animation: morphBlob 12s ease-in-out infinite;
+}
+
+/* ─── Counter Glow ─── */
+.stat-glow {
+  text-shadow: 0 0 40px rgba(52,211,153,0.5), 0 0 80px rgba(52,211,153,0.2);
+}
+
+/* ─── Floating Icons ─── */
+.float-icon {
+  animation: floatIcon var(--dur, 7s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+/* ─── Perspective Tilt Card ─── */
+.perspective-card {
+  transform-style: preserve-3d;
+  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.perspective-card:hover {
+  transform: perspective(800px) rotateY(-6deg) rotateX(3deg) scale(1.02);
+}
+
+/* ─── Reveal on Scroll ─── */
+.reveal {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* ─── Neon Border ─── */
+.neon-border {
+  box-shadow: 0 0 0 1px rgba(52,211,153,0.3), 0 0 24px rgba(52,211,153,0.12), inset 0 0 24px rgba(52,211,153,0.04);
+}
+.neon-border:hover {
+  box-shadow: 0 0 0 1px rgba(52,211,153,0.6), 0 0 40px rgba(52,211,153,0.2), inset 0 0 40px rgba(52,211,153,0.06);
+}
+
+/* ─── Wave Clip ─── */
+.wave-clip-bottom {
+  clip-path: ellipse(120% 100% at 50% 0%);
+}
+.wave-clip-top {
+  clip-path: ellipse(120% 100% at 50% 100%);
+}
+
+/* ─── Gradient Text ─── */
+.gradient-text-eco {
+  background: linear-gradient(135deg, #10b981 0%, #34d399 40%, #6ee7b7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.gradient-text-dark {
+  background: linear-gradient(135deg, #f0fdf4 0%, #6ee7b7 50%, #34d399 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Scanlines (retro effect) ─── */
+.scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+  pointer-events: none;
+}
+
+/* ─── Horizontal scroll snap ─── */
+.snap-x-container {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.snap-start { scroll-snap-align: start; }
+
+/* ─── Line clamp ─── */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+/* ─── Keyframes ─── */
+@keyframes floatOrb {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(0, -18px, 0) scale(1.04); }
+}
+
+@keyframes blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(18px, -24px) scale(1.05); }
+  66% { transform: translate(-14px, 12px) scale(0.96); }
+}
+
+@keyframes morphBlob {
+  0%   { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+  25%  { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
+  50%  { border-radius: 50% 60% 30% 60% / 40% 50% 60% 50%; }
+  75%  { border-radius: 60% 30% 60% 40% / 30% 60% 40% 70%; }
+  100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+}
+
+@keyframes floatIcon {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33% { transform: translateY(-14px) rotate(5deg); }
+  66% { transform: translateY(8px) rotate(-3deg); }
+}
+
+@keyframes tickerScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes pulseRing {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+@keyframes drawLine {
+  from { stroke-dashoffset: 1000; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* ─── Reduced Motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .ambient-orb, .animate-blob, .animate-morph, .float-icon, .ticker-track {
+    animation: none;
+  }
+}
