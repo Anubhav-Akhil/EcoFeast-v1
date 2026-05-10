@@ -143,7 +143,7 @@ export function buildNotification(
       const taskMap: Record<string, { emoji: string; title: string; message: string }> = {
         accepted: {
           emoji: '🚗',
-          title: 'You've accepted a delivery task',
+          title: "You've accepted a delivery task",
           message: `Head to ${storeName || 'the store'} to pick up the order. Bag is packed and ready.`,
         },
         picked_up: {
