@@ -15,7 +15,7 @@ import { User, Item, UserRole } from './types';
 import { X, Trash2, CheckCircle, Minus, Plus, Bell, Truck, XCircle, BadgeCheck } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { socket } from './services/socket';
-import { useNotificationStore } from './services/notificationStore';
+import { useNotificationStore, buildNotification } from './services/notificationStore';
 import { AlertPopup, PopupType } from './components/AlertPopup';
 import { ModalHeader, ModalShell, primaryButtonClassName, secondaryButtonClassName } from './components/ui';
 
@@ -58,65 +58,37 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const handleNewItem = (item: Item) => {
-      addNotification({
-        type: 'new_item',
-        title: 'New Surplus Food!',
-        message: `${item.storeName} just added ${item.title}.`,
-      });
-      
+      addNotification(buildNotification('new_item', { itemTitle: item.title, storeName: item.storeName }));
       setToastNotification(item);
-      setTimeout(() => setToastNotification(null), 5000);
+      setTimeout(() => setToastNotification(null), 6000);
     };
 
     const handleOrderUpdated = (order: any) => {
       if (user && order.userId === user.id) {
-        const statusTextMap: Record<string, string> = {
-          pending: 'Order confirmed & sent to store',
-          received: 'Retailer has acknowledged your order',
-          packed: 'Your food is packed and being prepared',
-          ready: 'Ready for pickup - Volunteer assigned',
-          accepted: 'Volunteer is on the way to store',
-          picked_up: 'Order picked up! Heading to you now',
-          completed: 'Delivered successfully!',
-          cancelled: 'Order Cancelled by Retailer',
-        };
-        const msg = `Order #${order.code}: ${statusTextMap[String(order.status)] || String(order.status).toUpperCase()}.`;
-        
-        addNotification({
-          type: 'order_update',
-          title: 'Order Status Updated',
-          message: msg,
-          link: '/dashboard?tab=orders',
+        const notif = buildNotification('order_update', {
+          status: order.status,
+          storeName: order.items?.[0]?.storeName,
+          orderCode: order.code,
+          volunteerName: order.volunteerName,
         });
-
-        setOrderToast(order);
-        setTimeout(() => setOrderToast(null), 6000);
+        addNotification({ ...notif, link: '/dashboard?tab=orders' });
+        setOrderToast({ ...order, _notif: notif });
+        setTimeout(() => setOrderToast(null), 7000);
       }
     };
 
     const handleNewOrderForStore = (payload: any) => {
       if (!user || user.role !== 'retailer') return;
       if (payload?.storeId !== user.id) return;
-
-      const msg = `Order received (#${payload.code}): ${payload.totalQty} item(s). Pickup ${payload.pickupStart || '--'}-${payload.pickupEnd || '--'}.`;
-      addNotification({
-        type: 'new_order',
-        title: 'New Order',
-        message: msg,
-        link: '/dashboard?tab=orders',
-      });
+      const notif = buildNotification('new_order', { orderCode: payload.code, storeName: payload.storeName });
+      addNotification({ ...notif, link: '/dashboard?tab=orders' });
     };
 
     const handleTaskUpdatedForStore = (task: any) => {
       if (!user || user.role !== 'retailer') return;
       if (task?.storeId !== user.id) return;
-
-      addNotification({
-        type: 'task_update',
-        title: 'Pickup Updated',
-        message: `Pickup is now ${String(task.status || '').toUpperCase()}. ${task.volunteerName ? `Partner: ${task.volunteerName}.` : ''}`,
-        link: '/dashboard?tab=pickups',
-      });
+      const notif = buildNotification('task_update', { status: task.status, storeName: task.storeName, volunteerName: task.volunteerName });
+      addNotification({ ...notif, link: '/dashboard?tab=pickups' });
     };
 
     socket.on('new-item', handleNewItem);
@@ -363,74 +335,68 @@ const App: React.FC = () => {
         </div>
       </ModalShell>
 
-      {/* Socket.IO Toast Notification (New Listings) */}
+      {/* Toast: New Item */}
       <AnimatePresence>
         {toastNotification && (
           <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            initial={{ opacity: 0, y: 60, scale: 0.92 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="fixed bottom-6 right-6 z-[100] bg-white dark:bg-dark-900 border border-eco-200 dark:border-eco-900/50 shadow-2xl rounded-2xl p-4 max-w-sm flex gap-4 cursor-pointer hover:shadow-eco-500/20 transition-shadow"
+            exit={{ opacity: 0, y: 40, scale: 0.92 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+            className="fixed bottom-6 right-6 z-[100] w-[22rem] rounded-2xl border border-white/10 bg-slate-950/95 backdrop-blur-xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] p-4 cursor-pointer"
             onClick={() => setToastNotification(null)}
           >
-            <div className="h-12 w-12 rounded-full bg-eco-100 dark:bg-eco-900/50 flex-shrink-0 flex items-center justify-center text-eco-600 dark:text-eco-400">
-              <Bell size={24} />
+            <div className="flex gap-3.5 items-start">
+              <div className="h-12 w-12 rounded-xl bg-violet-500/20 flex items-center justify-center text-2xl flex-shrink-0">🛍️</div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-black uppercase tracking-widest text-violet-400 mb-0.5">New Surplus</p>
+                <p className="text-sm font-black text-white leading-snug">{toastNotification.storeName} just dropped new food!</p>
+                <p className="text-xs text-slate-400 mt-0.5 truncate">{toastNotification.title} is now live on the marketplace</p>
+              </div>
+              <button onClick={e => { e.stopPropagation(); setToastNotification(null); }} className="text-slate-500 hover:text-white mt-0.5"><X size={15} /></button>
             </div>
-            <div className="flex-1">
-              <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-1">New Surplus Food!</h4>
-              <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">
-                {toastNotification.storeName} just added <span className="font-bold text-eco-600 dark:text-eco-400">{toastNotification.title}</span>.
-              </p>
-            </div>
-            <button onClick={(e) => { e.stopPropagation(); setToastNotification(null); }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-              <X size={16} />
-            </button>
+            <div className="mt-3 h-0.5 rounded-full bg-gradient-to-r from-violet-500 to-emerald-500" style={{ width: '100%' }} />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Socket.IO Order Update Toast */}
+      {/* Toast: Order Update */}
       <AnimatePresence>
-        {orderToast && (
-          <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className={`fixed bottom-6 right-6 z-[100] bg-white dark:bg-dark-900 border shadow-2xl rounded-2xl p-4 max-w-sm flex gap-4 cursor-pointer transition-shadow ${
-              orderToast.status === 'cancelled' ? 'border-red-200 dark:border-red-900/50 hover:shadow-red-500/20' : 'border-blue-200 dark:border-blue-900/50 hover:shadow-blue-500/20'
-            }`}
-            onClick={() => setOrderToast(null)}
-          >
-            <div className={`h-12 w-12 rounded-full flex-shrink-0 flex items-center justify-center ${
-              orderToast.status === 'cancelled' 
-                ? 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400' 
-                : orderToast.status === 'completed'
-                  ? 'bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400'
-                  : 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400'
-            }`}>
-              {orderToast.status === 'cancelled' ? <XCircle size={24} /> : orderToast.status === 'completed' ? <BadgeCheck size={24} /> : <Truck size={24} />}
-            </div>
-            <div className="flex-1">
-              <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-1">
-                {orderToast.status === 'completed' 
-                  ? 'Order Delivered!' 
-                  : orderToast.status === 'cancelled'
-                    ? 'Order Cancelled'
-                    : orderToast.status === 'ready'
-                      ? 'Ready for Pickup'
-                      : 'Order Status Updated'}
-              </h4>
-              <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">
-                Your order <span className="font-bold">#{orderToast.code}</span> has been marked as <span className={`font-bold uppercase ${
-                  orderToast.status === 'cancelled' ? 'text-red-600' : 'text-blue-600 dark:text-blue-400'
-                }`}>{orderToast.status}</span>.
-              </p>
-            </div>
-            <button onClick={(e) => { e.stopPropagation(); setOrderToast(null); }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-              <X size={16} />
-            </button>
-          </motion.div>
-        )}
+        {orderToast && (() => {
+          const notif = orderToast._notif || {};
+          const statusColorMap: Record<string, string> = {
+            completed: 'from-emerald-500 to-teal-500',
+            cancelled: 'from-rose-500 to-red-600',
+            ready: 'from-violet-500 to-purple-600',
+            accepted: 'from-sky-500 to-cyan-500',
+            picked_up: 'from-orange-500 to-amber-500',
+          };
+          const grad = statusColorMap[orderToast.status] || 'from-sky-500 to-blue-600';
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: 60, scale: 0.92 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 40, scale: 0.92 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+              className="fixed bottom-6 right-6 z-[100] w-[22rem] rounded-2xl border border-white/10 bg-slate-950/95 backdrop-blur-xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] p-4 cursor-pointer"
+              onClick={() => setOrderToast(null)}
+            >
+              <div className="flex gap-3.5 items-start">
+                <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${grad} flex items-center justify-center text-2xl flex-shrink-0`}>
+                  {notif.emoji || '📦'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-0.5">Order #{orderToast.code}</p>
+                  <p className="text-sm font-black text-white leading-snug">{notif.title || 'Order Updated'}</p>
+                  <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{notif.message}</p>
+                  {notif.subtitle && <p className="text-[11px] font-bold text-emerald-400 mt-1">{notif.subtitle}</p>}
+                </div>
+                <button onClick={e => { e.stopPropagation(); setOrderToast(null); }} className="text-slate-500 hover:text-white mt-0.5"><X size={15} /></button>
+              </div>
+              <div className={`mt-3 h-0.5 rounded-full bg-gradient-to-r ${grad}`} />
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
 
       <AlertPopup open={alertOpen} type={alertConfig.type} title={alertConfig.title} message={alertConfig.message} onClose={() => setAlertOpen(false)} />

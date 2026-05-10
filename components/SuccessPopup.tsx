@@ -1,6 +1,5 @@
 import React from 'react';
-import { CheckCircle2 } from 'lucide-react';
-import { ModalHeader, ModalShell, primaryButtonClassName } from './ui';
+import { AlertPopup } from './AlertPopup';
 
 interface SuccessPopupProps {
   open: boolean;
@@ -9,22 +8,6 @@ interface SuccessPopupProps {
   onClose: () => void;
 }
 
-export const SuccessPopup: React.FC<SuccessPopupProps> = ({ open, title, message, onClose }) => {
-  return (
-    <ModalShell open={open} onClose={onClose} maxWidthClassName="max-w-md">
-      <div className="space-y-7">
-        <ModalHeader
-          title={title}
-          description={message}
-          icon={<CheckCircle2 size={24} />}
-          tone="success"
-          eyebrow="Success"
-          align="center"
-        />
-        <button onClick={onClose} className={`w-full ${primaryButtonClassName}`}>
-          Continue
-        </button>
-      </div>
-    </ModalShell>
-  );
-};
+export const SuccessPopup: React.FC<SuccessPopupProps> = ({ open, title, message, onClose }) => (
+  <AlertPopup open={open} type="success" title={title} message={message} onClose={onClose} />
+);

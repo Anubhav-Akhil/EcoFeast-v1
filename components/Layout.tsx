@@ -117,23 +117,30 @@ export const Layout: React.FC<LayoutProps> = ({
   return (
     <div className={`min-h-screen flex flex-col font-sans transition-colors duration-300 ${isDark ? 'dark' : ''}`}>
       {/* Sticky Navbar */}
-      <nav className="sticky top-0 z-50 bg-white/90 dark:bg-dark-900/90 backdrop-blur-md border-b border-eco-100 dark:border-dark-800 shadow-sm transition-colors duration-300">
+      <nav className="sticky top-0 z-50 bg-white/80 dark:bg-slate-950/90 backdrop-blur-xl border-b border-slate-200/60 dark:border-white/5 shadow-sm transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             {/* Logo */}
-            <Link to="/" className="flex items-center space-x-2">
-              <img src="/ecofeast-logo.svg" alt="EcoFeast logo" className="w-10 h-10 rounded-full" />
-              <span className="text-2xl font-heading font-bold text-gray-900 dark:text-white">EcoFeast</span>
+            <Link to="/" className="flex items-center gap-2.5 group">
+              <div className="relative">
+                <div className="absolute -inset-1 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 opacity-60 blur-sm group-hover:opacity-90 transition-opacity" />
+                <img src="/ecofeast-logo.svg" alt="EcoFeast logo" className="relative w-9 h-9 rounded-full" />
+              </div>
+              <span className="text-xl font-black tracking-tight">
+                <span className="bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-400 bg-clip-text text-transparent dark:from-emerald-400 dark:via-teal-300 dark:to-emerald-300">Eco</span><span className="text-slate-900 dark:text-white">Feast</span>
+              </span>
             </Link>
 
             {/* Desktop Nav */}
-            <div className="hidden md:flex items-center space-x-8">
+            <div className="hidden md:flex items-center gap-1">
               {navLinks.map((link) => (
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`text-sm font-medium transition-colors hover:text-eco-600 dark:hover:text-eco-400 ${
-                    location.pathname === link.path ? 'text-eco-600 dark:text-eco-400' : 'text-gray-600 dark:text-gray-300'
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                    location.pathname === link.path
+                      ? 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   {link.name}
@@ -142,16 +149,16 @@ export const Layout: React.FC<LayoutProps> = ({
             </div>
 
             {/* Auth & Theme Buttons */}
-            <div className="hidden md:flex items-center space-x-4">
+            <div className="hidden md:flex items-center gap-2">
               <button 
                 onClick={toggleTheme}
-                className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-dark-800 transition-colors"
+                className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/5 transition-colors"
               >
-                {isDark ? <Sun size={20} /> : <Moon size={20} />}
+                {isDark ? <Sun size={18} /> : <Moon size={18} />}
               </button>
 
               {user ? (
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
                   {/* Notification Center */}
                   <div className="relative">
                     <button 
@@ -159,12 +166,12 @@ export const Layout: React.FC<LayoutProps> = ({
                         setIsNotificationsOpen(!isNotificationsOpen);
                         setNotifView('all');
                       }} 
-                      className="relative p-2 text-gray-600 dark:text-gray-300 hover:text-eco-600"
+                      className="relative p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white transition-colors"
                     >
-                      <Bell size={22} />
+                      <Bell size={19} />
                       {unreadCount > 0 && (
-                        <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                          {unreadCount}
+                        <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white">
+                          {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
                       )}
                     </button>
@@ -282,10 +289,10 @@ export const Layout: React.FC<LayoutProps> = ({
                   </div>
 
                   {user.role === 'consumer' && (
-                      <button onClick={onOpenCart} className="relative p-2 text-gray-600 dark:text-gray-300 hover:text-eco-600">
-                          <ShoppingCart size={22} />
+                      <button onClick={onOpenCart} className="relative p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white transition-colors">
+                          <ShoppingCart size={19} />
                           {cartCount > 0 && (
-                              <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                              <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white">
                                   {cartCount}
                               </span>
                           )}
@@ -295,10 +302,12 @@ export const Layout: React.FC<LayoutProps> = ({
                   <div className="relative">
                     <button 
                       onClick={() => setIsProfileOpen(!isProfileOpen)} 
-                      className="flex items-center gap-2 text-gray-700 dark:text-gray-200 hover:text-eco-700 dark:hover:text-eco-400 py-2"
+                      className="flex items-center gap-2 rounded-xl px-3 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
                     >
-                      <UserIcon size={18} />
-                      <span className="font-medium">{user.name}</span>
+                      <div className="h-7 w-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-white text-xs font-black">
+                        {user.name?.[0]?.toUpperCase() || 'U'}
+                      </div>
+                      <span className="text-sm font-semibold">{user.name}</span>
                     </button>
                     
                     {isProfileOpen && (
@@ -357,7 +366,7 @@ export const Layout: React.FC<LayoutProps> = ({
               ) : (
                 <button
                   onClick={() => onOpenAuth('consumer')}
-                  className="bg-eco-600 hover:bg-eco-700 text-white px-5 py-2 rounded-full font-medium transition-transform transform hover:scale-105 shadow-md"
+                  className="bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white px-5 py-2 rounded-xl font-bold text-sm transition-all shadow-[0_4px_20px_rgba(16,185,129,0.35)] hover:shadow-[0_4px_28px_rgba(16,185,129,0.5)] hover:-translate-y-0.5"
                 >
                   Join the Mission
                 </button>
@@ -365,16 +374,16 @@ export const Layout: React.FC<LayoutProps> = ({
             </div>
 
             {/* Mobile menu button */}
-            <div className="md:hidden flex items-center space-x-4">
+            <div className="md:hidden flex items-center gap-2">
                <button 
                 onClick={toggleTheme}
-                className="p-2 rounded-full text-gray-500 dark:text-gray-300"
+                className="p-2 rounded-xl text-slate-500 dark:text-slate-400"
               >
-                {isDark ? <Sun size={20} /> : <Moon size={20} />}
+                {isDark ? <Sun size={18} /> : <Moon size={18} />}
               </button>
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white focus:outline-none"
+                className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5"
               >
                 {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
@@ -461,71 +470,88 @@ export const Layout: React.FC<LayoutProps> = ({
         </div>
       </footer>
 
-      {/* Auth Modal */}
+      {/* Auth Modal — premium dark glassmorphism */}
       <ModalShell
         open={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
-        maxWidthClassName="max-w-2xl"
+        maxWidthClassName="max-w-lg"
         panelClassName="max-h-[92vh]"
-        contentClassName="max-h-[92vh] overflow-y-auto p-6 sm:p-8"
+        contentClassName="max-h-[92vh] overflow-y-auto p-0"
       >
-        <div className="space-y-6">
-          <ModalHeader
-            title={authMode === 'login' ? 'Welcome Back' : 'Join EcoFeast'}
-            description={authMode === 'login' ? 'Access your orders, saved impact, and dashboards from one clean workspace.' : 'Create a polished account experience for customers, retailers, charities, and volunteers.'}
-            eyebrow={authMode === 'login' ? 'Account Access' : 'Create Account'}
-            align="center"
-          />
+        <div className="relative overflow-hidden rounded-3xl">
+          {/* Top gradient bar */}
+          <div className="h-1.5 w-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500" />
+          <div className="px-8 pt-8 pb-8 space-y-6">
+            {/* Header */}
+            <div className="text-center space-y-1">
+              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-1 mb-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                <span className="text-xs font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-300">
+                  {authMode === 'login' ? 'Account Access' : 'Create Account'}
+                </span>
+              </div>
+              <h2 className="text-3xl font-black text-slate-950 dark:text-white">
+                {authMode === 'login' ? 'Welcome Back 👋' : 'Join EcoFeast 🌱'}
+              </h2>
+              <p className="text-slate-500 dark:text-slate-400 text-sm">
+                {authMode === 'login'
+                  ? 'Access your orders, saved impact, and dashboards.'
+                  : 'Pick your role and start rescuing food today.'}
+              </p>
+            </div>
 
           <form onSubmit={handleAuthSubmit} className="space-y-5">
             {authMode === 'signup' && (
-              <div className="rounded-[24px] border border-slate-200/70 bg-slate-50/80 p-4 dark:border-dark-800 dark:bg-dark-950/60">
-                <label className={fieldLabelClassName}>I Am Joining As</label>
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                  {['consumer', 'retailer', 'charity', 'volunteer'].map((r) => (
+              <div>
+                <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3">I Am Joining As</label>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {([
+                    { key: 'consumer', emoji: '🛒', label: 'Consumer' },
+                    { key: 'retailer', emoji: '🏪', label: 'Retailer' },
+                    { key: 'charity', emoji: '🤝', label: 'Charity' },
+                    { key: 'volunteer', emoji: '🚗', label: 'Volunteer' },
+                  ] as const).map((r) => (
                     <button
-                      key={r}
+                      key={r.key}
                       type="button"
-                      onClick={() => setSelectedRole(r as UserRole)}
-                      className={`rounded-2xl border px-3 py-3 text-sm font-semibold capitalize transition-all ${
-                        selectedRole === r
-                          ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700 shadow-[0_12px_24px_rgba(22,163,74,0.12)] dark:bg-emerald-500/15 dark:text-emerald-300'
-                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-dark-700 dark:bg-dark-800 dark:text-gray-300 dark:hover:bg-dark-700'
+                      onClick={() => setSelectedRole(r.key as UserRole)}
+                      className={`flex flex-col items-center gap-1 rounded-2xl border py-3 px-2 text-sm font-bold transition-all ${
+                        selectedRole === r.key
+                          ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 shadow-[0_0_16px_rgba(16,185,129,0.2)]'
+                          : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-500 hover:border-slate-300 dark:hover:border-slate-700'
                       }`}
                     >
-                      {r}
+                      <span className="text-xl">{r.emoji}</span>
+                      <span className="text-xs">{r.label}</span>
                     </button>
                   ))}
                 </div>
               </div>
             )}
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <label className={fieldLabelClassName}>Email</label>
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-1.5">Email</label>
                 <input
                   type="email"
                   required
-                  className={inputClassName}
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-all"
                   placeholder="you@example.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
 
-              <div className="sm:col-span-2">
-                <label className={fieldLabelClassName}>Password</label>
+              <div>
+                <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-1.5">Password</label>
                 <input
                   type="password"
                   required
-                  className={inputClassName}
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-all"
                   placeholder="Enter your password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 />
-                {authMode === 'signup' && (
-                  <p className={helperTextClassName}>Choose a secure password with at least 6 characters.</p>
-                )}
               </div>
 
               {authMode === 'signup' && selectedRole === 'consumer' && (
@@ -612,24 +638,28 @@ export const Layout: React.FC<LayoutProps> = ({
             </div>
 
             {authError && (
-              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300">
-                {authError}
+              <div className="rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/40 px-4 py-3 text-sm font-medium text-rose-700 dark:text-rose-300">
+                ⚠️ {authError}
               </div>
             )}
 
-            <button disabled={authLoading} className={`w-full ${primaryButtonClassName}`}>
-              {authLoading ? 'Please wait...' : authMode === 'login' ? 'Log In' : 'Create Account'}
+            <button
+              disabled={authLoading}
+              className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 px-4 py-3.5 text-sm font-black text-white hover:from-emerald-500 hover:to-teal-400 transition-all shadow-[0_4px_20px_rgba(16,185,129,0.35)] hover:shadow-[0_4px_28px_rgba(16,185,129,0.5)] disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {authLoading ? '⏳ Please wait...' : authMode === 'login' ? '🔓 Log In' : '🚀 Create Account'}
             </button>
           </form>
 
-          <div className="flex flex-col items-center justify-between gap-3 rounded-[22px] border border-slate-200/70 bg-slate-50/80 px-4 py-4 text-sm text-slate-500 dark:border-dark-800 dark:bg-dark-950/60 dark:text-gray-400 sm:flex-row">
+          <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 px-4 py-4 text-sm text-slate-500 sm:flex-row">
             <span>{authMode === 'login' ? 'New to EcoFeast?' : 'Already have an account?'}</span>
             <button
               onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
-              className={secondaryButtonClassName}
+              className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
             >
               {authMode === 'login' ? 'Create Account' : 'Log In'}
             </button>
+          </div>
           </div>
         </div>
       </ModalShell>

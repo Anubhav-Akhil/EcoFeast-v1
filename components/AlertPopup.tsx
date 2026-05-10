@@ -1,6 +1,6 @@
 import React from 'react';
-import { CheckCircle2, XCircle, AlertCircle, Info } from 'lucide-react';
-import { ModalHeader, ModalShell, primaryButtonClassName } from './ui';
+import { ModalShell } from './ui';
+import { motion } from 'framer-motion';
 
 export type PopupType = 'success' | 'error' | 'warning' | 'info';
 
@@ -12,47 +12,97 @@ interface AlertPopupProps {
   onClose: () => void;
 }
 
-const config = {
+interface SuccessPopupProps {
+  open: boolean;
+  title: string;
+  message: string;
+  onClose: () => void;
+}
+
+const typeConfig = {
   success: {
-    icon: <CheckCircle2 size={24} />,
-    tone: 'success' as const,
-    btn: primaryButtonClassName,
+    emoji: '✅',
+    gradient: 'from-emerald-500 to-teal-500',
+    glow: 'rgba(16,185,129,0.25)',
+    badge: 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/50',
+    btn: 'bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white shadow-[0_4px_20px_rgba(16,185,129,0.35)]',
+    label: 'Success',
   },
   error: {
-    icon: <XCircle size={24} />,
-    tone: 'danger' as const,
-    btn: 'inline-flex items-center justify-center rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_28px_rgba(225,29,72,0.2)] transition-all hover:-translate-y-0.5 hover:bg-rose-700 focus:outline-none focus:ring-4 focus:ring-rose-500/20',
+    emoji: '❌',
+    gradient: 'from-rose-500 to-red-600',
+    glow: 'rgba(244,63,94,0.25)',
+    badge: 'bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900/50',
+    btn: 'bg-gradient-to-r from-rose-600 to-red-500 hover:from-rose-500 hover:to-red-400 text-white shadow-[0_4px_20px_rgba(244,63,94,0.35)]',
+    label: 'Error',
   },
   warning: {
-    icon: <AlertCircle size={24} />,
-    tone: 'warning' as const,
-    btn: 'inline-flex items-center justify-center rounded-2xl bg-amber-500 px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_28px_rgba(245,158,11,0.22)] transition-all hover:-translate-y-0.5 hover:bg-amber-600 focus:outline-none focus:ring-4 focus:ring-amber-500/20',
+    emoji: '⚠️',
+    gradient: 'from-amber-500 to-orange-500',
+    glow: 'rgba(245,158,11,0.25)',
+    badge: 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900/50',
+    btn: 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white shadow-[0_4px_20px_rgba(245,158,11,0.35)]',
+    label: 'Warning',
   },
   info: {
-    icon: <Info size={24} />,
-    tone: 'info' as const,
-    btn: 'inline-flex items-center justify-center rounded-2xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_28px_rgba(2,132,199,0.22)] transition-all hover:-translate-y-0.5 hover:bg-sky-700 focus:outline-none focus:ring-4 focus:ring-sky-500/20',
+    emoji: 'ℹ️',
+    gradient: 'from-sky-500 to-blue-600',
+    glow: 'rgba(14,165,233,0.25)',
+    badge: 'bg-sky-50 dark:bg-sky-950/30 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-900/50',
+    btn: 'bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white shadow-[0_4px_20px_rgba(14,165,233,0.35)]',
+    label: 'Info',
   },
 };
 
 export const AlertPopup: React.FC<AlertPopupProps> = ({ open, type, title, message, onClose }) => {
-  const c = config[type];
-
+  const c = typeConfig[type];
   return (
-    <ModalShell open={open} onClose={onClose} maxWidthClassName="max-w-md">
-      <div className="space-y-7">
-        <ModalHeader
-          title={title}
-          description={message}
-          icon={c.icon}
-          tone={c.tone}
-          eyebrow="Notification"
-          align="center"
-        />
-        <button onClick={onClose} className={`w-full ${c.btn}`}>
-          Okay
-        </button>
+    <ModalShell open={open} onClose={onClose} maxWidthClassName="max-w-sm" contentClassName="p-0">
+      <div className="relative overflow-hidden rounded-3xl">
+        {/* gradient top bar */}
+        <div className={`h-1.5 w-full bg-gradient-to-r ${c.gradient}`} />
+        <div className="px-7 py-8 text-center space-y-5">
+          {/* emoji icon with glow */}
+          <motion.div
+            initial={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+            className="flex justify-center"
+          >
+            <div
+              className="h-16 w-16 rounded-2xl flex items-center justify-center text-3xl"
+              style={{ background: `linear-gradient(135deg, ${c.glow}, transparent)`, boxShadow: `0 8px 32px ${c.glow}` }}
+            >
+              {c.emoji}
+            </div>
+          </motion.div>
+
+          {/* badge label */}
+          <div className="flex justify-center">
+            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-black uppercase tracking-widest ${c.badge}`}>
+              {c.label}
+            </span>
+          </div>
+
+          {/* text */}
+          <div>
+            <h3 className="text-xl font-black text-slate-950 dark:text-white mb-2">{title}</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{message}</p>
+          </div>
+
+          {/* action button */}
+          <button
+            onClick={onClose}
+            className={`w-full rounded-xl px-4 py-3 text-sm font-black transition-all hover:-translate-y-0.5 ${c.btn}`}
+          >
+            Got it
+          </button>
+        </div>
       </div>
     </ModalShell>
   );
 };
+
+export const SuccessPopup: React.FC<SuccessPopupProps> = ({ open, title, message, onClose }) => (
+  <AlertPopup open={open} type="success" title={title} message={message} onClose={onClose} />
+);
