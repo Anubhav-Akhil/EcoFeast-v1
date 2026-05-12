@@ -70,17 +70,16 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
     <div className="min-h-screen bg-slate-50 dark:bg-[#020917] transition-colors">
 
       {/* ── HERO BANNER ── */}
-      <div className="relative overflow-hidden bg-slate-950 px-4 py-12 sm:px-6 lg:px-8"
-        style={{ background: 'radial-gradient(ellipse 80% 80% at 50% -20%, rgba(16,185,129,0.2) 0%, #020917 60%)' }}>
+      <div className="relative overflow-hidden bg-emerald-50 dark:bg-[#020917] px-4 py-12 sm:px-6 lg:px-8">
         <div className="dot-grid absolute inset-0 opacity-20" />
         <div className="relative mx-auto max-w-7xl">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.35em] text-emerald-400 mb-3">Live Marketplace</p>
-              <h1 className="text-4xl font-black text-white md:text-5xl">
+              <p className="text-xs font-black uppercase tracking-[0.35em] text-emerald-600 dark:text-emerald-400 mb-3">Live Marketplace</p>
+              <h1 className="text-4xl font-black text-slate-900 dark:text-white md:text-5xl">
                 {user?.role === 'charity' ? 'Claim donations near you.' : 'Surplus food. Real savings.'}
               </h1>
-              <p className="mt-3 text-slate-400 max-w-xl">
+              <p className="mt-3 text-slate-600 dark:text-slate-400 max-w-xl">
                 {user?.role === 'charity'
                   ? 'Free donations appear first. Browse and claim what your community needs.'
                   : user?.role === 'retailer'
@@ -90,7 +89,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
             </div>
             <button
               onClick={() => setShowStats(v => !v)}
-              className="inline-flex items-center gap-2 self-start md:self-auto rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-bold text-white backdrop-blur transition hover:bg-white/10"
+              className="inline-flex items-center gap-2 self-start md:self-auto rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-white backdrop-blur transition hover:bg-slate-100 dark:hover:bg-white/10"
             >
               <Filter size={16} /> Live Stats {showStats ? <X size={14} /> : <ChevronDown size={14} />}
             </button>
@@ -98,8 +97,8 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
 
           {/* Retailer banner */}
           {user?.role === 'retailer' && (
-            <div className="mt-6 flex items-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-5 py-3 text-amber-200 text-sm font-medium">
-              <Info size={18} className="text-amber-400 shrink-0" />
+            <div className="mt-6 flex items-center gap-3 rounded-2xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 px-5 py-3 text-amber-700 dark:text-amber-200 text-sm font-medium">
+              <Info size={18} className="text-amber-500 dark:text-amber-400 shrink-0" />
               View-only mode. Log in as a Customer to purchase, or as a Charity to claim donations.
             </div>
           )}
@@ -114,8 +113,8 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
                 transition={{ duration: 0.3 }}
                 className="overflow-hidden mt-6"
               >
-                <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Items available by category</p>
+                <div className="rounded-2xl border border-slate-200 dark:border-white/8 bg-white dark:bg-white/3 p-5">
+                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">Items available by category</p>
                   <div className="h-36">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={statsData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>

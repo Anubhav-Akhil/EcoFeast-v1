@@ -76,8 +76,7 @@ export const Impact: React.FC = () => {
     <div className="overflow-x-hidden bg-white dark:bg-[#020917] text-slate-900 dark:text-white">
 
       {/* ── HERO: DARK CINEMATIC ─────────────────────────── */}
-      <section className="relative min-h-[80vh] flex items-center overflow-hidden px-4 py-32 sm:px-6 lg:px-8"
-        style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(16,185,129,0.25) 0%, #020917 65%)' }}
+      <section className="relative min-h-[80vh] flex items-center overflow-hidden px-4 py-32 sm:px-6 lg:px-8 bg-emerald-50/40 dark:bg-[#020917]"
       >
         {/* Animated rings */}
         {[1, 2, 3].map(i => (
@@ -94,11 +93,11 @@ export const Impact: React.FC = () => {
         <div className="relative z-10 mx-auto max-w-7xl w-full text-center">
           <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
             <p className="text-xs font-black uppercase tracking-[0.4em] text-emerald-400 mb-6">Impact</p>
-            <h1 className="text-[clamp(3rem,7vw,6.5rem)] font-black leading-none tracking-tight text-white mb-8">
+            <h1 className="text-[clamp(3rem,7vw,6.5rem)] font-black leading-none tracking-tight text-slate-900 dark:text-white mb-8">
               Numbers that<br />
-              <span className="gradient-text-dark">actually matter.</span>
+              <span className="gradient-text-eco dark:gradient-text-dark">actually matter.</span>
             </h1>
-            <p className="mx-auto max-w-2xl text-lg text-slate-300 leading-relaxed">
+            <p className="mx-auto max-w-2xl text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
               Every rescue event creates a ripple of environmental, economic, and social impact. 
               Here's what the EcoFeast network has achieved together.
             </p>
@@ -107,9 +106,9 @@ export const Impact: React.FC = () => {
       </section>
 
       {/* ── BIG ANIMATED STATS ─────────────────────────────── */}
-      <section className="py-4 px-4 sm:px-6 lg:px-8 bg-slate-950">
+      <section className="py-4 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-950">
         <div className="mx-auto max-w-7xl">
-          <div className="grid gap-px bg-white/5 rounded-3xl overflow-hidden sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-px bg-slate-200 dark:bg-white/5 rounded-3xl overflow-hidden sm:grid-cols-2 lg:grid-cols-4">
             {bigStats.map((stat, i) => (
               <motion.div
                 key={stat.label}
@@ -117,13 +116,15 @@ export const Impact: React.FC = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1, duration: 0.5 }}
-                className="group relative bg-slate-950 p-10 text-center hover:bg-slate-900 transition-colors"
+                className="group relative bg-white dark:bg-slate-950 p-10 text-center hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors"
               >
                 <div className={`mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${stat.color} text-white shadow-lg group-hover:scale-110 transition-transform`}>
                   {stat.icon}
                 </div>
-                <AnimatedCounter end={stat.end} display={stat.display} />
-                <div className="mt-3 text-sm font-semibold text-slate-400">{stat.label}</div>
+                <div className="text-slate-900 dark:text-white">
+                  <AnimatedCounter end={stat.end} display={stat.display} />
+                </div>
+                <div className="mt-3 text-sm font-semibold text-slate-500 dark:text-slate-400">{stat.label}</div>
               </motion.div>
             ))}
           </div>
@@ -131,7 +132,7 @@ export const Impact: React.FC = () => {
       </section>
 
       {/* ── EARTH VISUAL ─────────────────────────────────── */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-950">
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-950">
         <div className="mx-auto max-w-7xl">
           <div className="grid gap-12 lg:grid-cols-[1fr_1fr] lg:items-center">
             {/* Left text */}
@@ -141,12 +142,12 @@ export const Impact: React.FC = () => {
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
             >
-              <p className="text-xs font-black uppercase tracking-[0.35em] text-emerald-400 mb-4">Climate Action</p>
-              <h2 className="text-4xl font-black text-white md:text-5xl mb-6 leading-tight">
+              <p className="text-xs font-black uppercase tracking-[0.35em] text-emerald-600 dark:text-emerald-400 mb-4">Climate Action</p>
+              <h2 className="text-4xl font-black text-slate-900 dark:text-white md:text-5xl mb-6 leading-tight">
                 1.2M kg of CO₂<br />
                 <span className="gradient-text-eco">avoided and counting.</span>
               </h2>
-              <p className="text-slate-400 text-lg leading-relaxed mb-8">
+              <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8">
                 Food waste accounts for 8–10% of global greenhouse gas emissions. By rescuing 
                 surplus food before it reaches landfills, EcoFeast directly reduces decomposition 
                 methane emissions and replacement production demand.
@@ -159,10 +160,10 @@ export const Impact: React.FC = () => {
                 ].map(bar => (
                   <div key={bar.label}>
                     <div className="flex justify-between text-sm mb-2">
-                      <span className="text-slate-300 font-medium">{bar.label} reduced</span>
-                      <span className="text-emerald-400 font-bold">{bar.value}%</span>
+                      <span className="text-slate-700 dark:text-slate-300 font-medium">{bar.label} reduced</span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">{bar.value}%</span>
                     </div>
-                    <div className="h-2 rounded-full bg-white/10">
+                    <div className="h-2 rounded-full bg-slate-200 dark:bg-white/10">
                       <motion.div
                         className={`h-full rounded-full ${bar.color}`}
                         initial={{ width: 0 }}

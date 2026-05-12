@@ -56,8 +56,7 @@ export const Partners: React.FC<PartnersProps> = ({ onOpenAuth }) => {
 
       {/* ── HERO: BRUTALIST DARK ─────────────────────────── */}
       <section
-        className="relative min-h-screen flex items-center overflow-hidden px-4 sm:px-6 lg:px-8"
-        style={{ background: 'linear-gradient(150deg, #020917 0%, #0a1f0d 50%, #020917 100%)' }}
+        className="relative min-h-screen flex items-center overflow-hidden px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-[#020917]"
       >
         {/* Neon grid lines */}
         <div className="absolute inset-0 opacity-30" style={{
@@ -78,11 +77,11 @@ export const Partners: React.FC<PartnersProps> = ({ onOpenAuth }) => {
                 <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
                 4,200+ partners active on the network
               </div>
-              <h1 className="text-[clamp(3rem,6vw,6rem)] font-black leading-none tracking-tight text-white mb-8">
+              <h1 className="text-[clamp(3rem,6vw,6rem)] font-black leading-none tracking-tight text-slate-900 dark:text-white mb-8">
                 Turn waste<br />
                 <span className="gradient-text-eco">into revenue.</span>
               </h1>
-              <p className="text-xl text-slate-300 leading-relaxed max-w-xl mb-10">
+              <p className="text-xl text-slate-600 dark:text-slate-300 leading-relaxed max-w-xl mb-10">
                 Join thousands of retailers using EcoFeast to recover costs from surplus inventory, 
                 attract new customers, and build genuine sustainability credentials.
               </p>
@@ -96,7 +95,7 @@ export const Partners: React.FC<PartnersProps> = ({ onOpenAuth }) => {
                 </button>
                 <a 
                   href="/#/how-it-works?role=partner"
-                  className="inline-flex items-center gap-2 rounded-2xl border border-white/15 px-8 py-4 font-bold text-white transition hover:bg-white/5 hover:-translate-y-1"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 dark:border-white/15 px-8 py-4 font-bold text-slate-700 dark:text-white transition hover:bg-slate-100 dark:hover:bg-white/5 hover:-translate-y-1"
                 >
                   How It Works
                 </a>
@@ -108,9 +107,9 @@ export const Partners: React.FC<PartnersProps> = ({ onOpenAuth }) => {
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.7, delay: 0.2 }}
-              className="neon-border rounded-3xl bg-[#0d1f12] border border-emerald-500/20 p-6 overflow-hidden"
+              className="neon-border rounded-3xl bg-white dark:bg-[#0d1f12] border border-slate-200 dark:border-emerald-500/20 p-6 overflow-hidden shadow-xl"
             >
-              <div className="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
+              <div className="flex items-center gap-3 mb-6 border-b border-slate-100 dark:border-white/10 pb-4">
                 <div className="flex gap-1.5">
                   {['bg-rose-500', 'bg-amber-500', 'bg-emerald-500'].map(c => (
                     <div key={c} className={`h-3 w-3 rounded-full ${c}`} />
@@ -126,16 +125,16 @@ export const Partners: React.FC<PartnersProps> = ({ onOpenAuth }) => {
                   { label: 'CO₂ Saved', value: '240kg', delta: 'this week', color: 'text-teal-400' },
                   { label: 'Orders Fulfilled', value: '127', delta: '100% pickup', color: 'text-violet-400' },
                 ].map(m => (
-                  <div key={m.label} className="rounded-2xl bg-white/5 p-4 border border-white/5">
+                  <div key={m.label} className="rounded-2xl bg-slate-50 dark:bg-white/5 p-4 border border-slate-100 dark:border-white/5">
                     <p className="text-xs text-slate-500 mb-1">{m.label}</p>
-                    <p className={`text-xl font-black text-white`}>{m.value}</p>
+                    <p className={`text-xl font-black text-slate-900 dark:text-white`}>{m.value}</p>
                     <p className={`text-xs font-bold ${m.color}`}>{m.delta}</p>
                   </div>
                 ))}
               </div>
 
               {/* Mini bar chart */}
-              <div className="rounded-2xl bg-white/5 p-4 border border-white/5">
+              <div className="rounded-2xl bg-slate-50 dark:bg-white/5 p-4 border border-slate-100 dark:border-white/5">
                 <p className="text-xs text-slate-500 mb-3">Weekly rescue volume</p>
                 <div className="flex items-end gap-2 h-16">
                   {[40, 65, 45, 80, 70, 90, 75].map((h, i) => (
@@ -161,11 +160,11 @@ export const Partners: React.FC<PartnersProps> = ({ onOpenAuth }) => {
       </section>
 
       {/* ── BENEFITS GRID ─────────────────────────────────── */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-950">
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-950">
         <div className="mx-auto max-w-7xl">
           <div className="mb-16 text-center">
-            <p className="text-xs font-black uppercase tracking-[0.35em] text-emerald-400 mb-4">Why Partners Choose EcoFeast</p>
-            <h2 className="text-4xl font-black text-white md:text-5xl">The numbers speak.</h2>
+            <p className="text-xs font-black uppercase tracking-[0.35em] text-emerald-600 dark:text-emerald-400 mb-4">Why Partners Choose EcoFeast</p>
+            <h2 className="text-4xl font-black text-slate-900 dark:text-white md:text-5xl">The numbers speak.</h2>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
             {benefits.map((b, i) => (
@@ -175,15 +174,15 @@ export const Partners: React.FC<PartnersProps> = ({ onOpenAuth }) => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.15, duration: 0.5 }}
-                className="group relative overflow-hidden rounded-3xl border border-white/8 bg-white/3 p-8 hover:border-emerald-500/30 transition-all"
+                className="group relative overflow-hidden rounded-3xl border border-slate-200 dark:border-white/8 bg-white dark:bg-white/3 p-8 hover:border-emerald-500/30 transition-all shadow-sm"
               >
                 <div className={`mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${b.color} text-white shadow-lg`}>
                   {b.icon}
                 </div>
-                <div className="text-4xl font-black text-white mb-1">{b.stat}</div>
+                <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">{b.stat}</div>
                 <div className="text-xs font-bold text-slate-500 mb-5">{b.statLabel}</div>
-                <h3 className="text-xl font-black text-white mb-3">{b.title}</h3>
-                <p className="text-sm leading-7 text-slate-400">{b.body}</p>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white mb-3">{b.title}</h3>
+                <p className="text-sm leading-7 text-slate-600 dark:text-slate-400">{b.body}</p>
               </motion.div>
             ))}
           </div>
@@ -191,11 +190,11 @@ export const Partners: React.FC<PartnersProps> = ({ onOpenAuth }) => {
       </section>
 
       {/* ── HOW IT WORKS ─────────────────────────────────── */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-[#06111b]">
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-white dark:bg-[#06111b]">
         <div className="mx-auto max-w-7xl">
           <div className="mb-16">
-            <p className="text-xs font-black uppercase tracking-[0.35em] text-emerald-400 mb-4">Partner Onboarding</p>
-            <h2 className="text-4xl font-black text-white md:text-5xl">Up and running<br />in four steps.</h2>
+            <p className="text-xs font-black uppercase tracking-[0.35em] text-emerald-600 dark:text-emerald-400 mb-4">Partner Onboarding</p>
+            <h2 className="text-4xl font-black text-slate-900 dark:text-white md:text-5xl">Up and running<br />in four steps.</h2>
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {steps.map((step, i) => (
@@ -205,11 +204,11 @@ export const Partners: React.FC<PartnersProps> = ({ onOpenAuth }) => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="relative rounded-3xl border border-white/8 bg-white/3 p-7"
+                className="relative rounded-3xl border border-slate-200 dark:border-white/8 bg-slate-50 dark:bg-white/3 p-7"
               >
-                <div className="text-[3.5rem] font-black text-white/6 select-none leading-none mb-4">{step.n}</div>
-                <h3 className="text-lg font-black text-white mb-3">{step.title}</h3>
-                <p className="text-sm leading-7 text-slate-400">{step.body}</p>
+                <div className="text-[3.5rem] font-black text-slate-200 dark:text-white/6 select-none leading-none mb-4">{step.n}</div>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white mb-3">{step.title}</h3>
+                <p className="text-sm leading-7 text-slate-600 dark:text-slate-400">{step.body}</p>
               </motion.div>
             ))}
           </div>
@@ -217,9 +216,9 @@ export const Partners: React.FC<PartnersProps> = ({ onOpenAuth }) => {
       </section>
 
       {/* ── FEATURES PILL LIST ─────────────────────────────── */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-950 text-center">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-950 text-center">
         <div className="mx-auto max-w-4xl">
-          <p className="text-xs font-black uppercase tracking-[0.35em] text-emerald-400 mb-6">What You Get</p>
+          <p className="text-xs font-black uppercase tracking-[0.35em] text-emerald-600 dark:text-emerald-400 mb-6">What You Get</p>
           <div className="flex flex-wrap gap-3 justify-center mb-12">
             {features.map(f => (
               <div key={f.label} className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-5 py-3 font-bold text-emerald-300">

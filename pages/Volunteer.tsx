@@ -56,8 +56,7 @@ export const Volunteer: React.FC<VolunteerProps> = ({ onOpenAuth }) => {
 
       {/* ── HERO ─────────────────────────────────────────── */}
       <section
-        className="relative min-h-screen flex items-center overflow-hidden px-4 sm:px-6 lg:px-8"
-        style={{ background: 'linear-gradient(150deg, #020917 0%, #1a1a2e 50%, #020917 100%)' }}
+        className="relative min-h-screen flex items-center overflow-hidden px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-[#020917]"
       >
         <div className="absolute inset-0 opacity-30" style={{
           backgroundImage: 'linear-gradient(rgba(245,158,11,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(245,158,11,0.15) 1px, transparent 1px)',
@@ -74,11 +73,11 @@ export const Volunteer: React.FC<VolunteerProps> = ({ onOpenAuth }) => {
                 <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
                 Join 1,200+ local food rescuers
               </div>
-              <h1 className="text-[clamp(3rem,6vw,6rem)] font-black leading-none tracking-tight text-white mb-8">
+              <h1 className="text-[clamp(3rem,6vw,6rem)] font-black leading-none tracking-tight text-slate-900 dark:text-white mb-8">
                 Be the bridge<br />
                 <span className="text-amber-500">to zero waste.</span>
               </h1>
-              <p className="text-xl text-slate-300 leading-relaxed max-w-xl mb-10 mx-auto lg:mx-0">
+              <p className="text-xl text-slate-600 dark:text-slate-300 leading-relaxed max-w-xl mb-10 mx-auto lg:mx-0">
                 Rescue quality surplus food from local stores and deliver it to charities in your neighborhood. 
                 Earn rewards while making a real difference.
               </p>
@@ -92,7 +91,7 @@ export const Volunteer: React.FC<VolunteerProps> = ({ onOpenAuth }) => {
                 </button>
                 <a 
                   href="/#/how-it-works?role=volunteer"
-                  className="inline-flex items-center gap-2 rounded-2xl border border-white/15 px-8 py-4 font-bold text-white transition hover:bg-white/5 hover:-translate-y-1"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 dark:border-white/15 px-8 py-4 font-bold text-slate-700 dark:text-white transition hover:bg-slate-100 dark:hover:bg-white/5 hover:-translate-y-1"
                 >
                   How It Works
                 </a>
@@ -155,11 +154,11 @@ export const Volunteer: React.FC<VolunteerProps> = ({ onOpenAuth }) => {
       </section>
 
       {/* ── BENEFITS GRID ─────────────────────────────────── */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-950">
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-950">
         <div className="mx-auto max-w-7xl">
           <div className="mb-16 text-center">
-            <p className="text-xs font-black uppercase tracking-[0.35em] text-amber-400 mb-4">Why Volunteer?</p>
-            <h2 className="text-4xl font-black text-white md:text-5xl">Your effort, amplified.</h2>
+            <p className="text-xs font-black uppercase tracking-[0.35em] text-amber-600 dark:text-amber-400 mb-4">Why Volunteer?</p>
+            <h2 className="text-4xl font-black text-slate-900 dark:text-white md:text-5xl">Your effort, amplified.</h2>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
             {benefits.map((b, i) => (
@@ -169,15 +168,15 @@ export const Volunteer: React.FC<VolunteerProps> = ({ onOpenAuth }) => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.15, duration: 0.5 }}
-                className="group relative overflow-hidden rounded-3xl border border-white/8 bg-white/3 p-8 hover:border-amber-500/30 transition-all"
+                className="group relative overflow-hidden rounded-3xl border border-slate-200 dark:border-white/8 bg-white dark:bg-white/3 p-8 hover:border-amber-500/30 transition-all shadow-sm"
               >
                 <div className={`mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${b.color} text-white shadow-lg`}>
                   {b.icon}
                 </div>
-                <div className="text-4xl font-black text-white mb-1">{b.stat}</div>
+                <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">{b.stat}</div>
                 <div className="text-xs font-bold text-slate-500 mb-5">{b.statLabel}</div>
-                <h3 className="text-xl font-black text-white mb-3">{b.title}</h3>
-                <p className="text-sm leading-7 text-slate-400">{b.body}</p>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white mb-3">{b.title}</h3>
+                <p className="text-sm leading-7 text-slate-600 dark:text-slate-400">{b.body}</p>
               </motion.div>
             ))}
           </div>
@@ -185,11 +184,11 @@ export const Volunteer: React.FC<VolunteerProps> = ({ onOpenAuth }) => {
       </section>
 
       {/* ── HOW IT WORKS ─────────────────────────────────── */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-[#0a0a0f]">
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-white dark:bg-[#0a0a0f]">
         <div className="mx-auto max-w-7xl">
           <div className="mb-16">
-            <p className="text-xs font-black uppercase tracking-[0.35em] text-amber-400 mb-4">The Volunteer Journey</p>
-            <h2 className="text-4xl font-black text-white md:text-5xl">Making an impact is<br />easier than ever.</h2>
+            <p className="text-xs font-black uppercase tracking-[0.35em] text-amber-600 dark:text-amber-400 mb-4">The Volunteer Journey</p>
+            <h2 className="text-4xl font-black text-slate-900 dark:text-white md:text-5xl">Making an impact is<br />easier than ever.</h2>
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {steps.map((step, i) => (
@@ -199,11 +198,11 @@ export const Volunteer: React.FC<VolunteerProps> = ({ onOpenAuth }) => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="relative rounded-3xl border border-white/8 bg-white/3 p-7"
+                className="relative rounded-3xl border border-slate-200 dark:border-white/8 bg-slate-50 dark:bg-white/3 p-7"
               >
-                <div className="text-[3.5rem] font-black text-white/6 select-none leading-none mb-4">{step.n}</div>
-                <h3 className="text-lg font-black text-white mb-3">{step.title}</h3>
-                <p className="text-sm leading-7 text-slate-400">{step.body}</p>
+                <div className="text-[3.5rem] font-black text-slate-200 dark:text-white/6 select-none leading-none mb-4">{step.n}</div>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white mb-3">{step.title}</h3>
+                <p className="text-sm leading-7 text-slate-600 dark:text-slate-400">{step.body}</p>
               </motion.div>
             ))}
           </div>
@@ -211,9 +210,9 @@ export const Volunteer: React.FC<VolunteerProps> = ({ onOpenAuth }) => {
       </section>
 
       {/* ── FEATURES ─────────────────────────────── */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-950 text-center">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-950 text-center">
         <div className="mx-auto max-w-4xl">
-          <p className="text-xs font-black uppercase tracking-[0.35em] text-amber-400 mb-6">Equipped for Rescue</p>
+          <p className="text-xs font-black uppercase tracking-[0.35em] text-amber-600 dark:text-amber-400 mb-6">Equipped for Rescue</p>
           <div className="flex flex-wrap gap-3 justify-center mb-12">
             {features.map(f => (
               <div key={f.label} className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-5 py-3 font-bold text-amber-300">

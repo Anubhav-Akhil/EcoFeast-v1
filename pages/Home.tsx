@@ -242,7 +242,7 @@ export const Home: React.FC = () => {
       </section>
 
       {/* ── HOW IT WORKS – DIAGONAL STEPS ─────────────────── */}
-      <section className="relative overflow-hidden bg-slate-950 py-28 px-4 text-white sm:px-6 lg:px-8">
+      <section className="relative overflow-hidden bg-slate-50 dark:bg-slate-950 py-28 px-4 text-slate-900 dark:text-white sm:px-6 lg:px-8">
         {/* Diagonal stripe */}
         <div className="absolute inset-0 opacity-5">
           <div className="absolute -left-20 top-0 h-full w-1/2 rotate-[-6deg] bg-emerald-400" />
@@ -266,14 +266,14 @@ export const Home: React.FC = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1, duration: 0.5 }}
-                className="group relative bg-slate-950 p-8 transition-colors hover:bg-emerald-950/40"
+                className="group relative bg-white dark:bg-slate-950 p-8 transition-colors hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
               >
-                <div className="text-[4rem] font-black text-white/5 select-none absolute right-4 top-2">{step.n}</div>
+                <div className="text-[4rem] font-black text-slate-200 dark:text-white/5 select-none absolute right-4 top-2">{step.n}</div>
                 <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/20 group-hover:bg-emerald-500 group-hover:text-white transition-all">
                   {step.icon}
                 </div>
                 <h3 className="text-xl font-black mb-3">{step.title}</h3>
-                <p className="text-sm leading-7 text-slate-400">{step.desc}</p>
+                <p className="text-sm leading-7 text-slate-600 dark:text-slate-400">{step.desc}</p>
               </motion.div>
             ))}
           </div>
