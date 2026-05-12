@@ -26,7 +26,7 @@ interface DashboardProps {
   user: User;
 }
 
-export const statusBadge = (status?: string) => {
+const statusBadge = (status?: string) => {
   const s = status || 'pending';
   const map: Record<string, string> = {
     pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
@@ -88,6 +88,16 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
     forCharity: false,
     image: '',
   });
+
+  useEffect(() => {
+    const orderId = searchParams.get('orderId');
+    if (orderId && activeTab === 'orders') {
+      setTimeout(() => {
+        const el = document.getElementById(`order-${orderId}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 500);
+    }
+  }, [searchParams, activeTab]);
 
   useEffect(() => {
     loadStoreData();
@@ -214,9 +224,9 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
       if (keyword.includes('sushi')) keyword += ',korean,japanese,food,delicious';
       else keyword = keyword.split(' ').join(',');
 
-      // Deterministic lock based on title string
-      const lock = title.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 1000;
-      const url = `https://loremflickr.com/800/600/${encodeURIComponent(keyword)}?lock=${lock}`;
+      // Use Pollinations AI for reliable, fast, and high-quality food images instead of loremflickr
+      const prompt = `${title} food photography, delicious, high quality, professional lighting`;
+      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=800&height=600&nologo=true`;
 
       setNewItem(prev => ({ ...prev, image: url }));
       setIsGeneratingImg(false);
@@ -276,10 +286,20 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
     let newQtyDelta = qty;
     if (qty < 0 && item.quantity + qty < 0) newQtyDelta = -item.quantity;
     if (newQtyDelta === 0) return;
-    await api.updateItem(item.id, { quantityDelta: newQtyDelta });
-    await loadStoreData();
-    const action = newQtyDelta > 0 ? 'added to' : 'removed from';
-    openSuccess('Stock Updated', `${Math.abs(newQtyDelta)} item${Math.abs(newQtyDelta) > 1 ? 's' : ''} ${action} "${item.title}".`);
+    // Optimistic update — apply instantly
+    const newQty = Math.max(0, item.quantity + newQtyDelta);
+    setItems(prev => prev.map(i => i.id === item.id ? { ...i, quantity: newQty, status: newQty <= 0 ? 'sold' : 'available' } : i));
+    try {
+      const updated = await api.updateItem(item.id, { quantityDelta: newQtyDelta });
+      // Reconcile with server response
+      setItems(prev => prev.map(i => i.id === item.id ? updated : i));
+      const action = newQtyDelta > 0 ? 'added to' : 'removed from';
+      openSuccess('Stock Updated', `${Math.abs(newQtyDelta)} item${Math.abs(newQtyDelta) > 1 ? 's' : ''} ${action} "${item.title}".`);
+    } catch (err: any) {
+      // Revert on failure
+      setItems(prev => prev.map(i => i.id === item.id ? item : i));
+      openError('Update Failed', err.message || 'Could not update stock.');
+    }
   };
 
   const handleRestockSubmit = async (e: React.FormEvent) => {
@@ -287,11 +307,12 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
     if (!restockTarget || restockQty < 0) return;
     setRestockLoading(true);
     try {
-      await api.updateItem(restockTarget.id, { quantity: restockQty });
+      const updated = await api.updateItem(restockTarget.id, { quantity: restockQty });
       const targetTitle = restockTarget.title;
       setRestockTarget(null);
       setRestockQty(1);
-      await loadStoreData();
+      // Apply server response directly instead of full refetch
+      setItems(prev => prev.map(i => i.id === updated.id ? updated : i));
       openSuccess('Stock Updated', `Stock for "${targetTitle}" set to ${restockQty}.`);
     } finally {
       setRestockLoading(false);
@@ -311,11 +332,11 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
     if (!priceTarget) return;
     setPriceSaving(true);
     try {
-      await api.updateItem(priceTarget.id, {
+      const updated = await api.updateItem(priceTarget.id, {
         originalPrice: Number(priceForm.originalPrice || 0),
         discountPrice: priceTarget.forCharity ? 0 : Number(priceForm.discountPrice || 0),
       });
-      await loadStoreData();
+      setItems(prev => prev.map(i => i.id === updated.id ? updated : i));
       setPriceTarget(null);
       openSuccess('Price Updated', `Price updated for "${priceTarget.title}".`);
     } finally {
@@ -673,7 +694,15 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
                     const date = row.order.timestamp ? new Date(row.order.timestamp) : null;
                     const dateStr = date ? date.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
                     return (
-                      <div key={row.order.id} className="p-4 rounded-2xl border border-gray-200 dark:border-dark-800 bg-gray-50 dark:bg-dark-950/30">
+                      <div 
+                        key={row.order.id} 
+                        id={`order-${row.order.id}`}
+                        className={`p-4 rounded-2xl border transition-all duration-500 ${
+                          searchParams.get('orderId') === row.order.id 
+                            ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-500/10 ring-2 ring-emerald-500/20' 
+                            : 'border-gray-200 dark:border-dark-800 bg-gray-50 dark:bg-dark-950/30'
+                        }`}
+                      >
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -730,7 +759,13 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
                           <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                             {row.storeItems.slice(0, 6).map((item, idx) => (
                               <div key={`${row.order.id}_${item.id}_${idx}`} className="flex items-center gap-3 bg-white dark:bg-dark-900 rounded-xl p-3 border border-gray-200 dark:border-dark-800">
-                                <img src={item.image} alt={item.title} className="h-10 w-10 rounded-lg object-cover flex-shrink-0" />
+                                {item.image ? (
+                                  <img src={item.image} alt={item.title} className="h-10 w-10 rounded-lg object-cover flex-shrink-0" />
+                                ) : (
+                                  <div className="h-10 w-10 rounded-lg flex-shrink-0 bg-gray-100 dark:bg-dark-800 flex items-center justify-center border border-gray-200 dark:border-dark-700">
+                                    <Package size={18} className="text-gray-400" />
+                                  </div>
+                                )}
                                 <div className="min-w-0 flex-1">
                                   <div className="text-sm font-bold text-gray-900 dark:text-white truncate">{item.title}</div>
                                   <div className="text-xs text-gray-400 capitalize">{item.category}</div>
@@ -1131,9 +1166,22 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
 
 // Orders accordion component - tracks which order is expanded
 const OrdersAccordion: React.FC<{ reservations: Reservation[]; viewer?: User; loading?: boolean }> = ({ reservations, viewer, loading }) => {
+  const [searchParams] = useSearchParams();
+  const orderIdFromUrl = searchParams.get('orderId');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [tasksByOrderId, setTasksByOrderId] = useState<Record<string, Task[]>>({});
   const [tasksLoadingByOrderId, setTasksLoadingByOrderId] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (orderIdFromUrl && reservations.some(r => r.id === orderIdFromUrl)) {
+      setExpandedId(orderIdFromUrl);
+      ensureOrderTasksLoaded(orderIdFromUrl);
+      setTimeout(() => {
+        const el = document.getElementById(`order-${orderIdFromUrl}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 600);
+    }
+  }, [orderIdFromUrl, reservations.length]);
 
   useEffect(() => {
     const handleTaskUpdate = (task: Task) => {
@@ -1277,7 +1325,13 @@ const OrdersAccordion: React.FC<{ reservations: Reservation[]; viewer?: User; lo
         }
 
         return (
-          <div key={res.id} className="bg-white dark:bg-dark-900 rounded-2xl border border-gray-200 dark:border-dark-800 shadow-sm overflow-hidden">
+          <div 
+            key={res.id} 
+            id={`order-${res.id}`}
+            className={`bg-white dark:bg-dark-900 rounded-2xl border transition-all duration-500 shadow-sm overflow-hidden ${
+              orderIdFromUrl === res.id ? 'border-emerald-500 ring-2 ring-emerald-500/20' : 'border-gray-200 dark:border-dark-800'
+            }`}
+          >
             <button
               onClick={() => {
                 const next = isExpanded ? null : res.id;
@@ -1370,7 +1424,13 @@ const OrdersAccordion: React.FC<{ reservations: Reservation[]; viewer?: User; lo
                       <div className="space-y-2">
                         {storeItems.map((item: any, idx: number) => (
                           <div key={idx} className="flex items-center gap-3 bg-gray-50 dark:bg-dark-800 rounded-xl p-3">
-                            <img src={item.image} alt={item.title} className="h-11 w-11 rounded-lg object-cover flex-shrink-0" />
+                            {item.image ? (
+                              <img src={item.image} alt={item.title} className="h-11 w-11 rounded-lg object-cover flex-shrink-0" />
+                            ) : (
+                              <div className="h-11 w-11 rounded-lg flex-shrink-0 bg-gray-200 dark:bg-dark-700 flex items-center justify-center border border-gray-300 dark:border-dark-600">
+                                <Package size={20} className="text-gray-400" />
+                              </div>
+                            )}
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-semibold text-gray-800 dark:text-white truncate">{item.title}</p>
                               <p className="text-xs text-gray-400 capitalize">{item.category}</p>
@@ -1580,6 +1640,7 @@ const CharityDashboard: React.FC<{ user: User }> = ({ user }) => {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [myTasks, setMyTasks] = useState<Task[]>([]);
   const [successOpen, setSuccessOpen] = useState(false);
+  const [isDonationsLoading, setIsDonationsLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = (searchParams.get('tab') || 'overview') as 'overview' | 'orders' | 'pickups';
 
@@ -1594,8 +1655,13 @@ const CharityDashboard: React.FC<{ user: User }> = ({ user }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchDonations = async () => {
-    const allItems = await api.getItems();
-    setDonations(allItems.filter((i) => !!i.forCharity && i.status === 'available' && i.quantity > 0));
+    setIsDonationsLoading(true);
+    try {
+      const allItems = await api.getItems();
+      setDonations(allItems.filter((i) => !!i.forCharity && i.status === 'available' && i.quantity > 0));
+    } finally {
+      setIsDonationsLoading(false);
+    }
   };
 
   const fetchOrders = () => {
@@ -1696,7 +1762,20 @@ const CharityDashboard: React.FC<{ user: User }> = ({ user }) => {
       <div className="p-6">
         {activeTab === 'overview' && (
           <div className="mb-8">
-            {donations.length === 0 ? (
+            {isDonationsLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 animate-pulse">
+                    <div className="h-40 bg-slate-100 dark:bg-slate-800" />
+                    <div className="p-4 space-y-3">
+                      <div className="h-5 bg-slate-100 dark:bg-slate-800 rounded-lg w-3/4" />
+                      <div className="h-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg w-1/2" />
+                      <div className="h-10 bg-slate-100 dark:bg-slate-800 rounded-xl w-full mt-2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : donations.length === 0 ? (
               <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-12 text-center">
                 <div className="text-5xl mb-4">🤝</div>
                 <h3 className="text-lg font-black text-slate-900 dark:text-white mb-2">No donations available right now</h3>
@@ -1737,6 +1816,7 @@ const CharityDashboard: React.FC<{ user: User }> = ({ user }) => {
 };
 
 const VolunteerDashboard: React.FC<{ user: User }> = ({ user }) => {
+  const [searchParams] = useSearchParams();
   const [isAvailable, setIsAvailable] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [successOpen, setSuccessOpen] = useState(false);
@@ -1751,6 +1831,17 @@ const VolunteerDashboard: React.FC<{ user: User }> = ({ user }) => {
     setAlertConfig({ type, title, message });
     setAlertOpen(true);
   };
+
+  useEffect(() => {
+    const orderId = searchParams.get('orderId');
+    if (orderId) {
+      setTimeout(() => {
+        const el = document.getElementById(`task-${orderId}`) || document.querySelector(`[id^="task-"]`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 500);
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     loadTasks();
   }, []);
@@ -1952,7 +2043,14 @@ const VolunteerDashboard: React.FC<{ user: User }> = ({ user }) => {
                   <p className="text-xs mt-1">Accept a pickup to get started.</p>
                 </div>
               ) : tasks.filter(t => t.status === 'accepted' || t.status === 'picked_up').map(task => (
-                <div key={task.id} className={`rounded-3xl border p-6 shadow-sm ${task.status === 'picked_up'
+                <div 
+                  key={task.id} 
+                  id={`task-${task.id}`}
+                  className={`rounded-3xl border p-6 shadow-sm transition-all duration-500 ${
+                    searchParams.get('orderId') === task.orderId 
+                      ? 'border-emerald-500 ring-4 ring-emerald-500/20' 
+                      : ''
+                  } ${task.status === 'picked_up'
                     ? 'border-emerald-500/20 bg-emerald-50/30 dark:bg-emerald-950/10'
                     : 'border-sky-500/20 bg-sky-50/30 dark:bg-sky-950/10'
                   }`}>

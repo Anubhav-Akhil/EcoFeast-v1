@@ -252,27 +252,55 @@ export const Layout: React.FC<LayoutProps> = ({
                                           setIsNotificationsOpen(false);
                                           if (notif.link) navigate(notif.link);
                                         }}
-                                        className={`w-full text-left px-4 py-3.5 hover:bg-slate-50 dark:hover:bg-white/4 transition-colors ${!notif.read ? 'bg-emerald-50/50 dark:bg-emerald-950/10' : ''
-                                          }`}
+                                        className={`w-full text-left px-5 py-4 transition-all border-b border-slate-50 dark:border-white/5 relative group/notif ${
+                                          !notif.read 
+                                            ? 'bg-emerald-50/30 dark:bg-emerald-500/5' 
+                                            : 'bg-white dark:bg-transparent'
+                                        }`}
                                       >
-                                        <div className="flex gap-3 items-start">
+                                        <div className="flex gap-4 items-start">
                                           {/* Icon tile */}
-                                          <div className={`h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${cfg.iconBg}`}>
-                                            <Icon size={16} className={cfg.iconColor} />
+                                          <div className={`h-10 w-10 rounded-2xl flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
+                                            !notif.read ? cfg.iconBg : 'bg-slate-100 dark:bg-slate-800/50'
+                                          }`}>
+                                            <Icon size={18} className={!notif.read ? cfg.iconColor : 'text-slate-400 dark:text-slate-500'} />
                                           </div>
+                                          
                                           <div className="min-w-0 flex-1">
-                                            <div className="flex justify-between items-baseline gap-2">
-                                              <span className={`text-sm font-bold leading-snug ${notif.read ? 'text-slate-600 dark:text-slate-300' : 'text-slate-900 dark:text-white'
-                                                }`}>{notif.title}</span>
-                                              <span className="text-[10px] text-slate-400 flex-shrink-0">{formatTimeAgo(notif.timestamp)}</span>
+                                            <div className="flex justify-between items-baseline gap-2 mb-1">
+                                              <span className={`text-sm leading-snug transition-colors ${
+                                                !notif.read 
+                                                  ? 'font-black text-slate-900 dark:text-white' 
+                                                  : 'font-bold text-slate-500 dark:text-slate-400'
+                                              }`}>
+                                                {notif.title}
+                                              </span>
+                                              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tight flex-shrink-0">
+                                                {formatTimeAgo(notif.timestamp)}
+                                              </span>
                                             </div>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug mt-0.5 line-clamp-2">{notif.message}</p>
+                                            
+                                            <p className={`text-xs leading-snug transition-colors ${
+                                              !notif.read 
+                                                ? 'text-slate-600 dark:text-slate-300 font-medium' 
+                                                : 'text-slate-400 dark:text-slate-500'
+                                            }`}>
+                                              {notif.message}
+                                            </p>
+                                            
                                             {notif.subtitle && (
-                                              <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mt-1">{notif.subtitle}</p>
+                                              <div className={`inline-flex items-center gap-1 mt-2.5 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-all ${
+                                                !notif.read 
+                                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
+                                                  : 'bg-slate-100 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500'
+                                              }`}>
+                                                {notif.subtitle}
+                                              </div>
                                             )}
                                           </div>
+                                          
                                           {!notif.read && (
-                                            <div className="h-2 w-2 rounded-full bg-emerald-500 flex-shrink-0 mt-2" />
+                                            <div className="h-2 w-2 rounded-full bg-emerald-500 flex-shrink-0 mt-2 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
                                           )}
                                         </div>
                                       </motion.button>
@@ -452,6 +480,7 @@ export const Layout: React.FC<LayoutProps> = ({
                 <li><Link to="/marketplace" className="hover:text-white">Marketplace</Link></li>
                 <li><Link to="/partners" className="hover:text-white">For Business</Link></li>
                 <li><Link to="/charities" className="hover:text-white">For Charities</Link></li>
+                <li><Link to="/how-it-works" className="hover:text-white">How it Works</Link></li>
               </ul>
             </div>
             <div>

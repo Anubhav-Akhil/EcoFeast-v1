@@ -33,7 +33,11 @@ const testimonials = [
   },
 ];
 
-export const Charities: React.FC = () => {
+interface CharitiesProps {
+  onOpenAuth: (role: UserRole) => void;
+}
+
+export const Charities: React.FC<CharitiesProps> = ({ onOpenAuth }) => {
   const [nearbyCharities, setNearbyCharities] = useState<Charity[]>([]);
   const [locationStatus, setLocationStatus] = useState<'idle' | 'locating' | 'found' | 'error'>('idle');
   const [selectedCharity, setSelectedCharity] = useState<Charity | null>(null);
@@ -97,24 +101,14 @@ export const Charities: React.FC = () => {
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
-                  onClick={findNearbyNGOs}
-                  disabled={locationStatus === 'locating'}
-                  className="group inline-flex items-center gap-2 rounded-2xl bg-rose-500 px-8 py-4 font-bold text-white shadow-[0_0_40px_rgba(244,63,94,0.3)] transition-all hover:bg-rose-400 hover:shadow-[0_0_60px_rgba(244,63,94,0.4)] hover:-translate-y-1 disabled:opacity-70"
+                  onClick={() => onOpenAuth('charity')}
+                  className="group inline-flex items-center gap-2 rounded-2xl bg-rose-500 px-8 py-4 font-bold text-white shadow-[0_0_40px_rgba(244,63,94,0.3)] transition-all hover:bg-rose-400 hover:shadow-[0_0_60px_rgba(244,63,94,0.4)] hover:-translate-y-1"
                 >
-                  {locationStatus === 'locating' ? (
-                    <>
-                      <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                      Finding nearby NGOs...
-                    </>
-                  ) : (
-                    <>
-                      <Navigation size={18} />
-                      Find NGOs Near Me
-                    </>
-                  )}
+                  Register Your Charity
+                  <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
                 </button>
-                <a href="#how-it-works" className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-8 py-4 font-bold text-slate-700 transition hover:border-rose-300 hover:text-rose-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:border-rose-500 dark:hover:text-rose-300 hover:-translate-y-1">
-                  How It Works <ArrowRight size={16} />
+                <a href="/#/how-it-works?role=charity" className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-8 py-4 font-bold text-slate-700 transition hover:border-rose-300 hover:text-rose-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:border-rose-500 dark:hover:text-rose-300 hover:-translate-y-1">
+                  How It Works
                 </a>
               </div>
             </motion.div>
@@ -147,6 +141,51 @@ export const Charities: React.FC = () => {
               </div>
             </motion.div>
           </div>
+        </div>
+      </section>
+ 
+      {/* ── NGO DISCOVERY SECTION ────────────────────────── */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-[#060c18]">
+        <div className="mx-auto max-w-3xl text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="rounded-[40px] bg-white dark:bg-[#0d1526] p-10 md:p-16 border border-slate-200 dark:border-white/5 shadow-2xl relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 p-8 opacity-5">
+              <Navigation size={120} />
+            </div>
+            
+            <h2 className="text-3xl font-black text-slate-950 dark:text-white mb-4">Discover Active Partners</h2>
+            <p className="text-slate-500 dark:text-slate-400 mb-10 max-w-md mx-auto">
+              Find charities and NGOs operating in your neighborhood and see the impact they are making in real-time.
+            </p>
+
+            <button
+              onClick={findNearbyNGOs}
+              disabled={locationStatus === 'locating'}
+              className="group relative inline-flex items-center gap-4 rounded-3xl bg-slate-950 px-12 py-6 text-xl font-black text-white transition-all hover:bg-slate-800 hover:-translate-y-1 disabled:opacity-70 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.2)]"
+            >
+              {locationStatus === 'locating' ? (
+                <>
+                  <div className="h-6 w-6 rounded-full border-3 border-slate-400 border-t-white animate-spin dark:border-slate-300 dark:border-t-slate-950" />
+                  Locating NGOs...
+                </>
+              ) : (
+                <>
+                  <Navigation size={24} className="transition-transform group-hover:rotate-12" />
+                  Find NGOs Near Me
+                </>
+              )}
+            </button>
+
+            {locationStatus === 'error' && (
+              <p className="mt-4 text-sm font-bold text-rose-500">
+                Unable to access location. Please try again.
+              </p>
+            )}
+          </motion.div>
         </div>
       </section>
 

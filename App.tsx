@@ -11,6 +11,7 @@ import { Profile } from './pages/Profile';
 import { Contact } from './pages/Contact';
 import { Impact } from './pages/Impact';
 import { Volunteer } from './pages/Volunteer';
+import { HowItWorks } from './pages/HowItWorks';
 import { api } from './services/api';
 import { User, Item, UserRole } from './types';
 import { X, Trash2, CheckCircle, Minus, Plus, ShoppingBag, Package, Truck, XCircle, BadgeCheck, ClipboardList } from 'lucide-react';
@@ -72,7 +73,7 @@ const App: React.FC = () => {
           orderCode: order.code,
           volunteerName: order.volunteerName,
         });
-        addNotification({ ...notif, link: '/dashboard?tab=orders' });
+        addNotification({ ...notif, link: `/dashboard?tab=orders&orderId=${order.id}` });
         setOrderToast({ ...order, _notif: notif });
         setTimeout(() => setOrderToast(null), 7000);
       }
@@ -82,14 +83,14 @@ const App: React.FC = () => {
       if (!user || user.role !== 'retailer') return;
       if (payload?.storeId !== user.id) return;
       const notif = buildNotification('new_order', { orderCode: payload.code, storeName: payload.storeName });
-      addNotification({ ...notif, link: '/dashboard?tab=orders' });
+      addNotification({ ...notif, link: `/dashboard?tab=orders&orderId=${payload.orderId || payload.id}` });
     };
 
     const handleTaskUpdatedForStore = (task: any) => {
       if (!user || user.role !== 'retailer') return;
       if (task?.storeId !== user.id) return;
       const notif = buildNotification('task_update', { status: task.status, storeName: task.storeName, volunteerName: task.volunteerName });
-      addNotification({ ...notif, link: '/dashboard?tab=pickups' });
+      addNotification({ ...notif, link: `/dashboard?tab=pickups&orderId=${task.orderId}` });
     };
 
     socket.on('new-item', handleNewItem);
@@ -228,11 +229,12 @@ const App: React.FC = () => {
           />
 
           <Route path="/partners" element={<Partners onOpenAuth={handleOpenAuth} />} />
-          <Route path="/charities" element={<Charities />} />
+          <Route path="/charities" element={<Charities onOpenAuth={handleOpenAuth} />} />
           <Route path="/volunteers" element={<Volunteer onOpenAuth={handleOpenAuth} />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/impact" element={<Impact />} />
+          <Route path="/how-it-works" element={<HowItWorks onOpenAuth={handleOpenAuth} />} />
           <Route path="/profile" element={user ? <Profile user={user} onUserUpdate={(u) => setUser(u)} /> : <Navigate to="/" replace />} />
           <Route path="/dashboard" element={user ? <Dashboards user={user} /> : <Navigate to="/" replace />} />
           <Route path="*" element={<div className="p-20 text-center dark:text-white">Page Not Found</div>} />

@@ -5,12 +5,15 @@ const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 // For local proxy (/api) we need to connect to the origin. 
 // If VITE_API_BASE_URL is a full URL, we connect to it.
 const socketUrl = VITE_API_BASE_URL.startsWith('http') 
-  ? VITE_API_BASE_URL.replace(/\/api$/, '') 
+  ? VITE_API_BASE_URL.replace(/\/api\/?$/, '') 
   : window.location.origin;
+
+console.log('Initializing socket connection to:', socketUrl);
 
 export const socket = io(socketUrl, {
   autoConnect: true,
-  withCredentials: true
+  withCredentials: true,
+  transports: ['polling', 'websocket']
 });
 
 socket.on('connect', () => {
@@ -18,5 +21,9 @@ socket.on('connect', () => {
 });
 
 socket.on('connect_error', (error) => {
-  console.error('Socket connection error:', error);
+  console.error('Socket connection error:', error.message, error);
+});
+
+socket.on('disconnect', (reason) => {
+  console.warn('Socket disconnected:', reason);
 });

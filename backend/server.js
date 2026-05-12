@@ -17,8 +17,28 @@ import Counter from "./models/Counter.js";
 
 dotenv.config();
 
+// Prevents the process from crashing on unhandled errors and provides better debugging
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception:", err);
+});
+
 const app = express();
 app.use(express.json({ limit: "2mb" }));
+
+// Request timing logger — helps debug slow endpoints
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const ms = Date.now() - start;
+    if (req.path.startsWith('/api/')) {
+      console.log(`${req.method} ${req.path} → ${res.statusCode} (${ms}ms)`);
+    }
+  });
+  next();
+});
 
 const allowedOrigins = (process.env.FRONTEND_ORIGIN || "")
   .split(",")
@@ -185,7 +205,7 @@ function toPublicUser(user) {
 
 // ── Health ──────────────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {
-  res.json({ ok: true, timestamp: nowIso() });
+  res.json({ ok: true, timestamp: new Date().toISOString() });
 });
 
 // ── Auth ────────────────────────────────────────────────────────────────────
@@ -315,7 +335,7 @@ app.post("/api/auth/change-password", requireAuth, async (req, res, next) => {
 // ── Items ───────────────────────────────────────────────────────────────────
 app.get("/api/items", async (_req, res, next) => {
   try {
-    const items = await Item.find().sort({ createdAt: -1 }).lean();
+    const items = await Item.find().sort({ createdAt: -1 }).limit(100).lean();
     res.json(items);
   } catch (error) {
     next(error);
@@ -325,7 +345,7 @@ app.get("/api/items", async (_req, res, next) => {
 app.get("/api/items/my", requireAuth, requireRole("retailer", "admin"), async (req, res, next) => {
   try {
     const storeId = req.auth.sub;
-    const items = await Item.find({ storeId }).sort({ createdAt: -1 }).lean();
+    const items = await Item.find({ storeId }).sort({ createdAt: -1 }).limit(100).lean();
     res.json(items);
   } catch (error) {
     next(error);
@@ -442,24 +462,30 @@ app.patch(
         quantity, quantityDelta, forAnimalFeed, forCharity,
       } = req.body || {};
 
+      // Detect if this is a content change (needs AI validation) vs stock/price-only update
+      const isContentChange = title !== undefined || description !== undefined || category !== undefined;
+
       if (title !== undefined) item.title = String(title).trim();
       if (description !== undefined) item.description = String(description).trim();
       if (category !== undefined) item.category = String(category);
 
-      if ((title !== undefined || description !== undefined || category !== undefined) && aiClient) {
+      // Only run AI validation for content changes, with a 5s timeout to avoid blocking
+      if (isContentChange && aiClient) {
         try {
           const prompt = `Item: "${item.title}" (${item.category}) - ${item.description}. Is this edible food/grocery? Reply ONLY with JSON {"isFood": true/false}`;
-          const response = await aiClient.chat.completions.create({
+          const aiPromise = aiClient.chat.completions.create({
             model: "llama-3.3-70b-versatile",
             messages: [{ role: "user", content: prompt }],
             response_format: { type: "json_object" },
           });
+          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('AI timeout')), 5000));
+          const response = await Promise.race([aiPromise, timeoutPromise]);
           const output = JSON.parse(response.choices[0]?.message?.content || "{}");
           if (output.isFood === false) {
              return res.status(400).json({ message: "Item update rejected: Only food items are allowed." });
           }
         } catch (err) {
-          console.error("AI food validation failed:", err);
+          console.error("AI food validation skipped/failed:", err.message || err);
         }
       }
 
@@ -506,10 +532,15 @@ app.post(
         quantityByItemId.set(itemId, (quantityByItemId.get(itemId) || 0) + 1);
       }
 
+      // BATCH fetch all items in a SINGLE query instead of N sequential queries
+      const itemIds = [...quantityByItemId.keys()];
+      const dbItems = await Item.find({ id: { $in: itemIds } });
+      const itemMap = new Map(dbItems.map(item => [item.id, item]));
+
       // Validate stock
       const selectedItems = [];
       for (const [itemId, requestedQty] of quantityByItemId.entries()) {
-        const item = await Item.findOne({ id: itemId });
+        const item = itemMap.get(itemId);
         if (!item) return res.status(404).json({ message: "One or more items were not found" });
         if (item.quantity <= 0 || item.quantity < requestedQty) {
           return res.status(409).json({ message: `${item.title} is sold out` });
@@ -517,10 +548,11 @@ app.post(
         for (let i = 0; i < requestedQty; i++) selectedItems.push(item);
       }
 
-      // Deduct stock and collect charity credits
+      // Deduct stock and collect charity credits — reuse already-fetched items
       const charityCreditsByStore = new Map();
+      const itemSavePromises = [];
       for (const [itemId, requestedQty] of quantityByItemId.entries()) {
-        const item = await Item.findOne({ id: itemId });
+        const item = itemMap.get(itemId);
         if (!item) continue;
         item.quantity -= requestedQty;
         item.rescuedCount = Number(item.rescuedCount || 0) + requestedQty;
@@ -536,15 +568,19 @@ app.post(
             (charityCreditsByStore.get(item.storeId) || 0) + earned
           );
         }
-        await item.save();
+        itemSavePromises.push(item.save());
       }
+      // Save all item stock changes in parallel
+      await Promise.all(itemSavePromises);
 
-      // Create order
-      const orderUser = await User.findOne({ id: req.auth.sub });
+      // Fetch order user and generate order code in parallel
+      const [orderUser, orderCode] = await Promise.all([
+        User.findOne({ id: req.auth.sub }),
+        getNextOrderCode(),
+      ]);
       const dropName = orderUser?.organizationName || orderUser?.name || "Customer";
       const dropAddress = orderUser?.address || "Address not provided";
 
-      const orderCode = await getNextOrderCode();
       const order = await Order.create({
         id: createId("ord"),
         itemId: "multi",
@@ -564,7 +600,8 @@ app.post(
         return acc;
       }, {});
 
-      for (const storeItems of Object.values(groupedByStore)) {
+      // Create all tasks in parallel
+      const taskPromises = Object.values(groupedByStore).map(async (storeItems) => {
         const storeName = storeItems[0]?.storeName || "HELLO WORLD";
         const storeId = storeItems[0]?.storeId || null;
         const itemsSummary = storeItems.map((i) => i.title).join(", ");
@@ -591,20 +628,29 @@ app.post(
           pickupStart: storeItems[0]?.pickupStart || null,
           pickupEnd: storeItems[0]?.pickupEnd || null,
         });
-      }
+      });
+      await Promise.all(taskPromises);
 
-      // Award charity credits to retailers
-      for (const [storeId, earnedCredits] of charityCreditsByStore.entries()) {
-        const storeUser = await User.findOne({ id: storeId });
-        if (!storeUser) continue;
-        storeUser.creditPoints = Number(storeUser.creditPoints || 0) + earnedCredits;
-        storeUser.charityPointsGained =
-          Number(storeUser.charityPointsGained || 0) + earnedCredits;
-        await storeUser.save();
-        await Item.updateMany(
-          { storeId },
-          { storeCreditPoints: storeUser.creditPoints }
-        );
+      // Award charity credits to retailers (fire-and-forget, don't block response)
+      if (charityCreditsByStore.size > 0) {
+        (async () => {
+          try {
+            for (const [storeId, earnedCredits] of charityCreditsByStore.entries()) {
+              const storeUser = await User.findOne({ id: storeId });
+              if (!storeUser) continue;
+              storeUser.creditPoints = Number(storeUser.creditPoints || 0) + earnedCredits;
+              storeUser.charityPointsGained =
+                Number(storeUser.charityPointsGained || 0) + earnedCredits;
+              await storeUser.save();
+              await Item.updateMany(
+                { storeId },
+                { storeCreditPoints: storeUser.creditPoints }
+              );
+            }
+          } catch (err) {
+            console.error("Charity credit award error:", err.message);
+          }
+        })();
       }
 
       io.emit("order-updated", order.toObject());
@@ -619,7 +665,9 @@ app.post(
 app.get("/api/orders/my", requireAuth, async (req, res, next) => {
   try {
     const orders = await Order.find({ userId: req.auth.sub })
+      .select("-items.image")
       .sort({ createdAt: -1 })
+      .limit(100)
       .lean();
     res.json(orders);
   } catch (error) {
@@ -641,7 +689,9 @@ app.get(
         .map((v) => String(v));
 
       const orders = await Order.find({ "items.storeId": storeId })
+        .select("-items.image")
         .sort({ createdAt: -1 })
+        .limit(100)
         .lean();
 
       if (orders.length === 0) return res.json({ orders: [], tasks: [] });
@@ -700,14 +750,15 @@ app.post(
       const storeUser = await User.findOne({ id: storeId }).lean();
       const storeNames = [storeUser?.organizationName, storeUser?.name].filter(Boolean);
 
+      const taskSaves = [];
       for (const task of tasks) {
         const matchesStore = task.storeId === storeId || storeNames.includes(task.storeName);
         if (matchesStore) {
           task.status = "completed";
-          await task.save();
-          io.emit("task-updated", task.toObject());
+          taskSaves.push(task.save().then(() => io.emit("task-updated", task.toObject())));
         }
       }
+      await Promise.all(taskSaves);
 
       const updatedOrder = await recomputeAndPersistOrderStatus(order.id);
       if (updatedOrder) {
@@ -736,7 +787,9 @@ app.get(
       }
 
       const orders = await Order.find({ "items.storeId": storeId })
+        .select("-items.image")
         .sort({ createdAt: -1 })
+        .limit(100)
         .lean();
 
       const orderIds = orders.map((o) => o.id);
@@ -782,6 +835,8 @@ app.get(
     }
   }
 );
+
+
 
 app.post(
   "/api/orders/:id/confirm-pickup",
@@ -881,28 +936,31 @@ app.post(
         return res.status(409).json({ message: `Cannot cancel: Task is already ${task.status}` });
       }
 
-      // Restock original items based on storeItems snapshot
+      // Restock original items based on storeItems snapshot — batch fetch
       const qtyByItemId = new Map();
       for (const item of storeItems) {
         if (!item?.id) continue;
         qtyByItemId.set(item.id, (qtyByItemId.get(item.id) || 0) + 1);
       }
-      for (const [itemId, qty] of qtyByItemId.entries()) {
-        const dbItem = await Item.findOne({ id: itemId });
-        if (!dbItem) continue;
+      const restockItemIds = [...qtyByItemId.keys()];
+      const restockItems = await Item.find({ id: { $in: restockItemIds } });
+      const restockSaves = [];
+      for (const dbItem of restockItems) {
+        const qty = qtyByItemId.get(dbItem.id) || 0;
         dbItem.quantity = Number(dbItem.quantity || 0) + Number(qty || 0);
         if (dbItem.quantity > 0) dbItem.status = "available";
-        await dbItem.save();
+        restockSaves.push(dbItem.save());
       }
+      await Promise.all(restockSaves);
 
       // Capture the task's current status BEFORE cancellation
       // This is the definitive record of how far the order progressed
       const taskStatusBeforeCancel = task.status;
       order.lastStatus = taskStatusBeforeCancel;
-      await order.save();
 
       task.status = "cancelled";
-      await task.save();
+      // Save order and task in parallel
+      await Promise.all([order.save(), task.save()]);
 
       const updatedOrder = await recomputeAndPersistOrderStatus(order.id);
       if (updatedOrder) io.emit("order-updated", updatedOrder);
@@ -930,7 +988,7 @@ app.get("/api/tasks", requireAuth, async (req, res, next) => {
     if (!["volunteer", "admin"].includes(req.auth.role)) {
       return res.status(403).json({ message: "Only volunteers can access tasks" });
     }
-    const tasks = await Task.find().sort({ createdAt: -1 }).lean();
+    const tasks = await Task.find().sort({ createdAt: -1 }).limit(100).lean();
     res.json(tasks);
   } catch (error) {
     next(error);
@@ -1235,7 +1293,7 @@ const port = Number(process.env.PORT || 8787);
 
 connectDb()
   .then(() => {
-    server.listen(port, "0.0.0.0", () => {
+    server.listen(port, () => {
       console.log(`EcoFeast backend running on http://0.0.0.0:${port}`);
       
       // Auto-cleanup disabled to conserve Groq API quota.

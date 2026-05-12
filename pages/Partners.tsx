@@ -94,9 +94,12 @@ export const Partners: React.FC<PartnersProps> = ({ onOpenAuth }) => {
                   Register Your Store
                   <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
                 </button>
-                <button className="inline-flex items-center gap-2 rounded-2xl border border-white/15 px-8 py-4 font-bold text-white transition hover:bg-white/5 hover:-translate-y-1">
-                  See How It Works
-                </button>
+                <a 
+                  href="/#/how-it-works?role=partner"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-white/15 px-8 py-4 font-bold text-white transition hover:bg-white/5 hover:-translate-y-1"
+                >
+                  How It Works
+                </a>
               </div>
             </motion.div>
 

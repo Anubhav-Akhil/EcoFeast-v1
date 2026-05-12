@@ -90,9 +90,12 @@ export const Volunteer: React.FC<VolunteerProps> = ({ onOpenAuth }) => {
                   Start Volunteering
                   <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
                 </button>
-                <button className="inline-flex items-center gap-2 rounded-2xl border border-white/15 px-8 py-4 font-bold text-white transition hover:bg-white/5 hover:-translate-y-1">
-                  How it Works
-                </button>
+                <a 
+                  href="/#/how-it-works?role=volunteer"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-white/15 px-8 py-4 font-bold text-white transition hover:bg-white/5 hover:-translate-y-1"
+                >
+                  How It Works
+                </a>
               </div>
             </motion.div>
 
