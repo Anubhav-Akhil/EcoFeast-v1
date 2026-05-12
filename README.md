@@ -1,71 +1,99 @@
-# <p align="center">🌍 EcoFeast</p>
+<div align="center">
+  <img src="public/banner.png" alt="EcoFeast Banner" width="100%" style="border-radius: 12px; margin-bottom: 20px;">
 
-<p align="center">
-  <strong>Combating Food Waste through Community Synergy & AI Innovation</strong>
-</p>
+  <br />
 
-<p align="center">
-  <img src="public/banner.png" alt="EcoFeast Banner" width="100%" style="border-radius: 12px; margin: 20px 0;">
-</p>
+  <!-- Tech Stack Badges -->
+  <img src="https://img.shields.io/badge/React-18-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" />
+  <img src="https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Vite-5.0-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
+  <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js" />
+  <img src="https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB" />
+  <img src="https://img.shields.io/badge/Socket.io-010101?style=for-the-badge&logo=socketdotio&logoColor=white" alt="Socket.io" />
+  <img src="https://img.shields.io/badge/Groq_AI-F55036?style=for-the-badge&logo=groq&logoColor=white" alt="Groq AI" />
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Status-In%20Development-orange?style=for-the-badge" alt="Status">
-  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License">
-  <img src="https://img.shields.io/badge/Built%20With-React%20%2B%20Node.js-blue?style=for-the-badge" alt="Stack">
-  <img src="https://img.shields.io/badge/AI-Powered%20by%20Groq-violet?style=for-the-badge" alt="AI">
-</p>
+  <br />
+  <br />
+
+  <!-- Status Badges -->
+  <img src="https://img.shields.io/badge/License-MIT-brightgreen?style=flat-square" alt="License" />
+  <img src="https://img.shields.io/badge/PRs-Welcome-brightgreen?style=flat-square" alt="PRs Welcome" />
+  <img src="https://img.shields.io/github/last-commit/Anubhav-Akhil/EcoFeast-v1?style=flat-square&color=blue" alt="Last Commit" />
+  <img src="https://img.shields.io/github/repo-size/Anubhav-Akhil/EcoFeast-v1?style=flat-square&color=purple" alt="Repo Size" />
+
+  <br />
+  <br />
+
+  <h3><strong>
+    An intelligent, full-stack logistics platform that combines real-time order synchronization with AI-driven insights to seamlessly connect retailers, consumers, charities, and volunteers, turning potential food waste into community impact.
+  </strong></h3>
+
+  <br />
+
+  <a href="https://ecofeast-v1.vercel.app">
+    <img src="https://img.shields.io/badge/🚀_LIVE_DEMO-ECOFEAST_V1.VERCEL.APP-646CFF?style=for-the-badge" alt="Live Demo" />
+  </a>
+
+  <br />
+  <br />
+
+  <p>
+    <a href="#-features">Features</a> ·
+    <a href="#-architecture">Architecture</a> ·
+    <a href="#-tech-stack">Tech Stack</a> ·
+    <a href="#-quick-start">Quick Start</a> ·
+    <a href="#-ai-pipeline">AI Pipeline</a>
+  </p>
+</div>
+
+<br />
 
 ---
 
-## 🌟 The Vision
+## 🌟 Features
 
-**EcoFeast** is a mission-driven full-stack ecosystem designed to bridge the gap between surplus food and those who need it most. By connecting food retailers, conscious consumers, charities, and dedicated volunteers, we turn potential waste into community impact.
+**EcoFeast** is a mission-driven ecosystem built to bridge the gap between surplus food and those who need it most.
 
-Our platform leverages **AI-driven insights** to predict expiry, optimize distribution, and gamify sustainability, making every meal rescued a win for the planet.
-
----
-
-## 🚀 Core Ecosystem Pillars
-
-| Role | Impact | Key Features |
-| :--- | :--- | :--- |
-| **🏢 Retailers** | *Zero-Waste Efficiency* | Surplus listing, Real-time inventory, Donation credits. |
-| **🛒 Consumers** | *Sustainable Savings* | Discounted surplus food, EcoPoints, Order tracking. |
-| **❤️ Charities** | *Hunger Relief* | Donation claiming, Volunteer assignment, Task tracking. |
-| **🚲 Volunteers** | *Community Action* | Task management, Real-time delivery updates, Status logs. |
+- **🏢 Retailer Dashboard:** Zero-waste efficiency tools including surplus listing, real-time inventory management, and dynamic discount pricing.
+- **🛒 Consumer Marketplace:** Sustainable savings hub where users can browse discounted surplus food, track eco-points, and monitor live delivery tracking.
+- **❤️ Charity Network:** Dedicated portals for verified organizations to claim bulk donations and automatically assign delivery tasks to local volunteers.
+- **🚲 Volunteer Logistics:** Real-time task management system with live status tracking, OTP delivery verification, and interactive pickup assignments.
+- **⚡ Unified Real-Time Sync:** Powered by Socket.io, every action (order placement, task assignment, pickup confirmation) is instantly synchronized across all user dashboards without refreshing.
 
 ---
 
-## 🤖 AI-Powered Intelligence
-*Integrated with Groq API (Llama 3.3)*
+## 🤖 AI Pipeline
 
-- **⌛ Smart Expiry Prediction:** Analyze food data to predict optimal consumption windows and marketing tags.
-- **📈 Sustainability Analytics:** Real-time calculation of CO2 impact prevented by rescuing food.
-- **🍳 Creative Recipe Engine:** Instant recipe suggestions based on rescued ingredients to minimize kitchen waste.
-- **🎨 AI Media Generation:** Automated product image generation for retailers to speed up listing creation.
+*Integrated with the Groq API (Llama 3.3)*
+
+Our platform leverages **AI-driven intelligence** to optimize the food rescue process:
+
+- **⌛ Smart Expiry Prediction:** Analyzes food data to predict optimal consumption windows and automatically generate marketing tags.
+- **📈 Sustainability Analytics:** Calculates the real-time CO2 impact prevented by rescuing food.
+- **🍳 Creative Recipe Engine:** Provides instant, context-aware recipe suggestions based on rescued ingredients to minimize kitchen waste.
+- **🎨 AI Media Generation:** Automates product image generation for retailers to speed up the listing creation process.
 
 ---
 
 ## 🛠 Tech Stack
 
-### Frontend
-- **Framework:** `React 18` + `Vite`
-- **Styling:** `Tailwind CSS` & `Vanilla CSS`
-- **Animations:** `Framer Motion`
-- **Icons:** `Lucide React`
-- **State Management:** `Zustand`
-- **Visualization:** `Recharts`
+### Frontend Architecture
+- **Framework:** `React 18` + `Vite` + `TypeScript`
+- **Styling:** `Tailwind CSS` for utility-first responsive design
+- **State Management:** Custom React Hooks + Context API
+- **Icons & UI:** `Lucide React` & Custom CSS micro-animations
 
-### Backend
-- **Server:** `Node.js` + `Express`
-- **Real-Time:** `Socket.IO`
-- **Database:** `MongoDB Atlas` + `Mongoose`
-- **Security:** `JWT` + `BcryptJS`
-- **Intelligence:** `groq-sdk` (Groq API)
+### Backend Architecture
+- **Server Environment:** `Node.js` + `Express`
+- **Real-Time Engine:** `Socket.IO` for bidirectional event synchronization
+- **Database:** `MongoDB Atlas` + `Mongoose` ORM
+- **Security:** `JWT` Authentication + `BcryptJS` password hashing
+- **Intelligence:** `groq-sdk` for high-speed LLM inference
 
 ---
 
-## 🚦 Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
 - Node.js (v18+)
@@ -73,17 +101,15 @@ Our platform leverages **AI-driven insights** to predict expiry, optimize distri
 - Groq API Key
 
 ### 1. Installation
+Clone the repository and install dependencies:
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/ecofeast.git
-
-# Install dependencies
-cd ecofeast
+git clone https://github.com/Anubhav-Akhil/EcoFeast-v1.git
+cd EcoFeast-v1
 npm install
 ```
 
 ### 2. Configuration
-Create a `.env` file in the root directory:
+Create a `.env` file in the `backend/` directory:
 ```env
 PORT=8787
 MONGODB_URI=your_mongodb_connection_string
@@ -93,44 +119,30 @@ FRONTEND_ORIGIN=http://localhost:5173
 ```
 
 ### 3. Execution
+Start both the Frontend & Backend concurrently:
 ```bash
-# Run both Frontend & Backend concurrently
 npm run dev:full
 ```
 
 ---
 
-## 📡 API Overview
+## 📡 Core API Structure
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `POST` | `/api/auth/signup` | Register new community members. |
-| `GET` | `/api/items` | Browse available surplus items. |
-| `POST` | `/api/orders` | Reserve/Claim food items. |
-| `PATCH` | `/api/tasks/:id` | Update volunteer delivery status. |
-| `POST` | `/api/ai/predict-expiry` | Fetch AI insights for food items. |
+| `POST` | `/api/auth/login` | Authenticate and retrieve JWT session token. |
+| `GET` | `/api/items` | Fetch available surplus marketplace inventory. |
+| `POST` | `/api/orders` | Process transactions and trigger multi-store task creation. |
+| `PATCH` | `/api/tasks/:id` | Update volunteer logistics and synchronize via Socket.io. |
+| `POST` | `/api/orders/:id/cancel-store` | Safely interrupt fulfillment and save progress snapshots. |
 
 ---
 
-## 🗺 Roadmap
-- [ ] Mobile Application (React Native)
-- [ ] Hyper-local push notifications
-- [ ] Integration with local food bank APIs
-- [ ] Advanced retailer analytics dashboard
-
----
-
-## 🤝 Contributing
-We welcome contributions! Whether it's a bug fix, feature request, or documentation improvement, please feel free to open a Pull Request.
-
----
-
-## 📄 License
-This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
-
----
-
-<p align="center">
-  Made with ❤️ by Anubhav for a Greener Planet
-</p>
-
+<div align="center">
+  <p>Made with ❤️ by Anubhav for a Greener Planet.</p>
+  <p>
+    <a href="https://github.com/Anubhav-Akhil/EcoFeast-v1/issues">Report Bug</a>
+    ·
+    <a href="https://github.com/Anubhav-Akhil/EcoFeast-v1/pulls">Request Feature</a>
+  </p>
+</div>
