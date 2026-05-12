@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="public/banner.png" alt="EcoFeast Banner" width="100%" style="border-radius: 12px; margin-bottom: 20px;">
+  <img src="public/banner-v2.png" alt="EcoFeast Banner" width="100%" style="border-radius: 12px; margin-bottom: 20px;">
 
   <br />
 
