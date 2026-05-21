@@ -15,6 +15,7 @@ const benefits = [
     stat: '₹12K+',
     statLabel: 'avg. monthly recovery per store',
     color: 'from-emerald-600 to-teal-600',
+    lightAccent: 'bg-emerald-50 border-emerald-100',
   },
   {
     icon: <Users size={28} />,
@@ -23,6 +24,7 @@ const benefits = [
     stat: '76%',
     statLabel: 'return-to-full-price rate',
     color: 'from-violet-600 to-purple-600',
+    lightAccent: 'bg-violet-50 border-violet-100',
   },
   {
     icon: <Leaf size={28} />,
@@ -31,6 +33,7 @@ const benefits = [
     stat: '0kg',
     statLabel: 'target disposal waste',
     color: 'from-green-500 to-emerald-600',
+    lightAccent: 'bg-green-50 border-green-100',
   },
 ];
 
@@ -56,25 +59,25 @@ export const Partners: React.FC<PartnersProps> = ({ onOpenAuth }) => {
 
       {/* ── HERO: BRUTALIST DARK ─────────────────────────── */}
       <section
-        className="relative min-h-screen flex items-center overflow-hidden px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-[#020917]"
+        className="relative min-h-screen flex items-center overflow-hidden px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white via-emerald-50/40 to-white dark:from-[#020917] dark:via-[#020917] dark:to-[#020917]"
       >
         {/* Neon grid lines */}
-        <div className="absolute inset-0 opacity-30" style={{
+        <div className="absolute inset-0 opacity-10 dark:opacity-30" style={{
           backgroundImage: 'linear-gradient(rgba(52,211,153,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(52,211,153,0.15) 1px, transparent 1px)',
           backgroundSize: '60px 60px',
         }} />
 
         {/* Orbs */}
-        <div className="ambient-orb left-[15%] top-20 h-96 w-96 bg-emerald-500/25" />
-        <div className="ambient-orb animation-delay-4000 right-[5%] bottom-10 h-80 w-80 bg-teal-400/15" />
+        <div className="ambient-orb left-[15%] top-20 h-96 w-96 bg-emerald-500/10 dark:bg-emerald-500/25" />
+        <div className="ambient-orb animation-delay-4000 right-[5%] bottom-10 h-80 w-80 bg-teal-400/8 dark:bg-teal-400/15" />
 
 
 
         <div className="relative z-10 mx-auto max-w-7xl w-full">
           <div className="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
             <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-300 mb-8">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300 mb-8">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                 4,200+ partners active on the network
               </div>
               <h1 className="text-[clamp(3rem,6vw,6rem)] font-black leading-none tracking-tight text-slate-900 dark:text-white mb-8">
@@ -88,14 +91,14 @@ export const Partners: React.FC<PartnersProps> = ({ onOpenAuth }) => {
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
                   onClick={() => onOpenAuth('retailer')}
-                  className="group inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-8 py-4 font-bold text-slate-950 shadow-[0_0_40px_rgba(52,211,153,0.35)] transition-all hover:bg-emerald-400 hover:shadow-[0_0_60px_rgba(52,211,153,0.55)] hover:-translate-y-1"
+                  className="group inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-8 py-4 font-bold text-white shadow-lg shadow-emerald-500/25 transition-all hover:bg-emerald-500 hover:shadow-xl hover:shadow-emerald-500/30 hover:-translate-y-1 dark:bg-emerald-500 dark:text-slate-950 dark:shadow-[0_0_40px_rgba(52,211,153,0.35)] dark:hover:bg-emerald-400 dark:hover:shadow-[0_0_60px_rgba(52,211,153,0.55)]"
                 >
                   Register Your Store
                   <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
                 </button>
                 <a 
                   href="/#/how-it-works?role=partner"
-                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 dark:border-white/15 px-8 py-4 font-bold text-slate-700 dark:text-white transition hover:bg-slate-100 dark:hover:bg-white/5 hover:-translate-y-1"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-8 py-4 font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:border-emerald-200 hover:text-emerald-700 hover:-translate-y-1 dark:border-white/15 dark:bg-transparent dark:text-white dark:hover:bg-white/5"
                 >
                   How It Works
                 </a>
@@ -107,7 +110,7 @@ export const Partners: React.FC<PartnersProps> = ({ onOpenAuth }) => {
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.7, delay: 0.2 }}
-              className="neon-border rounded-3xl bg-white dark:bg-[#0d1f12] border border-slate-200 dark:border-emerald-500/20 p-6 overflow-hidden shadow-xl"
+              className="rounded-3xl bg-white border border-slate-200 p-6 overflow-hidden shadow-xl shadow-slate-200/50 dark:bg-[#0d1f12] dark:border-emerald-500/20 dark:shadow-none dark:neon-border"
             >
               <div className="flex items-center gap-3 mb-6 border-b border-slate-100 dark:border-white/10 pb-4">
                 <div className="flex gap-1.5">
@@ -115,15 +118,15 @@ export const Partners: React.FC<PartnersProps> = ({ onOpenAuth }) => {
                     <div key={c} className={`h-3 w-3 rounded-full ${c}`} />
                   ))}
                 </div>
-                <span className="text-xs text-emerald-400 font-mono">ecofeast — partner dashboard</span>
+                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-mono">ecofeast — partner dashboard</span>
               </div>
 
               <div className="grid grid-cols-2 gap-3 mb-4">
                 {[
-                  { label: 'Revenue Recovered', value: '₹12,450', delta: '+15%', color: 'text-emerald-400' },
-                  { label: 'Items Listed', value: '48', delta: '+8', color: 'text-emerald-400' },
-                  { label: 'CO₂ Saved', value: '240kg', delta: 'this week', color: 'text-teal-400' },
-                  { label: 'Orders Fulfilled', value: '127', delta: '100% pickup', color: 'text-violet-400' },
+                  { label: 'Revenue Recovered', value: '₹12,450', delta: '+15%', color: 'text-emerald-600 dark:text-emerald-400' },
+                  { label: 'Items Listed', value: '48', delta: '+8', color: 'text-emerald-600 dark:text-emerald-400' },
+                  { label: 'CO₂ Saved', value: '240kg', delta: 'this week', color: 'text-teal-600 dark:text-teal-400' },
+                  { label: 'Orders Fulfilled', value: '127', delta: '100% pickup', color: 'text-violet-600 dark:text-violet-400' },
                 ].map(m => (
                   <div key={m.label} className="rounded-2xl bg-slate-50 dark:bg-white/5 p-4 border border-slate-100 dark:border-white/5">
                     <p className="text-xs text-slate-500 mb-1">{m.label}</p>
@@ -160,7 +163,7 @@ export const Partners: React.FC<PartnersProps> = ({ onOpenAuth }) => {
       </section>
 
       {/* ── BENEFITS GRID ─────────────────────────────────── */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-950">
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-950">
         <div className="mx-auto max-w-7xl">
           <div className="mb-16 text-center">
             <p className="text-xs font-black uppercase tracking-[0.35em] text-emerald-600 dark:text-emerald-400 mb-4">Why Partners Choose EcoFeast</p>
@@ -174,15 +177,19 @@ export const Partners: React.FC<PartnersProps> = ({ onOpenAuth }) => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.15, duration: 0.5 }}
-                className="group relative overflow-hidden rounded-3xl border border-slate-200 dark:border-white/8 bg-white dark:bg-white/3 p-8 hover:border-emerald-500/30 transition-all shadow-sm"
+                className="group relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-8 shadow-md shadow-slate-100 hover:shadow-xl hover:shadow-emerald-100/50 hover:border-emerald-200 hover:-translate-y-1 transition-all duration-300 dark:border-slate-700/50 dark:bg-slate-900 dark:shadow-none dark:hover:shadow-none dark:hover:border-emerald-500/30"
               >
-                <div className={`mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${b.color} text-white shadow-lg`}>
-                  {b.icon}
+                {/* Subtle accent gradient in light mode */}
+                <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-emerald-50/50 dark:to-transparent pointer-events-none" />
+                <div className="relative">
+                  <div className={`mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${b.color} text-white shadow-lg`}>
+                    {b.icon}
+                  </div>
+                  <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">{b.stat}</div>
+                  <div className="text-xs font-bold text-slate-400 dark:text-slate-400 mb-5">{b.statLabel}</div>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white mb-3">{b.title}</h3>
+                  <p className="text-sm leading-7 text-slate-500 dark:text-slate-400">{b.body}</p>
                 </div>
-                <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">{b.stat}</div>
-                <div className="text-xs font-bold text-slate-500 mb-5">{b.statLabel}</div>
-                <h3 className="text-xl font-black text-slate-900 dark:text-white mb-3">{b.title}</h3>
-                <p className="text-sm leading-7 text-slate-600 dark:text-slate-400">{b.body}</p>
               </motion.div>
             ))}
           </div>
@@ -204,11 +211,11 @@ export const Partners: React.FC<PartnersProps> = ({ onOpenAuth }) => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="relative rounded-3xl border border-slate-200 dark:border-white/8 bg-slate-50 dark:bg-white/3 p-7"
+                className="group relative rounded-3xl border border-slate-200/80 bg-gradient-to-b from-slate-50 to-white p-7 shadow-sm hover:shadow-lg hover:shadow-emerald-50 hover:border-emerald-200 hover:-translate-y-1 transition-all duration-300 dark:border-slate-700/50 dark:from-slate-900 dark:to-slate-900 dark:shadow-none dark:hover:shadow-none dark:hover:border-emerald-500/30"
               >
-                <div className="text-[3.5rem] font-black text-slate-200 dark:text-white/6 select-none leading-none mb-4">{step.n}</div>
+                <div className="text-[3.5rem] font-black text-emerald-100 dark:text-slate-700 select-none leading-none mb-4 group-hover:text-emerald-200 dark:group-hover:text-emerald-900/50 transition-colors">{step.n}</div>
                 <h3 className="text-lg font-black text-slate-900 dark:text-white mb-3">{step.title}</h3>
-                <p className="text-sm leading-7 text-slate-600 dark:text-slate-400">{step.body}</p>
+                <p className="text-sm leading-7 text-slate-500 dark:text-slate-400">{step.body}</p>
               </motion.div>
             ))}
           </div>
@@ -216,19 +223,19 @@ export const Partners: React.FC<PartnersProps> = ({ onOpenAuth }) => {
       </section>
 
       {/* ── FEATURES PILL LIST ─────────────────────────────── */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-950 text-center">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-950 text-center">
         <div className="mx-auto max-w-4xl">
           <p className="text-xs font-black uppercase tracking-[0.35em] text-emerald-600 dark:text-emerald-400 mb-6">What You Get</p>
           <div className="flex flex-wrap gap-3 justify-center mb-12">
             {features.map(f => (
-              <div key={f.label} className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-5 py-3 font-bold text-emerald-300">
+              <div key={f.label} className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-5 py-3 font-bold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
                 {f.icon} {f.label}
               </div>
             ))}
           </div>
           <button
             onClick={() => onOpenAuth('retailer')}
-            className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-10 py-5 text-lg font-black text-slate-950 shadow-[0_0_60px_rgba(52,211,153,0.4)] transition hover:bg-emerald-400 hover:-translate-y-1"
+            className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-10 py-5 text-lg font-black text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-500 hover:-translate-y-1 dark:bg-emerald-500 dark:text-slate-950 dark:shadow-[0_0_60px_rgba(52,211,153,0.4)] dark:hover:bg-emerald-400"
           >
             Join the Network <ArrowRight size={20} />
           </button>

@@ -54,12 +54,12 @@ const roleData: Record<Role, {
     badge: 'For Retailers & Restaurants',
     headline: 'Turn Surplus Into Revenue',
     description: 'Transform your excess inventory from a sunk cost into a new revenue stream while building genuine sustainability credentials for your brand.',
-    badgeClass: 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5',
-    iconBgClass: 'bg-emerald-500/10',
-    iconTextClass: 'text-emerald-400',
-    borderHoverClass: 'group-hover:border-emerald-500/50',
-    accent: 'bg-emerald-500',
-    gradient: 'from-emerald-500/10 to-transparent',
+    badgeClass: 'text-emerald-700 border-emerald-200 bg-emerald-50 dark:text-emerald-400 dark:border-emerald-500/20 dark:bg-emerald-500/5',
+    iconBgClass: 'bg-emerald-50 dark:bg-emerald-500/10',
+    iconTextClass: 'text-emerald-600 dark:text-emerald-400',
+    borderHoverClass: 'group-hover:border-emerald-300 dark:group-hover:border-emerald-500/50',
+    accent: 'bg-emerald-600 text-white dark:bg-emerald-500 dark:text-slate-950',
+    gradient: 'from-emerald-500/5 dark:from-emerald-500/10 to-transparent',
     cta: 'Register Your Store',
     steps: [
       {
@@ -98,12 +98,12 @@ const roleData: Record<Role, {
     badge: 'For NGOs & Shelters',
     headline: 'Consistent Food Supply',
     description: 'Gain access to a reliable stream of high-quality surplus food from local businesses. We handle the logistics so you can focus on serving the community.',
-    badgeClass: 'text-rose-400 border-rose-500/20 bg-rose-500/5',
-    iconBgClass: 'bg-rose-500/10',
-    iconTextClass: 'text-rose-400',
-    borderHoverClass: 'group-hover:border-rose-500/50',
-    accent: 'bg-rose-500',
-    gradient: 'from-rose-500/10 to-transparent',
+    badgeClass: 'text-rose-700 border-rose-200 bg-rose-50 dark:text-rose-400 dark:border-rose-500/20 dark:bg-rose-500/5',
+    iconBgClass: 'bg-rose-50 dark:bg-rose-500/10',
+    iconTextClass: 'text-rose-600 dark:text-rose-400',
+    borderHoverClass: 'group-hover:border-rose-300 dark:group-hover:border-rose-500/50',
+    accent: 'bg-rose-600 text-white dark:bg-rose-500 dark:text-slate-950',
+    gradient: 'from-rose-500/5 dark:from-rose-500/10 to-transparent',
     cta: 'Register Your Charity',
     steps: [
       {
@@ -142,12 +142,12 @@ const roleData: Record<Role, {
     badge: 'For Individuals',
     headline: 'Be The Impact Driver',
     description: 'Become the crucial link between surplus food and those who need it. Complete hyper-local delivery tasks on your own schedule and earn rewards.',
-    badgeClass: 'text-amber-400 border-amber-500/20 bg-amber-500/5',
-    iconBgClass: 'bg-amber-500/10',
-    iconTextClass: 'text-amber-400',
-    borderHoverClass: 'group-hover:border-amber-500/50',
-    accent: 'bg-amber-500',
-    gradient: 'from-amber-500/10 to-transparent',
+    badgeClass: 'text-amber-700 border-amber-200 bg-amber-50 dark:text-amber-400 dark:border-amber-500/20 dark:bg-amber-500/5',
+    iconBgClass: 'bg-amber-50 dark:bg-amber-500/10',
+    iconTextClass: 'text-amber-600 dark:text-amber-400',
+    borderHoverClass: 'group-hover:border-amber-300 dark:group-hover:border-amber-500/50',
+    accent: 'bg-amber-600 text-white dark:bg-amber-500 dark:text-slate-950',
+    gradient: 'from-amber-500/5 dark:from-amber-500/10 to-transparent',
     cta: 'Become a Volunteer',
     steps: [
       {
@@ -208,7 +208,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onOpenAuth }) => {
   const current = roleData[activeRole];
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white selection:bg-emerald-500/30 font-sans">
+    <div className="min-h-screen bg-white dark:bg-[#020617] text-slate-900 dark:text-white selection:bg-emerald-500/30 font-sans transition-colors duration-300">
       {/* ── AMBIENT BACKGROUND ───────────────────────────── */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <AnimatePresence mode="wait">
@@ -221,7 +221,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onOpenAuth }) => {
             className={`absolute inset-0 bg-gradient-to-br ${current.gradient}`}
           />
         </AnimatePresence>
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-white/5 rounded-full blur-[120px]" />
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-emerald-500/5 dark:bg-white/5 rounded-full blur-[120px]" />
       </div>
 
       {/* ── HERO SECTION ─────────────────────────────────── */}
@@ -232,21 +232,21 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onOpenAuth }) => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           >
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-black uppercase tracking-widest text-slate-400 mb-8 backdrop-blur-md">
-              <Sparkles size={14} className="text-emerald-400" />
+            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-white/5 px-4 py-1.5 text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 mb-8 backdrop-blur-md">
+              <Sparkles size={14} className="text-emerald-500 dark:text-emerald-400" />
               The Ecosystem
             </div>
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter mb-8 leading-[0.9]">
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter mb-8 leading-[0.9] text-slate-950 dark:text-white">
               Connecting the dots for a <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500">zero-waste future.</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500 dark:from-emerald-400 dark:to-teal-400">zero-waste future.</span>
             </h1>
-            <p className="text-xl text-slate-400 max-w-3xl mx-auto mb-16 leading-relaxed font-medium">
+            <p className="text-xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto mb-16 leading-relaxed font-medium">
               We've automated the logistics of food rescue so you can focus on making a tangible difference in your community.
             </p>
           </motion.div>
 
           {/* Premium Role Toggles */}
-          <div className="inline-flex p-1.5 bg-white/5 border border-white/10 rounded-[28px] backdrop-blur-2xl shadow-2xl">
+          <div className="inline-flex p-1.5 bg-slate-100 border border-slate-200/80 dark:bg-white/5 dark:border-white/10 rounded-[28px] backdrop-blur-2xl shadow-xl dark:shadow-2xl">
             {(['partner', 'charity', 'volunteer'] as Role[]).map((role) => (
               <button
                 key={role}
@@ -254,13 +254,13 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onOpenAuth }) => {
                 className={`relative px-8 py-4 rounded-[22px] text-sm font-black transition-all duration-500 ${
                   activeRole === role 
                     ? 'text-white' 
-                    : 'text-slate-500 hover:text-slate-300'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
                 }`}
               >
                 {activeRole === role && (
                   <motion.div 
                     layoutId="activeTabGlow" 
-                    className={`absolute inset-0 z-0 ${roleData[role].accent} shadow-lg`}
+                    className={`absolute inset-0 z-0 ${current.accent} shadow-lg`}
                     style={{ borderRadius: '22px' }}
                     transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
@@ -290,17 +290,17 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onOpenAuth }) => {
                   <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg border text-[10px] font-black uppercase tracking-widest mb-6 ${current.badgeClass}`}>
                     {current.badge}
                   </span>
-                  <h2 className="text-4xl md:text-5xl font-black mb-6 tracking-tight leading-tight">
+                  <h2 className="text-4xl md:text-5xl font-black mb-6 tracking-tight leading-tight text-slate-950 dark:text-white">
                     {current.headline}
                   </h2>
-                  <p className="text-xl text-slate-400 leading-relaxed font-medium">
+                  <p className="text-xl text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
                     {current.description}
                   </p>
                 </div>
 
                 <div className="grid gap-8 relative">
                   {/* Vertical Line */}
-                  <div className="absolute left-10 top-0 bottom-0 w-px bg-white/5 hidden md:block" />
+                  <div className="absolute left-10 top-0 bottom-0 w-px bg-slate-200 dark:bg-white/5 hidden md:block" />
 
                   {current.steps.map((step, i) => (
                     <motion.div
@@ -309,24 +309,24 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onOpenAuth }) => {
                       whileInView={{ opacity: 1, x: 0 }}
                       viewport={{ once: true }}
                       transition={{ delay: i * 0.1 }}
-                      className="group relative flex flex-col md:flex-row gap-8 p-10 rounded-[40px] border border-white/5 bg-white/[0.02] backdrop-blur-3xl hover:bg-white/[0.04] transition-all duration-500"
+                      className={`group relative flex flex-col md:flex-row gap-8 p-10 rounded-[40px] border border-slate-200/80 bg-white hover:border-slate-300 dark:border-white/5 dark:bg-white/[0.02] backdrop-blur-3xl dark:hover:bg-white/[0.04] transition-all duration-500 hover:shadow-lg hover:shadow-slate-100 dark:hover:shadow-none ${current.borderHoverClass}`}
                     >
                       {/* Step Indicator */}
-                      <div className={`flex-shrink-0 flex h-20 w-20 items-center justify-center rounded-3xl ${current.iconBgClass} ${current.iconTextClass} border border-white/5 shadow-xl transition-transform group-hover:scale-110 duration-500 relative z-10`}>
+                      <div className={`flex-shrink-0 flex h-20 w-20 items-center justify-center rounded-3xl ${current.iconBgClass} ${current.iconTextClass} border border-slate-200/60 dark:border-white/5 shadow-md dark:shadow-xl transition-transform group-hover:scale-110 duration-500 relative z-10`}>
                         {step.icon}
                       </div>
 
                       <div className="flex-1">
-                        <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 mb-2 block">Step {step.id}</span>
-                        <h3 className="text-2xl font-black text-white mb-4 transition-colors">
+                        <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 dark:text-slate-500 mb-2 block">Step {step.id}</span>
+                        <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-4 transition-colors">
                           {step.title}
                         </h3>
-                        <p className="text-slate-400 leading-relaxed text-lg font-medium max-w-lg">
+                        <p className="text-slate-500 dark:text-slate-400 leading-relaxed text-lg font-medium max-w-lg">
                           {step.description}
                         </p>
                       </div>
 
-                      <div className="absolute right-10 bottom-4 text-[6rem] font-black text-white/[0.02] select-none pointer-events-none">
+                      <div className="absolute right-10 bottom-4 text-[6rem] font-black text-slate-100 dark:text-white/[0.02] select-none pointer-events-none">
                         {step.id}
                       </div>
                     </motion.div>
@@ -339,21 +339,21 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onOpenAuth }) => {
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="p-10 rounded-[48px] bg-white/[0.03] border border-white/10 relative overflow-hidden shadow-2xl group"
+                  className="p-10 rounded-[48px] bg-slate-50/50 border border-slate-200 dark:bg-white/[0.03] dark:border-white/10 relative overflow-hidden shadow-xl dark:shadow-2xl group"
                 >
-                  <div className={`absolute top-0 left-0 right-0 h-1.5 ${current.accent}`} />
+                  <div className={`absolute top-0 left-0 right-0 h-1.5 ${current.accent.split(' ')[0]}`} />
                   
-                  <h3 className="text-3xl font-black mb-6 leading-tight">
-                    Start making an impact <span className="text-emerald-400">today.</span>
+                  <h3 className="text-3xl font-black mb-6 leading-tight text-slate-900 dark:text-white">
+                    Start making an impact <span className="text-emerald-600 dark:text-emerald-400">today.</span>
                   </h3>
                   
-                  <p className="text-slate-400 mb-10 leading-relaxed text-lg font-medium">
+                  <p className="text-slate-500 dark:text-slate-400 mb-10 leading-relaxed text-lg font-medium">
                     Join our mission to eliminate food waste. Whether you're a retailer, a charity, or a volunteer — there's a seat at the table.
                   </p>
                   
                   <button 
                     onClick={handleCTAClick}
-                    className={`w-full py-6 rounded-2xl font-black text-slate-950 flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl ${current.accent} hover:brightness-110`}
+                    className={`w-full py-6 rounded-2xl font-black flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl ${current.accent} hover:brightness-110 shadow-emerald-200/50 dark:shadow-none`}
                   >
                     <span className="text-lg">{current.cta}</span>
                     <ArrowRight size={22} />
@@ -361,15 +361,15 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onOpenAuth }) => {
                 </motion.div>
 
                 {/* Features List */}
-                <div className="p-8 rounded-[40px] bg-white/[0.01] border border-white/5 space-y-8">
-                   <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 border-b border-white/5 pb-4">Key Benefits</h4>
+                <div className="p-8 rounded-[40px] bg-white border border-slate-200 dark:bg-white/[0.01] dark:border-white/5 space-y-8 shadow-sm">
+                   <h4 className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-white/5 pb-4">Key Benefits</h4>
                    {current.features.map((f, i) => (
                      <div key={i} className="flex gap-4">
-                        <div className={`flex-shrink-0 w-10 h-10 rounded-xl ${current.iconBgClass} ${current.iconTextClass} flex items-center justify-center`}>
+                        <div className={`flex-shrink-0 w-10 h-10 rounded-xl ${current.iconBgClass} ${current.iconTextClass} flex items-center justify-center shadow-sm`}>
                            {f.icon}
                         </div>
                         <div>
-                           <h5 className="font-black text-sm text-white mb-1">{f.title}</h5>
+                           <h5 className="font-black text-sm text-slate-900 dark:text-white mb-1">{f.title}</h5>
                            <p className="text-xs text-slate-500 leading-relaxed">{f.desc}</p>
                         </div>
                      </div>
@@ -382,20 +382,20 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onOpenAuth }) => {
       </section>
 
       {/* ── TRUST SIGNALS ────────────────────────────────── */}
-      <section className="py-32 border-t border-white/5 bg-black/20 relative z-10">
+      <section className="py-32 border-t border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-black/20 relative z-10">
         <div className="mx-auto max-w-7xl px-4">
           <div className="grid md:grid-cols-3 gap-12">
             {[
-              { icon: <ShieldCheck className="text-emerald-500" />, title: 'Enterprise Security', text: 'All transactions and data are encrypted and verified.' },
-              { icon: <Smartphone className="text-blue-500" />, title: 'Real-Time Sync', text: 'Optimized for neighborhood logistics and zero latency.' },
-              { icon: <CheckCircle2 className="text-purple-500" />, title: 'Impact Metrics', text: 'See your contribution metrics update instantly.' }
+              { icon: <ShieldCheck className="text-emerald-600 dark:text-emerald-500" />, title: 'Enterprise Security', text: 'All transactions and data are encrypted and verified.' },
+              { icon: <Smartphone className="text-blue-600 dark:text-blue-500" />, title: 'Real-Time Sync', text: 'Optimized for neighborhood logistics and zero latency.' },
+              { icon: <CheckCircle2 className="text-purple-600 dark:text-purple-500" />, title: 'Impact Metrics', text: 'See your contribution metrics update instantly.' }
             ].map((item, i) => (
               <div key={i} className="flex gap-6 items-center">
-                <div className="flex-shrink-0 h-16 w-16 items-center justify-center rounded-2xl bg-white/5 border border-white/10 flex">
+                <div className="flex-shrink-0 h-16 w-16 items-center justify-center rounded-2xl bg-white border border-slate-200 dark:bg-white/5 dark:border-white/10 flex shadow-sm">
                   {item.icon}
                 </div>
                 <div>
-                  <h4 className="text-lg font-black text-white mb-1">{item.title}</h4>
+                  <h4 className="text-lg font-black text-slate-900 dark:text-white mb-1">{item.title}</h4>
                   <p className="text-sm text-slate-500 font-medium">{item.text}</p>
                 </div>
               </div>

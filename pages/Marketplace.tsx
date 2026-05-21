@@ -67,19 +67,19 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
   const statsData = CATEGORIES.slice(1).map(c => ({ name: c.charAt(0).toUpperCase() + c.slice(1), count: items.filter(i => i.category === c).length }));
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#020917] transition-colors">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#020917] transition-colors duration-300">
 
       {/* ── HERO BANNER ── */}
-      <div className="relative overflow-hidden bg-emerald-50 dark:bg-[#020917] px-4 py-12 sm:px-6 lg:px-8">
+      <div className="relative overflow-hidden bg-gradient-to-b from-emerald-50/50 via-emerald-50/20 to-slate-50 dark:from-[#020917] dark:via-[#020917] dark:to-[#020917] px-4 py-16 sm:px-6 lg:px-8">
         <div className="dot-grid absolute inset-0 opacity-20" />
         <div className="relative mx-auto max-w-7xl">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.35em] text-emerald-600 dark:text-emerald-400 mb-3">Live Marketplace</p>
-              <h1 className="text-4xl font-black text-slate-900 dark:text-white md:text-5xl">
+              <h1 className="text-4xl font-black text-slate-900 dark:text-white md:text-5xl leading-tight">
                 {user?.role === 'charity' ? 'Claim donations near you.' : 'Surplus food. Real savings.'}
               </h1>
-              <p className="mt-3 text-slate-600 dark:text-slate-400 max-w-xl">
+              <p className="mt-3 text-slate-600 dark:text-slate-400 max-w-xl text-base leading-relaxed">
                 {user?.role === 'charity'
                   ? 'Free donations appear first. Browse and claim what your community needs.'
                   : user?.role === 'retailer'
@@ -89,7 +89,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
             </div>
             <button
               onClick={() => setShowStats(v => !v)}
-              className="inline-flex items-center gap-2 self-start md:self-auto rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-white backdrop-blur transition hover:bg-slate-100 dark:hover:bg-white/10"
+              className="inline-flex items-center gap-2 self-start md:self-auto rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-white backdrop-blur transition hover:bg-slate-100 dark:hover:bg-white/10 hover:border-emerald-300 dark:hover:border-emerald-800"
             >
               <Filter size={16} /> Live Stats {showStats ? <X size={14} /> : <ChevronDown size={14} />}
             </button>
@@ -113,7 +113,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
                 transition={{ duration: 0.3 }}
                 className="overflow-hidden mt-6"
               >
-                <div className="rounded-2xl border border-slate-200 dark:border-white/8 bg-white dark:bg-white/3 p-5">
+                <div className="rounded-2xl border border-slate-200 dark:border-white/8 bg-white dark:bg-white/3 p-5 shadow-md">
                   <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">Items available by category</p>
                   <div className="h-36">
                     <ResponsiveContainer width="100%" height="100%">
@@ -134,7 +134,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
       </div>
 
       {/* ── STICKY FILTER BAR ── */}
-      <div className="sticky top-16 z-30 bg-white/95 dark:bg-[#020917]/95 backdrop-blur border-b border-slate-200 dark:border-white/5 px-4 py-3 sm:px-6 lg:px-8">
+      <div className="sticky top-16 z-30 bg-white/95 dark:bg-[#020917]/95 backdrop-blur border-b border-slate-200 dark:border-white/5 px-4 py-3 sm:px-6 lg:px-8 transition-colors duration-300">
         <div className="mx-auto max-w-7xl flex flex-col sm:flex-row gap-3 items-center">
           <div className="relative w-full sm:w-72">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -199,10 +199,10 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(i * 0.05, 0.3), duration: 0.4 }}
-                className={`group rounded-3xl overflow-hidden border flex flex-col transition-all hover:-translate-y-1 hover:shadow-xl ${
+                className={`group rounded-3xl overflow-hidden border flex flex-col transition-all duration-300 hover:-translate-y-1 ${
                   item.quantity === 0
-                    ? 'bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800 opacity-70'
-                    : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-800'
+                    ? 'bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800 opacity-70 shadow-sm'
+                    : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-800 shadow-md shadow-slate-100 hover:shadow-xl hover:shadow-emerald-100/50 dark:shadow-none'
                 }`}
               >
                 {/* Image */}
@@ -219,30 +219,30 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
                   {/* Badges */}
                   <div className="absolute top-3 left-3 flex flex-col gap-2">
                     {storeRankMap[item.storeName] <= 3 && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-400 px-2.5 py-1 text-xs font-black text-slate-950">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-400 px-2.5 py-1 text-xs font-black text-slate-950 shadow-sm">
                         <Star size={11} fill="currentColor" /> Top Pick
                       </span>
                     )}
                     {item.forCharity && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-rose-500 px-2.5 py-1 text-xs font-black text-white">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-rose-500 px-2.5 py-1 text-xs font-black text-white shadow-sm">
                         <Leaf size={11} /> Donation
                       </span>
                     )}
                     {item.forAnimalFeed && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-orange-500 px-2.5 py-1 text-xs font-black text-white">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-orange-500 px-2.5 py-1 text-xs font-black text-white shadow-sm">
                         <RefreshCw size={11} /> Animal Feed
                       </span>
                     )}
                   </div>
 
                   {item.quantity > 0 && (
-                    <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full bg-black/50 backdrop-blur px-2.5 py-1 text-xs font-bold text-white">
+                    <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full bg-black/50 backdrop-blur px-2.5 py-1 text-xs font-bold text-white shadow-sm">
                       <Tag size={11} /> {item.quantity} left
                     </span>
                   )}
 
                   {item.quantity > 0 && item.quantity <= 3 && (
-                    <span className="absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-full bg-orange-500 px-2.5 py-1 text-xs font-black text-white animate-pulse">
+                    <span className="absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-full bg-orange-500 px-2.5 py-1 text-xs font-black text-white animate-pulse shadow-sm">
                       <Flame size={11} /> Almost gone
                     </span>
                   )}
@@ -263,33 +263,33 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
                   </div>
 
                   <div className="flex items-center text-slate-500 dark:text-slate-400 text-xs mb-3">
-                    <MapPin size={12} className="mr-1 shrink-0" />
-                    <span>{item.storeName} • <Clock size={11} className="inline" /> {item.pickupStart}–{item.pickupEnd}</span>
+                    <MapPin size={12} className="mr-1 shrink-0 text-slate-400" />
+                    <span>{item.storeName} • <Clock size={11} className="inline text-slate-400" /> {item.pickupStart}–{item.pickupEnd}</span>
                   </div>
 
                   <div className="flex flex-wrap gap-1.5 mb-4">
                     {item.tags.slice(0, 3).map(tag => (
-                      <span key={tag} className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs rounded-lg font-medium capitalize">{tag}</span>
+                      <span key={tag} className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[11px] rounded-lg font-bold capitalize">{tag}</span>
                     ))}
                   </div>
 
                   <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
-                    <button onClick={() => item.quantity > 0 && setSelectedItem(item)} disabled={item.quantity === 0} className="text-xs font-bold text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 underline underline-offset-2 transition">
+                    <button onClick={() => item.quantity > 0 && setSelectedItem(item)} disabled={item.quantity === 0} className="text-xs font-black text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 underline underline-offset-2 transition-colors duration-200">
                       Details
                     </button>
                     {user?.role === 'retailer' ? (
                       <span className="text-xs font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl">View Only</span>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <div className="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                          <button onClick={() => setQty(item, getQty(item) - 1)} disabled={item.quantity === 0} className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold disabled:opacity-40 text-lg">−</button>
-                          <span className="w-8 text-center text-sm font-bold dark:text-white">{getQty(item)}</span>
-                          <button onClick={() => setQty(item, getQty(item) + 1)} disabled={item.quantity === 0} className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold disabled:opacity-40 text-lg">+</button>
+                        <div className="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden bg-slate-50 dark:bg-slate-900">
+                          <button onClick={() => setQty(item, getQty(item) - 1)} disabled={item.quantity === 0} className="w-8 h-8 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold disabled:opacity-40 text-lg transition-colors">−</button>
+                          <span className="w-8 text-center text-sm font-black dark:text-white">{getQty(item)}</span>
+                          <button onClick={() => setQty(item, getQty(item) + 1)} disabled={item.quantity === 0} className="w-8 h-8 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold disabled:opacity-40 text-lg transition-colors">+</button>
                         </div>
                         <button
                           onClick={() => onAddToCart(item, getQty(item))}
                           disabled={item.quantity === 0}
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-500 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:cursor-not-allowed"
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-black text-white transition hover:bg-emerald-500 hover:shadow-lg hover:shadow-emerald-500/20 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:cursor-not-allowed"
                         >
                           <ShoppingCart size={14} />
                           {item.discountPrice === 0 ? 'Claim' : 'Add'}

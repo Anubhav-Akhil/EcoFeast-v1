@@ -56,21 +56,21 @@ export const Volunteer: React.FC<VolunteerProps> = ({ onOpenAuth }) => {
 
       {/* ── HERO ─────────────────────────────────────────── */}
       <section
-        className="relative min-h-screen flex items-center overflow-hidden px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-[#020917]"
+        className="relative min-h-screen flex items-center overflow-hidden px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white via-amber-50/30 to-white dark:from-[#020917] dark:via-[#020917] dark:to-[#020917]"
       >
-        <div className="absolute inset-0 opacity-30" style={{
+        <div className="absolute inset-0 opacity-10 dark:opacity-30" style={{
           backgroundImage: 'linear-gradient(rgba(245,158,11,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(245,158,11,0.15) 1px, transparent 1px)',
           backgroundSize: '60px 60px',
         }} />
 
-        <div className="ambient-orb left-[15%] top-20 h-96 w-96 bg-amber-500/25" />
-        <div className="ambient-orb animation-delay-4000 right-[5%] bottom-10 h-80 w-80 bg-orange-400/15" />
+        <div className="ambient-orb left-[15%] top-20 h-96 w-96 bg-amber-500/10 dark:bg-amber-500/25" />
+        <div className="ambient-orb animation-delay-4000 right-[5%] bottom-10 h-80 w-80 bg-orange-400/8 dark:bg-orange-400/15" />
 
         <div className="relative z-10 mx-auto max-w-7xl w-full text-center lg:text-left">
           <div className="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
             <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
-              <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm font-bold text-amber-300 mb-8">
-                <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+              <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300 mb-8">
+                <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
                 Join 1,200+ local food rescuers
               </div>
               <h1 className="text-[clamp(3rem,6vw,6rem)] font-black leading-none tracking-tight text-slate-900 dark:text-white mb-8">
@@ -84,14 +84,14 @@ export const Volunteer: React.FC<VolunteerProps> = ({ onOpenAuth }) => {
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <button
                   onClick={() => onOpenAuth('volunteer')}
-                  className="group inline-flex items-center gap-2 rounded-2xl bg-amber-500 px-8 py-4 font-bold text-slate-950 shadow-[0_0_40px_rgba(245,158,11,0.35)] transition-all hover:bg-amber-400 hover:shadow-[0_0_60px_rgba(245,158,11,0.55)] hover:-translate-y-1"
+                  className="group inline-flex items-center gap-2 rounded-2xl bg-amber-500 px-8 py-4 font-bold text-white shadow-lg shadow-amber-200 transition-all hover:bg-amber-400 hover:shadow-xl hover:shadow-amber-200/60 hover:-translate-y-1 dark:text-slate-950 dark:shadow-[0_0_40px_rgba(245,158,11,0.35)] dark:hover:shadow-[0_0_60px_rgba(245,158,11,0.55)]"
                 >
                   Start Volunteering
                   <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
                 </button>
                 <a 
                   href="/#/how-it-works?role=volunteer"
-                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 dark:border-white/15 px-8 py-4 font-bold text-slate-700 dark:text-white transition hover:bg-slate-100 dark:hover:bg-white/5 hover:-translate-y-1"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-8 py-4 font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:border-amber-200 hover:text-amber-700 hover:-translate-y-1 dark:border-white/15 dark:bg-transparent dark:text-white dark:hover:bg-white/5"
                 >
                   How It Works
                 </a>
@@ -105,15 +105,15 @@ export const Volunteer: React.FC<VolunteerProps> = ({ onOpenAuth }) => {
               transition={{ duration: 0.7, delay: 0.2 }}
               className="relative hidden lg:block"
             >
-              <div className="rounded-3xl border border-amber-500/20 bg-amber-950/20 p-8 backdrop-blur-sm">
+              <div className="rounded-3xl border border-amber-200 bg-white p-8 shadow-xl shadow-amber-100/40 dark:border-amber-500/20 dark:bg-amber-950/20 dark:shadow-none dark:backdrop-blur-sm">
                 <div className="space-y-6">
-                  <div className="flex items-center gap-4 border-b border-white/10 pb-6">
-                    <div className="h-12 w-12 rounded-2xl bg-amber-500 flex items-center justify-center text-slate-950">
+                  <div className="flex items-center gap-4 border-b border-slate-100 dark:border-white/10 pb-6">
+                    <div className="h-12 w-12 rounded-2xl bg-amber-500 flex items-center justify-center text-white dark:text-slate-950">
                       <Truck size={24} />
                     </div>
                     <div>
-                      <h4 className="font-black text-white">Active Pickup Ready</h4>
-                      <p className="text-xs text-amber-400">2.4km from you • 15 min estimated</p>
+                      <h4 className="font-black text-slate-900 dark:text-white">Active Pickup Ready</h4>
+                      <p className="text-xs text-amber-600 dark:text-amber-400">2.4km from you • 15 min estimated</p>
                     </div>
                   </div>
                   
@@ -121,28 +121,28 @@ export const Volunteer: React.FC<VolunteerProps> = ({ onOpenAuth }) => {
                     <div className="flex gap-4">
                       <div className="flex flex-col items-center">
                         <div className="h-4 w-4 rounded-full border-2 border-amber-500 bg-amber-500" />
-                        <div className="w-0.5 h-12 bg-amber-500/30" />
+                        <div className="w-0.5 h-12 bg-amber-300 dark:bg-amber-500/30" />
                         <div className="h-4 w-4 rounded-full border-2 border-emerald-500 bg-transparent" />
                       </div>
                       <div className="space-y-6">
                         <div>
-                          <p className="text-[10px] font-black uppercase text-slate-500">Pickup Location</p>
-                          <p className="text-sm font-bold text-white">Green Earth Market • Sector 42</p>
+                          <p className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Pickup Location</p>
+                          <p className="text-sm font-bold text-slate-800 dark:text-white">Green Earth Market • Sector 42</p>
                         </div>
                         <div>
-                          <p className="text-[10px] font-black uppercase text-slate-500">Delivery To</p>
-                          <p className="text-sm font-bold text-white">Hope Kitchen Foundation</p>
+                          <p className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Delivery To</p>
+                          <p className="text-sm font-bold text-slate-800 dark:text-white">Hope Kitchen Foundation</p>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="rounded-2xl bg-amber-500/10 p-4 border border-amber-500/20">
+                  <div className="rounded-2xl bg-amber-50 p-4 border border-amber-100 dark:bg-amber-500/10 dark:border-amber-500/20">
                     <div className="flex justify-between items-center mb-1">
-                      <span className="text-xs text-amber-300 font-bold">Reward</span>
-                      <span className="text-xs text-amber-300 font-black">+150 Points</span>
+                      <span className="text-xs text-amber-700 dark:text-amber-300 font-bold">Reward</span>
+                      <span className="text-xs text-amber-700 dark:text-amber-300 font-black">+150 Points</span>
                     </div>
-                    <div className="w-full h-1.5 bg-amber-500/20 rounded-full overflow-hidden">
+                    <div className="w-full h-1.5 bg-amber-200 dark:bg-amber-500/20 rounded-full overflow-hidden">
                       <div className="h-full bg-amber-500 w-3/4" />
                     </div>
                   </div>
@@ -154,7 +154,7 @@ export const Volunteer: React.FC<VolunteerProps> = ({ onOpenAuth }) => {
       </section>
 
       {/* ── BENEFITS GRID ─────────────────────────────────── */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-950">
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-950">
         <div className="mx-auto max-w-7xl">
           <div className="mb-16 text-center">
             <p className="text-xs font-black uppercase tracking-[0.35em] text-amber-600 dark:text-amber-400 mb-4">Why Volunteer?</p>
@@ -168,15 +168,19 @@ export const Volunteer: React.FC<VolunteerProps> = ({ onOpenAuth }) => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.15, duration: 0.5 }}
-                className="group relative overflow-hidden rounded-3xl border border-slate-200 dark:border-white/8 bg-white dark:bg-white/3 p-8 hover:border-amber-500/30 transition-all shadow-sm"
+                className="group relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-8 shadow-md shadow-slate-100 hover:shadow-xl hover:shadow-amber-100/50 hover:border-amber-200 hover:-translate-y-1 transition-all duration-300 dark:border-slate-700/50 dark:bg-slate-900 dark:shadow-none dark:hover:shadow-none dark:hover:border-amber-500/30"
               >
-                <div className={`mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${b.color} text-white shadow-lg`}>
-                  {b.icon}
+                {/* Subtle accent gradient in light mode */}
+                <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-amber-50/50 dark:to-transparent pointer-events-none" />
+                <div className="relative">
+                  <div className={`mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${b.color} text-white shadow-lg`}>
+                    {b.icon}
+                  </div>
+                  <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">{b.stat}</div>
+                  <div className="text-xs font-bold text-slate-400 dark:text-slate-400 mb-5">{b.statLabel}</div>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white mb-3">{b.title}</h3>
+                  <p className="text-sm leading-7 text-slate-500 dark:text-slate-400">{b.body}</p>
                 </div>
-                <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">{b.stat}</div>
-                <div className="text-xs font-bold text-slate-500 mb-5">{b.statLabel}</div>
-                <h3 className="text-xl font-black text-slate-900 dark:text-white mb-3">{b.title}</h3>
-                <p className="text-sm leading-7 text-slate-600 dark:text-slate-400">{b.body}</p>
               </motion.div>
             ))}
           </div>
@@ -198,11 +202,11 @@ export const Volunteer: React.FC<VolunteerProps> = ({ onOpenAuth }) => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="relative rounded-3xl border border-slate-200 dark:border-white/8 bg-slate-50 dark:bg-white/3 p-7"
+                className="group relative rounded-3xl border border-slate-200/80 bg-gradient-to-b from-slate-50 to-white p-7 shadow-sm hover:shadow-lg hover:shadow-amber-50 hover:border-amber-200 hover:-translate-y-1 transition-all duration-300 dark:border-slate-700/50 dark:from-slate-900 dark:to-slate-900 dark:shadow-none dark:hover:shadow-none dark:hover:border-amber-500/30"
               >
-                <div className="text-[3.5rem] font-black text-slate-200 dark:text-white/6 select-none leading-none mb-4">{step.n}</div>
+                <div className="text-[3.5rem] font-black text-amber-100 dark:text-slate-700 select-none leading-none mb-4 group-hover:text-amber-200 dark:group-hover:text-amber-900/50 transition-colors">{step.n}</div>
                 <h3 className="text-lg font-black text-slate-900 dark:text-white mb-3">{step.title}</h3>
-                <p className="text-sm leading-7 text-slate-600 dark:text-slate-400">{step.body}</p>
+                <p className="text-sm leading-7 text-slate-500 dark:text-slate-400">{step.body}</p>
               </motion.div>
             ))}
           </div>
@@ -210,19 +214,19 @@ export const Volunteer: React.FC<VolunteerProps> = ({ onOpenAuth }) => {
       </section>
 
       {/* ── FEATURES ─────────────────────────────── */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-950 text-center">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-950 text-center">
         <div className="mx-auto max-w-4xl">
           <p className="text-xs font-black uppercase tracking-[0.35em] text-amber-600 dark:text-amber-400 mb-6">Equipped for Rescue</p>
           <div className="flex flex-wrap gap-3 justify-center mb-12">
             {features.map(f => (
-              <div key={f.label} className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-5 py-3 font-bold text-amber-300">
+              <div key={f.label} className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-5 py-3 font-bold text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
                 {f.icon} {f.label}
               </div>
             ))}
           </div>
           <button
             onClick={() => onOpenAuth('volunteer')}
-            className="inline-flex items-center gap-2 rounded-2xl bg-amber-500 px-10 py-5 text-lg font-black text-slate-950 shadow-[0_0_60px_rgba(245,158,11,0.4)] transition hover:bg-amber-400 hover:-translate-y-1"
+            className="inline-flex items-center gap-2 rounded-2xl bg-amber-500 px-10 py-5 text-lg font-black text-white shadow-lg shadow-amber-200 transition hover:bg-amber-400 hover:-translate-y-1 dark:text-slate-950 dark:shadow-[0_0_60px_rgba(245,158,11,0.4)]"
           >
             Start Your First Rescue <ArrowRight size={20} />
           </button>
