@@ -31,8 +31,8 @@
 
   <br />
 
-  <a href="https://ecofeast-v1.vercel.app">
-    <img src="https://img.shields.io/badge/🚀_LIVE_DEMO-ECOFEAST_V1.VERCEL.APP-646CFF?style=for-the-badge" alt="Live Demo" />
+  <a href="https://myecofeast.vercel.app">
+    <img src="https://img.shields.io/badge/🚀_LIVE_DEMO-MYECOFEAST.VERCEL.APP-646CFF?style=for-the-badge" alt="Live Demo" />
   </a>
 
   <br />
