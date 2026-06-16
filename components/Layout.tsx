@@ -19,7 +19,7 @@ interface LayoutProps {
   children: React.ReactNode;
   user: User | null;
   onLogout: () => void;
-  onOpenAuth: (role?: UserRole) => void;
+  onOpenAuth: (role?: UserRole, mode?: 'login' | 'signup') => void;
   isDark: boolean;
   toggleTheme: () => void;
   authModalOpen: boolean;
@@ -28,11 +28,12 @@ interface LayoutProps {
   cartCount: number;
   onOpenCart: () => void;
   initialAuthRole?: UserRole;
+  initialAuthMode?: 'login' | 'signup';
 }
 
 export const Layout: React.FC<LayoutProps> = ({
   children, user, onLogout, onOpenAuth, isDark, toggleTheme,
-  authModalOpen, setAuthModalOpen, handleLogin, cartCount, onOpenCart, initialAuthRole
+  authModalOpen, setAuthModalOpen, handleLogin, cartCount, onOpenCart, initialAuthRole, initialAuthMode
 }) => {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const location = useLocation();
@@ -61,7 +62,8 @@ export const Layout: React.FC<LayoutProps> = ({
 
   React.useEffect(() => {
     if (initialAuthRole) setSelectedRole(initialAuthRole);
-  }, [initialAuthRole, authModalOpen]);
+    if (initialAuthMode) setAuthMode(initialAuthMode);
+  }, [initialAuthRole, initialAuthMode, authModalOpen]);
 
   React.useEffect(() => {
     if (authModalOpen) {
@@ -69,14 +71,32 @@ export const Layout: React.FC<LayoutProps> = ({
     }
   }, [authModalOpen, authMode, selectedRole]);
 
-  const navLinks = [
-    { name: 'Home', path: '/' },
-    { name: 'Marketplace', path: '/marketplace' },
-    { name: 'Partners', path: '/partners' },
-    { name: 'Charities', path: '/charities' },
-    { name: 'Volunteers', path: '/volunteers' },
-    { name: 'About', path: '/about' },
-  ];
+  const navLinks = (() => {
+    if (!user) {
+      // Logged-out: full marketing nav
+      return [
+        { name: 'Home', path: '/' },
+        { name: 'Marketplace', path: '/marketplace' },
+        { name: 'Partners', path: '/partners' },
+        { name: 'Charities', path: '/charities' },
+        { name: 'Volunteers', path: '/volunteers' },
+        { name: 'About', path: '/about' },
+      ];
+    }
+    if (user.role === 'consumer') {
+      return [
+        { name: 'Home', path: '/' },
+        { name: 'Marketplace', path: '/marketplace' },
+        { name: 'Dashboard', path: '/dashboard' },
+        { name: 'About', path: '/about' },
+      ];
+    }
+    // retailer, charity, volunteer â€” focused nav
+    return [
+      { name: 'Dashboard', path: '/dashboard' },
+      { name: 'Marketplace', path: '/marketplace' },
+    ];
+  })();
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -369,13 +389,15 @@ export const Layout: React.FC<LayoutProps> = ({
                                 <Package size={15} /> Your Orders
                               </Link>
                             )}
-                            <Link
-                              to="/marketplace"
-                              onClick={() => setIsProfileOpen(false)}
-                              className="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-eco-50 dark:hover:bg-dark-800 hover:text-eco-600 transition-colors"
-                            >
-                              <Store size={15} /> Browse Marketplace
-                            </Link>
+                            {(user.role === 'consumer') && (
+                              <Link
+                                to="/marketplace"
+                                onClick={() => setIsProfileOpen(false)}
+                                className="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-eco-50 dark:hover:bg-dark-800 hover:text-eco-600 transition-colors"
+                              >
+                                <Store size={15} /> Browse Marketplace
+                              </Link>
+                            )}
                           </div>
                           <div className="border-t border-gray-100 dark:border-dark-800">
                             <button
@@ -493,201 +515,265 @@ export const Layout: React.FC<LayoutProps> = ({
             </div>
           </div>
           <div className="mt-12 pt-8 border-t border-eco-800 text-center text-eco-400 text-sm">
-            © {new Date().getFullYear()} EcoFeast Inc. All rights reserved.
+            Â© {new Date().getFullYear()} EcoFeast Inc. All rights reserved.
           </div>
         </div>
       </footer>
 
-      {/* Auth Modal — premium dark glassmorphism */}
+      {/* Auth Modal — two-panel with smooth CSS transitions */}
       <ModalShell
         open={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
-        maxWidthClassName="max-w-lg"
-        panelClassName="max-h-[92vh]"
+        maxWidthClassName={authMode === 'login' ? 'max-w-md' : 'max-w-2xl'}
+        panelClassName="max-h-[92vh] transition-all duration-500 ease-in-out"
         contentClassName="max-h-[92vh] overflow-y-auto p-0"
       >
         <div className="relative overflow-hidden rounded-3xl">
           {/* Top gradient bar */}
-          <div className="h-1.5 w-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500" />
-          <div className="px-8 pt-8 pb-8 space-y-6">
-            {/* Header */}
-            <div className="text-center space-y-1">
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-1 mb-2">
-                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                <span className="text-xs font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-300">
-                  {authMode === 'login' ? 'Account Access' : 'Create Account'}
-                </span>
-              </div>
-              <h2 className="text-3xl font-black text-slate-950 dark:text-white">
-                {authMode === 'login' ? 'Welcome Back' : 'Join EcoFeast'}
-              </h2>
+          <div className="h-1 w-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500" />
 
-              <p className="text-slate-500 dark:text-slate-400 text-sm">
-                {authMode === 'login'
-                  ? 'Access your orders, saved impact, and dashboards.'
-                  : 'Pick your role and start rescuing food today.'}
-              </p>
+          <div className="flex flex-col sm:flex-row">
+            {/* Decorative sidebar â€” always mounted, visibility via CSS */}
+            <div
+              className="hidden sm:flex flex-col justify-between bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-600 text-white relative overflow-hidden flex-shrink-0 transition-all duration-500 ease-in-out"
+              style={{
+                width: authMode === 'signup' ? 208 : 0,
+                padding: authMode === 'signup' ? '24px' : '0px',
+                opacity: authMode === 'signup' ? 1 : 0,
+              }}
+            >
+              <div className="absolute inset-0 dot-grid opacity-15" />
+              <div className="relative z-10 min-w-[160px]">
+                <div className="h-10 w-10 rounded-2xl bg-white/20 flex items-center justify-center mb-6">
+                  <Leaf size={20} />
+                </div>
+                <h3 className="text-lg font-black leading-tight mb-2">Join the Food Rescue Movement</h3>
+                <p className="text-xs text-white/70 leading-relaxed">Every signup helps reduce food waste in your community.</p>
+              </div>
+              <div className="relative z-10 space-y-3 mt-8 min-w-[160px]">
+                {[
+                  { icon: ShoppingCart, label: 'Save up to 70%', active: selectedRole === 'consumer' },
+                  { icon: Building2, label: 'Zero waste stores', active: selectedRole === 'retailer' },
+                  { icon: Heart, label: 'Feed communities', active: selectedRole === 'charity' },
+                  { icon: Truck, label: 'Last-mile heroes', active: selectedRole === 'volunteer' },
+                ].map((item, i) => (
+                  <div key={i} className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold transition-all duration-300 ${item.active ? 'bg-white/20 text-white' : 'text-white/50'}`}>
+                    <item.icon size={14} />
+                    {item.label}
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <form onSubmit={handleAuthSubmit} className="space-y-5">
-              {authMode === 'signup' && (
-                <div>
-                  <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3">I Am Joining As</label>
-                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {/* Main form area */}
+            <div className="flex-1 px-6 sm:px-8 pt-7 pb-7 space-y-5 overflow-y-auto" style={{ maxHeight: '85vh' }}>
+              {/* Header */}
+              <div className="text-center space-y-1">
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-1 mb-2">
+                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-300">
+                    {authMode === 'login' ? 'Welcome Back' : 'Get Started'}
+                  </span>
+                </div>
+                <h2 className="text-2xl font-black text-slate-950 dark:text-white">
+                  {authMode === 'login' ? 'Log In to EcoFeast' : 'Create Your Account'}
+                </h2>
+                <p className="text-slate-500 dark:text-slate-400 text-xs">
+                  {authMode === 'login'
+                    ? 'Access your dashboard, orders, and impact stats.'
+                    : 'Pick your role below and fill in the details.'}
+                </p>
+              </div>
+
+              <form onSubmit={handleAuthSubmit} className="space-y-4">
+                {/* Role selector â€” slides open/closed via CSS */}
+                <div
+                  className="overflow-hidden transition-all duration-500 ease-in-out"
+                  style={{
+                    maxHeight: authMode === 'signup' ? 200 : 0,
+                    opacity: authMode === 'signup' ? 1 : 0,
+                  }}
+                >
+                  <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2.5">I Am Joining As</label>
+                  <div className="grid grid-cols-4 gap-2">
                     {([
-                      { key: 'consumer', icon: ShoppingCart, label: 'Consumer', color: 'text-emerald-500' },
-                      { key: 'retailer', icon: Building2, label: 'Retailer', color: 'text-violet-500' },
-                      { key: 'charity', icon: Heart, label: 'Charity', color: 'text-rose-500' },
-                      { key: 'volunteer', icon: Truck, label: 'Volunteer', color: 'text-amber-500' },
+                      { key: 'consumer', icon: ShoppingCart, label: 'Consumer', gradient: 'from-emerald-500 to-teal-500' },
+                      { key: 'retailer', icon: Building2, label: 'Retailer', gradient: 'from-violet-500 to-purple-500' },
+                      { key: 'charity', icon: Heart, label: 'Charity', gradient: 'from-rose-500 to-pink-500' },
+                      { key: 'volunteer', icon: Truck, label: 'Volunteer', gradient: 'from-amber-500 to-orange-500' },
                     ] as const).map((r) => (
                       <button
                         key={r.key}
                         type="button"
                         onClick={() => setSelectedRole(r.key as UserRole)}
-                        className={`flex flex-col items-center gap-1.5 rounded-2xl border py-3 px-2 text-sm font-bold transition-all ${selectedRole === r.key
-                            ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 shadow-[0_0_16px_rgba(16,185,129,0.2)]'
-                            : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-500 hover:border-slate-300 dark:hover:border-slate-700'
+                        className={`relative flex flex-col items-center gap-1 rounded-2xl border py-3 px-1 text-xs font-bold transition-all duration-300 overflow-hidden ${selectedRole === r.key
+                            ? 'border-transparent text-white shadow-lg scale-[1.03]'
+                            : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-500 hover:border-slate-300 dark:hover:border-slate-700 hover:scale-[1.02]'
                           }`}
                       >
-                        <r.icon size={20} className={selectedRole === r.key ? 'text-emerald-500' : r.color} />
-                        <span className="text-xs">{r.label}</span>
+                        {selectedRole === r.key && (
+                          <motion.div
+                            layoutId="authRoleHighlight"
+                            className={`absolute inset-0 bg-gradient-to-br ${r.gradient}`}
+                            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                          />
+                        )}
+                        <r.icon size={18} className="relative z-10" />
+                        <span className="relative z-10 text-[10px]">{r.label}</span>
                       </button>
                     ))}
                   </div>
-
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-1.5">Email</label>
-                  <input
-                    type="email"
-                    required
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-all"
-                    placeholder="you@example.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-1.5">Password</label>
-                  <input
-                    type="password"
-                    required
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-all"
-                    placeholder="Enter your password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  />
+                {/* Divider â€” slides with role selector */}
+                <div
+                  className="overflow-hidden transition-all duration-500 ease-in-out"
+                  style={{
+                    maxHeight: authMode === 'signup' ? 30 : 0,
+                    opacity: authMode === 'signup' ? 1 : 0,
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-300 dark:text-slate-600">Account Details</span>
+                    <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+                  </div>
                 </div>
 
-                {authMode === 'signup' && selectedRole === 'consumer' && (
+                {/* Core fields â€” always visible */}
+                <div className="space-y-3">
                   <div>
-                    <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-1.5">Full Name</label>
+                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1.5">Email</label>
                     <input
-                      type="text"
+                      type="email"
                       required
-                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-all"
-                      placeholder="Your full name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-all duration-200"
+                      placeholder="you@example.com"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1.5">Password</label>
+                    <input
+                      type="password"
+                      required
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-all duration-200"
+                      placeholder="Enter your password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                {/* Role-specific extra fields â€” slides open/closed */}
+                <div
+                  className="overflow-hidden transition-all duration-500 ease-in-out"
+                  style={{
+                    maxHeight: authMode === 'signup' ? 500 : 0,
+                    opacity: authMode === 'signup' ? 1 : 0,
+                  }}
+                >
+                  <div className="space-y-3 pt-1">
+                    {(selectedRole === 'consumer' || selectedRole === 'volunteer') && (
+                      <div>
+                        <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1.5">Full Name</label>
+                        <input
+                          type="text"
+                          required={authMode === 'signup'}
+                          className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-all duration-200"
+                          placeholder="Your full name"
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        />
+                      </div>
+                    )}
+
+                    {(selectedRole === 'retailer' || selectedRole === 'charity') && (
+                      <>
+                        <div>
+                          <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1.5">Organization Name</label>
+                          <input
+                            type="text"
+                            required={authMode === 'signup'}
+                            className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-all duration-200"
+                            placeholder="Business or organization name"
+                            value={formData.orgName}
+                            onChange={(e) => setFormData({ ...formData, orgName: e.target.value })}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1.5">Address</label>
+                            <input
+                              type="text"
+                              required={authMode === 'signup'}
+                              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-all duration-200"
+                              placeholder="Street, city"
+                              value={formData.address}
+                              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1.5">Phone</label>
+                            <input
+                              type="tel"
+                              required={authMode === 'signup'}
+                              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-all duration-200"
+                              placeholder="Contact number"
+                              value={formData.phone}
+                              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {selectedRole === 'volunteer' && (
+                      <div>
+                        <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1.5">Vehicle Type</label>
+                        <select
+                          className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-all duration-200 appearance-none"
+                          value={formData.vehicleType}
+                          onChange={(e) => setFormData({ ...formData, vehicleType: e.target.value })}
+                        >
+                          <option value="">Select a vehicle</option>
+                          <option value="bike">Bicycle</option>
+                          <option value="scooter">Scooter / Motorbike</option>
+                          <option value="car">Car</option>
+                          <option value="van">Van</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {authError && (
+                  <div className="rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/40 px-4 py-2.5 text-xs font-medium text-rose-700 dark:text-rose-300">
+                    {authError}
                   </div>
                 )}
 
-                {authMode === 'signup' && (selectedRole === 'retailer' || selectedRole === 'charity') && (
-                  <>
-                    <div>
-                      <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-1.5">Organization Name</label>
-                      <input
-                        type="text"
-                        required
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-all"
-                        placeholder="Business or organization name"
-                        value={formData.orgName}
-                        onChange={(e) => setFormData({ ...formData, orgName: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-1.5">Address</label>
-                      <input
-                        type="text"
-                        required
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-all"
-                        placeholder="Street, city, and area details"
-                        value={formData.address}
-                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-1.5">Phone</label>
-                      <input
-                        type="tel"
-                        required
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-all"
-                        placeholder="Primary contact number"
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      />
-                    </div>
-                  </>
-                )}
+                <motion.button
+                  disabled={authLoading}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 px-4 py-3 text-sm font-black text-white hover:from-emerald-500 hover:to-teal-400 transition-all shadow-[0_4px_20px_rgba(16,185,129,0.35)] hover:shadow-[0_4px_28px_rgba(16,185,129,0.5)] disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {authLoading ? 'Please wait...' : authMode === 'login' ? 'Log In' : 'Create Account'}
+                </motion.button>
+              </form>
 
-                {authMode === 'signup' && selectedRole === 'volunteer' && (
-                  <>
-                    <div>
-                      <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-1.5">Full Name</label>
-                      <input
-                        type="text"
-                        required
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-all"
-                        placeholder="Your full name"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-1.5">Vehicle Type</label>
-                      <select
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-all appearance-none"
-                        value={formData.vehicleType}
-                        onChange={(e) => setFormData({ ...formData, vehicleType: e.target.value })}
-                      >
-                        <option value="">Select a vehicle</option>
-                        <option value="bike">Bicycle</option>
-                        <option value="scooter">Scooter / Motorbike</option>
-                        <option value="car">Car</option>
-                        <option value="van">Van</option>
-                      </select>
-                    </div>
-                  </>
-                )}
+              {/* Toggle login/signup */}
+              <div className="flex items-center justify-center gap-2 text-xs text-slate-500 pt-1">
+                <span>{authMode === 'login' ? 'New to EcoFeast?' : 'Already have an account?'}</span>
+                <button
+                  onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
+                  className="font-bold text-emerald-600 dark:text-emerald-400 hover:underline transition-colors"
+                >
+                  {authMode === 'login' ? 'Create Account' : 'Log In'}
+                </button>
               </div>
-
-              {authError && (
-                <div className="rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/40 px-4 py-3 text-sm font-medium text-rose-700 dark:text-rose-300">
-                  {authError}
-                </div>
-              )}
-
-              <button
-                disabled={authLoading}
-                className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 px-4 py-3.5 text-sm font-black text-white hover:from-emerald-500 hover:to-teal-400 transition-all shadow-[0_4px_20px_rgba(16,185,129,0.35)] hover:shadow-[0_4px_28px_rgba(16,185,129,0.5)] disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {authLoading ? 'Please wait...' : authMode === 'login' ? 'Log In' : 'Create Account'}
-              </button>
-            </form>
-
-            <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 px-4 py-4 text-sm text-slate-500 sm:flex-row">
-              <span>{authMode === 'login' ? 'New to EcoFeast?' : 'Already have an account?'}</span>
-              <button
-                onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
-                className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
-              >
-                {authMode === 'login' ? 'Create Account' : 'Log In'}
-              </button>
             </div>
           </div>
         </div>
@@ -696,6 +782,4 @@ export const Layout: React.FC<LayoutProps> = ({
     </div>
   );
 };
-
-
 

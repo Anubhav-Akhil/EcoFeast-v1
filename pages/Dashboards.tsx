@@ -4,7 +4,7 @@ import { api } from '../services/api';
 import { socket } from '../services/socket';
 import { predictExpiryAndTags } from '../services/aiService';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Package, Calendar, Camera, Leaf, Trash2, CheckSquare, Square, Truck, Upload, Search, PackagePlus, Layers3, TrendingUp, Sparkles, BadgeIndianRupee, ClipboardList, BadgeCheck, XCircle, Clock, RefreshCw } from 'lucide-react';
+import { Plus, Package, Calendar, Camera, Leaf, Trash2, CheckSquare, Square, Truck, Upload, Search, PackagePlus, Layers3, TrendingUp, Sparkles, BadgeIndianRupee, ClipboardList, BadgeCheck, XCircle, Clock, RefreshCw, ShoppingBag } from 'lucide-react';
 import { BarChart, Bar, XAxis, ResponsiveContainer } from 'recharts';
 import { SuccessPopup } from '../components/SuccessPopup';
 import { AlertPopup, PopupType } from '../components/AlertPopup';
@@ -1530,102 +1530,155 @@ const ConsumerDashboard: React.FC<{ user: User }> = ({ user }) => {
     };
   }, [user.id]);
 
+  const completedOrders = reservations.filter(r => r.status === 'completed').length;
+  const activeOrders = reservations.filter(r => r.status !== 'completed').length;
+  const co2Saved = Math.round((user.ecoPoints || 0) * 0.12);
+  const moneySaved = (user.ecoPoints || 0) * 5;
+
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold dark:text-white">Welcome back, {user.name}! {'\uD83D\uDC4B'}</h2>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">Here's a summary of your eco journey.</p>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-2 mb-8 border-b border-gray-200 dark:border-dark-800">
-        <button
-          onClick={() => setSearchParams({})}
-          className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${activeTab === 'overview'
-              ? 'border-eco-500 text-eco-600 dark:text-eco-400'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-        >
-          Overview
-        </button>
-        <button
-          onClick={() => setSearchParams({ tab: 'orders' })}
-          className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'orders'
-              ? 'border-eco-500 text-eco-600 dark:text-eco-400'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-        >
-          Your Orders
-          {reservations.length > 0 && (
-            <span className="bg-eco-500 text-white text-xs rounded-full px-2 py-0.5">{reservations.length}</span>
-          )}
-        </button>
-      </div>
-
-      {/* Overview Tab */}
-      {activeTab === 'overview' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Eco Points Card */}
-          <div className="bg-gradient-to-br from-eco-500 to-teal-600 rounded-2xl p-6 text-white">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <p className="text-eco-100 text-sm font-medium">Eco Points Earned</p>
-                <p className="text-5xl font-bold mt-1">{user.ecoPoints}</p>
-              </div>
-              <div className="p-3 bg-white/20 rounded-full">
-                <Leaf size={28} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4 border-t border-white/20 pt-4 text-sm">
-              <div>
-                <div className="font-bold text-xl">{Math.round((user.ecoPoints || 0) * 0.12)}kg</div>
-                <div className="text-eco-200">CO2 Saved</div>
-              </div>
-              <div>
-                <div className="font-bold text-xl">INR {(user.ecoPoints || 0) * 5}</div>
-                <div className="text-eco-200">Value Saved</div>
-              </div>
-            </div>
+    <div className="max-w-5xl mx-auto">
+      {/* Header */}
+      <div className="px-6 pt-8 pb-6 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.35em] text-emerald-600 dark:text-emerald-400 mb-2">Consumer</p>
+            <h2 className="text-3xl font-black text-slate-950 dark:text-white">
+              Welcome back, {user.name} 👋
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">Your eco journey at a glance — every purchase makes a difference.</p>
           </div>
-
-          {/* Profile Card */}
-          <div className="bg-white dark:bg-dark-900 rounded-2xl p-6 border border-gray-200 dark:border-dark-800 shadow-sm">
-            <h3 className="font-bold text-gray-900 dark:text-white mb-4">My Profile</h3>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 bg-eco-100 dark:bg-eco-900/50 rounded-full flex items-center justify-center text-eco-600 font-bold text-lg">
-                  {user.name?.[0]?.toUpperCase()}
-                </div>
-                <div>
-                  <p className="font-bold text-gray-900 dark:text-white">{user.name}</p>
-                  <p className="text-xs text-gray-500 capitalize">{user.role}</p>
-                </div>
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1 pt-2">
-                <div className="flex justify-between"><span>Total Orders</span><span className="font-bold text-gray-900 dark:text-white">{reservations.length}</span></div>
-                <div className="flex justify-between"><span>Active Orders</span><span className="font-bold text-orange-500">{reservations.filter(r => r.status !== 'completed').length}</span></div>
-                <div className="flex justify-between"><span>Delivered</span><span className="font-bold text-green-500">{reservations.filter(r => r.status === 'completed').length}</span></div>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Eco Score</p>
+              <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{user.ecoPoints}</p>
             </div>
-          </div>
-
-          {/* Quick Action */}
-          <div className="md:col-span-2 bg-eco-50 dark:bg-eco-900/20 rounded-2xl p-6 border border-eco-200 dark:border-eco-900/50 flex items-center justify-between">
-            <div>
-              <h3 className="font-bold text-eco-800 dark:text-eco-300">Ready to save more food?</h3>
-              <p className="text-sm text-eco-600 dark:text-eco-400 mt-1">Browse the marketplace to rescue surplus food near you!</p>
-            </div>
-            <a href="/#/marketplace" className="bg-eco-600 hover:bg-eco-700 text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition-colors whitespace-nowrap ml-4">
-              Browse Marketplace
-            </a>
           </div>
         </div>
-      )}
 
-      {/* Your Orders Tab */}
-      {activeTab === 'orders' && (
-        <OrdersAccordion reservations={reservations} viewer={user} loading={isLoading} />
-      )}
+        {/* Tabs */}
+        <div className="flex gap-1 mt-6">
+          {[
+            { key: 'overview', label: 'Overview' },
+            { key: 'orders', label: `Your Orders (${reservations.length})` },
+          ].map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setSearchParams(tab.key === 'overview' ? {} : { tab: tab.key })}
+              className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === tab.key
+                  ? 'bg-emerald-600 text-white shadow-[0_0_16px_rgba(16,185,129,0.25)]'
+                  : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="p-6">
+        {/* Overview Tab */}
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            {/* Stats Row */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { label: 'Eco Points', value: user.ecoPoints || 0, suffix: 'pts', icon: <Leaf size={18} />, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/30', border: 'border-emerald-200 dark:border-emerald-900/50' },
+                { label: 'CO₂ Saved', value: co2Saved, suffix: 'kg', icon: <Sparkles size={18} />, color: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-50 dark:bg-teal-950/30', border: 'border-teal-200 dark:border-teal-900/50' },
+                { label: 'Money Saved', value: `₹${moneySaved.toLocaleString()}`, suffix: '', icon: <TrendingUp size={18} />, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-950/30', border: 'border-violet-200 dark:border-violet-900/50' },
+                { label: 'Total Orders', value: reservations.length, suffix: '', icon: <ShoppingBag size={18} />, color: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-50 dark:bg-sky-950/30', border: 'border-sky-200 dark:border-sky-900/50' },
+              ].map((stat, i) => (
+                <div key={i} className={`rounded-2xl border ${stat.border} ${stat.bg} p-5 transition-all hover:-translate-y-0.5`}>
+                  <div className={`flex items-center gap-2 mb-3 ${stat.color}`}>
+                    {stat.icon}
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">{stat.label}</span>
+                  </div>
+                  <div className="text-2xl font-black text-slate-950 dark:text-white">
+                    {stat.value}{stat.suffix && <span className="text-sm font-bold text-slate-400 ml-1">{stat.suffix}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Eco Impact + Profile Row */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+              {/* Eco Impact Card */}
+              <div className="md:col-span-3 relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-600 p-6 text-white">
+                <div className="absolute inset-0 dot-grid opacity-10" />
+                <div className="absolute -right-12 -bottom-12 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="h-8 w-8 rounded-xl bg-white/20 flex items-center justify-center">
+                      <Leaf size={16} />
+                    </div>
+                    <p className="text-xs font-black uppercase tracking-[0.3em] text-white/70">Your Impact</p>
+                  </div>
+                  <h3 className="text-3xl font-black mb-1">{user.ecoPoints || 0} <span className="text-lg font-bold text-white/60">eco points</span></h3>
+                  <p className="text-sm text-white/60 mb-5">Every rescue earns points towards a greener planet.</p>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { label: 'CO₂ Avoided', value: `${co2Saved}kg` },
+                      { label: 'Money Saved', value: `₹${moneySaved.toLocaleString()}` },
+                      { label: 'Meals Rescued', value: reservations.length },
+                    ].map((m, i) => (
+                      <div key={i} className="rounded-2xl bg-white/10 backdrop-blur-sm p-3 text-center border border-white/10">
+                        <p className="text-lg font-black">{m.value}</p>
+                        <p className="text-[10px] font-bold text-white/50 uppercase tracking-wider mt-0.5">{m.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Profile Card */}
+              <div className="md:col-span-2 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4">Profile</p>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="h-12 w-12 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center text-white font-black text-lg shadow-lg shadow-emerald-500/20">
+                    {user.name?.[0]?.toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-black text-slate-950 dark:text-white">{user.name}</p>
+                    <p className="text-xs text-slate-400 capitalize">{user.role}</p>
+                  </div>
+                </div>
+                <div className="space-y-3 text-sm">
+                  {[
+                    { label: 'Total Orders', value: reservations.length, color: 'text-slate-950 dark:text-white' },
+                    { label: 'Active', value: activeOrders, color: 'text-amber-500' },
+                    { label: 'Delivered', value: completedOrders, color: 'text-emerald-500' },
+                  ].map((row, i) => (
+                    <div key={i} className="flex items-center justify-between py-1.5 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                      <span className="text-slate-500 dark:text-slate-400">{row.label}</span>
+                      <span className={`font-black ${row.color}`}>{row.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Action CTA */}
+            <div className="relative overflow-hidden rounded-3xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/20 p-6 flex items-center justify-between gap-4 flex-wrap">
+              <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-emerald-200/30 dark:bg-emerald-500/10 blur-xl" />
+              <div className="relative z-10">
+                <h3 className="font-black text-emerald-800 dark:text-emerald-300 text-lg">Ready to save more food?</h3>
+                <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-1">Browse the marketplace to rescue surplus food near you!</p>
+              </div>
+              <a
+                href="/#/marketplace"
+                className="relative z-10 inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-2xl font-black text-sm transition-all hover:-translate-y-0.5 shadow-lg shadow-emerald-600/25 whitespace-nowrap"
+              >
+                <ShoppingBag size={16} /> Browse Marketplace
+              </a>
+            </div>
+          </div>
+        )}
+
+        {/* Your Orders Tab */}
+        {activeTab === 'orders' && (
+          <OrdersAccordion reservations={reservations} viewer={user} loading={isLoading} />
+        )}
+      </div>
 
       <AlertPopup open={alertOpen} type={alertConfig.type} title={alertConfig.title} message={alertConfig.message} onClose={() => setAlertOpen(false)} />
     </div>

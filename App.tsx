@@ -30,6 +30,7 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [initialAuthRole, setInitialAuthRole] = useState<UserRole>('consumer');
+  const [initialAuthMode, setInitialAuthMode] = useState<'login' | 'signup'>('login');
 
   const [cart, setCart] = useState<CartEntry[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -128,8 +129,9 @@ const App: React.FC = () => {
 
   const toggleTheme = () => setIsDark(!isDark);
 
-  const handleOpenAuth = (role: UserRole = 'consumer') => {
+  const handleOpenAuth = (role: UserRole = 'consumer', mode: 'login' | 'signup' = 'login') => {
     setInitialAuthRole(role);
+    setInitialAuthMode(mode);
     setAuthModalOpen(true);
   };
 
@@ -144,6 +146,8 @@ const App: React.FC = () => {
       handleOpenAuth('consumer');
       return;
     }
+    // Only consumers can add to cart
+    if (user.role !== 'consumer') return;
 
     setCart((prev) => {
       const idx = prev.findIndex((c) => c.item.id === item.id);
@@ -212,13 +216,14 @@ const App: React.FC = () => {
         setAuthModalOpen={setAuthModalOpen}
         handleLogin={handleLogin}
         initialAuthRole={initialAuthRole}
+        initialAuthMode={initialAuthMode}
         cartCount={cart.reduce((sum, entry) => sum + entry.quantity, 0)}
         onOpenCart={() => setIsCartOpen(true)}
       >
         <Routes>
           <Route
             path="/"
-            element={user && user.role !== 'consumer' ? <Navigate to="/dashboard" replace /> : <Home />}
+            element={user && user.role !== 'consumer' ? <Navigate to="/dashboard" replace /> : <Home user={user} onOpenAuth={handleOpenAuth} />}
           />
 
           <Route
@@ -228,9 +233,9 @@ const App: React.FC = () => {
             }
           />
 
-          <Route path="/partners" element={<Partners onOpenAuth={handleOpenAuth} />} />
-          <Route path="/charities" element={<Charities onOpenAuth={handleOpenAuth} />} />
-          <Route path="/volunteers" element={<Volunteer onOpenAuth={handleOpenAuth} />} />
+          <Route path="/partners" element={user ? <Navigate to="/dashboard" replace /> : <Partners onOpenAuth={handleOpenAuth} />} />
+          <Route path="/charities" element={user ? <Navigate to="/dashboard" replace /> : <Charities onOpenAuth={handleOpenAuth} />} />
+          <Route path="/volunteers" element={user ? <Navigate to="/dashboard" replace /> : <Volunteer onOpenAuth={handleOpenAuth} />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/impact" element={<Impact />} />
@@ -241,7 +246,7 @@ const App: React.FC = () => {
         </Routes>
       </Layout>
 
-      {isCartOpen && (
+      {isCartOpen && user?.role === 'consumer' && (
         <div className="fixed inset-0 bg-black/50 z-50 flex justify-end">
           <div className="bg-white dark:bg-dark-900 w-full max-w-md h-full shadow-2xl p-6 overflow-y-auto border-l dark:border-dark-800">
             <div className="flex justify-between items-center mb-6">

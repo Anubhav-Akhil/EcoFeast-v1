@@ -46,6 +46,7 @@ interface ModalShellProps {
   onClose: () => void;
   children: React.ReactNode;
   maxWidthClassName?: string;
+  maxWidthStyle?: React.CSSProperties;
   panelClassName?: string;
   contentClassName?: string;
   showCloseButton?: boolean;
@@ -56,6 +57,7 @@ export const ModalShell: React.FC<ModalShellProps> = ({
   onClose,
   children,
   maxWidthClassName = 'max-w-md',
+  maxWidthStyle,
   panelClassName = '',
   contentClassName = 'p-6 sm:p-7',
   showCloseButton = true,
@@ -78,6 +80,7 @@ export const ModalShell: React.FC<ModalShellProps> = ({
             exit={{ opacity: 0, scale: 0.97, y: 14 }}
             transition={{ type: 'spring', damping: 24, stiffness: 280 }}
             className={`relative w-full ${maxWidthClassName} overflow-hidden ${surfaceCardClassName} ${panelClassName}`}
+            style={maxWidthStyle}
           >
             {showCloseButton && (
               <button

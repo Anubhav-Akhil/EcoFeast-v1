@@ -81,10 +81,12 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
               </h1>
               <p className="mt-3 text-slate-600 dark:text-slate-400 max-w-xl text-base leading-relaxed">
                 {user?.role === 'charity'
-                  ? 'Free donations appear first. Browse and claim what your community needs.'
+                  ? 'Browse all available surplus food. Claim donations from your Dashboard.'
                   : user?.role === 'retailer'
                     ? 'You\'re in view-only mode. Browse what others are offering.'
-                    : 'Top-rated partner stores appear first. Every item rescued keeps food out of landfills.'}
+                    : user?.role === 'volunteer'
+                      ? 'Browse available surplus food. Manage your deliveries from your Dashboard.'
+                      : 'Top-rated partner stores appear first. Every item rescued keeps food out of landfills.'}
               </p>
             </div>
             <button
@@ -95,11 +97,13 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
             </button>
           </div>
 
-          {/* Retailer banner */}
-          {user?.role === 'retailer' && (
+          {/* Non-consumer info banner */}
+          {user && user.role !== 'consumer' && (
             <div className="mt-6 flex items-center gap-3 rounded-2xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 px-5 py-3 text-amber-700 dark:text-amber-200 text-sm font-medium">
               <Info size={18} className="text-amber-500 dark:text-amber-400 shrink-0" />
-              View-only mode. Log in as a Customer to purchase, or as a Charity to claim donations.
+              {user.role === 'retailer' && 'View-only mode. Log in as a Customer to purchase, or as a Charity to claim donations.'}
+              {user.role === 'volunteer' && 'View-only mode. Your Delivery Hub is on the Dashboard. Switch to a Customer account to purchase.'}
+              {user.role === 'charity' && 'View-only mode. Head to your Dashboard to claim free donations directly.'}
             </div>
           )}
 
@@ -277,7 +281,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
                     <button onClick={() => item.quantity > 0 && setSelectedItem(item)} disabled={item.quantity === 0} className="text-xs font-black text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 underline underline-offset-2 transition-colors duration-200">
                       Details
                     </button>
-                    {user?.role === 'retailer' ? (
+                    {user && user.role !== 'consumer' ? (
                       <span className="text-xs font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl">View Only</span>
                     ) : (
                       <div className="flex items-center gap-2">
@@ -357,9 +361,9 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
                 </div>
               )}
 
-              {user?.role === 'retailer' ? (
+              {user && user.role !== 'consumer' ? (
                 <div className="rounded-2xl border border-slate-200 bg-slate-100 p-4 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800">
-                  You're browsing in retailer view-only mode.
+                  You're browsing in view-only mode.
                 </div>
               ) : (
                 <div className="flex flex-col sm:flex-row gap-3 items-center">

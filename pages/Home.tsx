@@ -1,7 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, useScroll, useTransform, useSpring, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Leaf, Zap, Heart, ShoppingBag, Building2, Users, Truck, Star, ChevronDown } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ArrowRight, Leaf, Zap, Heart, ShoppingBag, Building2, Users, Truck, Star, ChevronDown, LogIn, UserPlus, X } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { User, UserRole } from '../types';
+
+interface HomeProps {
+  user?: User | null;
+  onOpenAuth?: (role?: UserRole, mode?: 'login' | 'signup') => void;
+}
 
 // Floating accent icons (Lucide names rendered in the component)
 const floatingItems = [
@@ -36,7 +42,8 @@ const workflowSteps = [
   { n: '04', title: 'Impact compounds', icon: <Leaf size={24} />, desc: 'Every rescue creates measurable community and climate value.' },
 ];
 
-export const Home: React.FC = () => {
+export const Home: React.FC<HomeProps> = ({ user, onOpenAuth }) => {
+  const navigate = useNavigate();
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
   const yTitle = useTransform(scrollYProgress, [0, 1], [0, -60]);
@@ -46,6 +53,34 @@ export const Home: React.FC = () => {
 
   const [activeRole, setActiveRole] = useState(0);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [roleSwitchPrompt, setRoleSwitchPrompt] = useState<{ roleName: string; roleKey: UserRole; color: string } | null>(null);
+
+  // Map role index to UserRole key
+  const roleKeyMap: Record<number, UserRole> = { 0: 'consumer', 1: 'retailer', 2: 'charity', 3: 'volunteer' };
+
+  const handleRoleCta = (roleIdx: number) => {
+    const role = roles[roleIdx];
+    const targetRole = roleKeyMap[roleIdx];
+
+    // Not logged in — navigate normally
+    if (!user) {
+      navigate(role.link);
+      return;
+    }
+
+    // Same role as current user — navigate normally
+    if (user.role === targetRole) {
+      navigate(role.link);
+      return;
+    }
+
+    // Different role — show prompt then open auth
+    setRoleSwitchPrompt({
+      roleName: role.label.replace('For ', ''),
+      roleKey: targetRole,
+      color: role.color,
+    });
+  };
 
   useEffect(() => {
     const timer = setInterval(() => setActiveRole(p => (p + 1) % roles.length), 3200);
@@ -204,12 +239,12 @@ export const Home: React.FC = () => {
                   </p>
                 </motion.div>
               </AnimatePresence>
-              <Link
-                to={roles[activeRole].link}
+              <button
+                onClick={() => handleRoleCta(activeRole)}
                 className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-6 py-3 font-bold text-white transition hover:bg-slate-800 dark:bg-emerald-500 dark:text-slate-950 dark:hover:bg-emerald-400"
               >
                 {roles[activeRole].cta} <ArrowRight size={16} />
-              </Link>
+              </button>
             </div>
 
             {/* Right: role selector pills */}
@@ -238,6 +273,78 @@ export const Home: React.FC = () => {
               ))}
             </div>
           </div>
+
+          {/* Role-switch prompt banner */}
+          <AnimatePresence>
+            {roleSwitchPrompt && (
+              <motion.div
+                initial={{ opacity: 0, y: 40, scale: 0.92 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+                className="mt-10"
+              >
+                <div className={`relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-r ${roleSwitchPrompt.color} p-6 sm:p-8 text-white shadow-2xl`}>
+                  {/* Background shimmer */}
+                  <div className="absolute inset-0 dot-grid opacity-15" />
+                  <motion.div
+                    className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/10"
+                    animate={{ scale: [1, 1.2, 1], rotate: [0, 90, 0] }}
+                    transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                  />
+
+                  <button
+                    onClick={() => setRoleSwitchPrompt(null)}
+                    className="absolute top-4 right-4 p-1.5 rounded-xl bg-white/10 hover:bg-white/20 transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+
+                  <div className="relative z-10">
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1 }}
+                    >
+                      <p className="text-sm font-black uppercase tracking-[0.3em] text-white/70 mb-2">Switch Role</p>
+                      <h3 className="text-2xl sm:text-3xl font-black mb-3">
+                        Want to join as a {roleSwitchPrompt.roleName.replace(/s$/, '')}?
+                      </h3>
+                      <p className="text-white/80 text-sm sm:text-base mb-6 max-w-xl">
+                        You're currently logged in as a <span className="font-black capitalize">{user?.role}</span>. Create a new {roleSwitchPrompt.roleName.replace(/s$/, '').toLowerCase()} account or log in to an existing one.
+                      </p>
+                    </motion.div>
+
+                    <motion.div
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="flex flex-col sm:flex-row gap-3"
+                    >
+                      <button
+                        onClick={() => {
+                          setRoleSwitchPrompt(null);
+                          if (onOpenAuth) onOpenAuth(roleSwitchPrompt.roleKey, 'signup');
+                        }}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-3.5 font-bold text-slate-900 transition-all hover:bg-white/90 hover:-translate-y-0.5 shadow-lg"
+                      >
+                        <UserPlus size={18} /> Create {roleSwitchPrompt.roleName.replace(/s$/, '')} Account
+                      </button>
+                      <button
+                        onClick={() => {
+                          setRoleSwitchPrompt(null);
+                          if (onOpenAuth) onOpenAuth(roleSwitchPrompt.roleKey, 'login');
+                        }}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-white/30 px-6 py-3.5 font-bold text-white transition-all hover:bg-white/10 hover:-translate-y-0.5"
+                      >
+                        <LogIn size={18} /> Log In as {roleSwitchPrompt.roleName.replace(/s$/, '')}
+                      </button>
+                    </motion.div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </section>
 
