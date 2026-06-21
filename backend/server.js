@@ -3,9 +3,12 @@ import http from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Groq from "groq-sdk";
+import nodemailer from "nodemailer";
 import { connectDb } from "./db.js";
 import User from "./models/User.js";
 import Item from "./models/Item.js";
@@ -14,8 +17,12 @@ import Task from "./models/Task.js";
 import Charity from "./models/Charity.js";
 import ContactMessage from "./models/ContactMessage.js";
 import Counter from "./models/Counter.js";
+import OTP from "./models/OTP.js";
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.resolve(__dirname, ".env") });
 
 // Prevents the process from crashing on unhandled errors and provides better debugging
 process.on("unhandledRejection", (reason, promise) => {
@@ -67,8 +74,33 @@ const io = new Server(server, {
   },
 });
 
+// In-memory store for active volunteer locations
+const volunteerLocations = new Map();
+
 io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);
+
+  socket.on("volunteer-location-update", (data) => {
+    if (data && data.orderId) {
+      const locationData = {
+        orderId: data.orderId,
+        taskId: data.taskId,
+        lat: Number(data.lat),
+        lng: Number(data.lng),
+        name: data.name || "Volunteer",
+        updatedAt: Date.now(),
+      };
+      volunteerLocations.set(data.orderId, locationData);
+      io.emit("volunteer-location-updated", locationData);
+    }
+  });
+
+  socket.on("get-volunteer-location", ({ orderId }) => {
+    if (orderId && volunteerLocations.has(orderId)) {
+      socket.emit("volunteer-location-updated", volunteerLocations.get(orderId));
+    }
+  });
+
   socket.on("disconnect", () => {
     console.log("Client disconnected:", socket.id);
   });
@@ -80,9 +112,104 @@ const aiClient = process.env.GROQ_API_KEY
   ? new Groq({ apiKey: process.env.GROQ_API_KEY })
   : null;
 
+// ── Email (Nodemailer) setup ────────────────────────────────────────────────
+const smtpEmail = process.env.SMTP_EMAIL || "";
+const smtpPassword = process.env.SMTP_PASSWORD || "";
+console.log(`[SMTP] Email configured: ${smtpEmail ? smtpEmail : '(NOT SET)'}, Password: ${smtpPassword ? '****' + smtpPassword.slice(-4) : '(NOT SET)'}`);
+const mailTransport = smtpEmail && smtpPassword
+  ? nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: smtpEmail, pass: smtpPassword },
+    })
+  : null;
+
+if (mailTransport) {
+  mailTransport.verify((error, success) => {
+    if (error) {
+      console.error("[SMTP] Transport verification FAILED:", error.message);
+    } else {
+      console.log("[SMTP] Transport verified — ready to send emails ✓");
+    }
+  });
+}
+
+const TEST_EMAILS = new Set(["hello@gmail.com", "hello1@gmail.com", "hello2@gmail.com", "hello3@gmail.com"]);
+
+function isTestEmail(email) {
+  if (!email) return false;
+  return TEST_EMAILS.has(String(email).toLowerCase().trim());
+}
+
+function generateOtp() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+async function sendOtpEmail(email, otp) {
+  if (isTestEmail(email)) {
+    console.log(`[SMTP-TEST] Bypassing SMTP send for test email ${email} (OTP: ${otp})`);
+    return;
+  }
+  if (!mailTransport) {
+    console.log(`[OTP-DEV] OTP for ${email}: ${otp} (no SMTP configured, printed to console)`);
+    return;
+  }
+  console.log(`[SMTP] Sending OTP to ${email}...`);
+  try {
+    const info = await mailTransport.sendMail({
+      from: `"EcoFeast" <${smtpEmail}>`,
+      to: email,
+      subject: `Your EcoFeast Verification Code: ${otp}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f0fdf4;border-radius:16px">
+          <div style="text-align:center;margin-bottom:24px">
+            <h1 style="color:#059669;margin:0">EcoFeast</h1>
+            <p style="color:#64748b;font-size:14px;margin-top:4px">Email Verification</p>
+          </div>
+          <div style="background:white;border-radius:12px;padding:32px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06)">
+            <p style="color:#334155;font-size:15px;margin:0 0 20px">Use this code to verify your email:</p>
+            <div style="letter-spacing:12px;font-size:36px;font-weight:800;color:#059669;background:#f0fdf4;border-radius:12px;padding:16px;display:inline-block">${otp}</div>
+            <p style="color:#94a3b8;font-size:13px;margin-top:20px">This code expires in 10 minutes.</p>
+          </div>
+          <p style="color:#94a3b8;font-size:11px;text-align:center;margin-top:24px">&copy; ${new Date().getFullYear()} EcoFeast &mdash; Reducing food waste, one meal at a time.</p>
+        </div>
+      `,
+    });
+    console.log(`[SMTP] Email sent successfully to ${email} — messageId: ${info.messageId}`);
+  } catch (err) {
+    console.error(`[SMTP] FAILED to send email to ${email}:`, err.message);
+    throw err;
+  }
+}
+
 const nowIso = () => new Date().toISOString();
 const createId = (prefix) =>
   `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
+
+async function populateTaskLocations(tasks) {
+  if (!tasks || tasks.length === 0) return tasks;
+  return Promise.all(
+    tasks.map(async (task) => {
+      // 1. Populate store location
+      if (task.storeId) {
+        const storeUser = await User.findOne({ id: task.storeId }).select("location").lean();
+        if (storeUser && storeUser.location) {
+          task.storeLocation = storeUser.location;
+        }
+      }
+      // 2. Populate drop location (customer location)
+      if (task.orderId) {
+        const order = await Order.findOne({ id: task.orderId }).select("userId").lean();
+        if (order && order.userId) {
+          const customerUser = await User.findOne({ id: order.userId }).select("location").lean();
+          if (customerUser && customerUser.location) {
+            task.dropLocation = customerUser.location;
+          }
+        }
+      }
+      return task;
+    })
+  );
+}
 
 function computeAggregateOrderStatus(taskStatuses) {
   const statuses = Array.isArray(taskStatuses) ? taskStatuses : [];
@@ -128,12 +255,28 @@ async function recomputeAndPersistOrderStatus(orderId) {
       order.lastStatus = order.status;
     }
   }
-  
+  const wasCompleted = order.status === 'completed';
   order.status = nextStatus;
 
   // Generate delivery OTP if order becomes ready and doesn't have one
   if (nextStatus === 'ready' && !order.deliveryOtp) {
     order.deliveryOtp = Math.floor(1000 + Math.random() * 9000).toString();
+  }
+
+  // Award ecoPoints to consumer when order is completed
+  if (nextStatus === 'completed' && !wasCompleted) {
+    try {
+      const orderUser = await User.findOne({ id: order.userId });
+      if (orderUser) {
+        const itemsCount = order.items ? order.items.length : 1;
+        const pointsEarned = itemsCount * 10; // 10 ecoPoints per item rescued
+        orderUser.ecoPoints = (orderUser.ecoPoints || 0) + pointsEarned;
+        await orderUser.save();
+        console.log(`[Points] Awarded ${pointsEarned} ecoPoints to user ${order.userId} for completing order ${orderId}`);
+      }
+    } catch (err) {
+      console.error("[Points] Failed to award ecoPoints to user:", err.message);
+    }
   }
 
   await order.save();
@@ -200,6 +343,8 @@ function toPublicUser(user) {
     address: u.address || undefined,
     vehicleType: u.vehicleType || undefined,
     charityPointsGained: u.charityPointsGained || 0,
+    emailVerified: !!u.emailVerified,
+    location: u.location && u.location.lat != null ? u.location : undefined,
   };
 }
 
@@ -233,16 +378,39 @@ app.post("/api/auth/signup", async (req, res, next) => {
       email: normalizedEmail,
       passwordHash: bcrypt.hashSync(String(password), 10),
       role: String(role),
-      ecoPoints: role === "consumer" ? 120 : 0,
-      creditPoints: role === "retailer" ? 50 : 0,
+      ecoPoints: 0,
+      creditPoints: 0,
       organizationName: orgName || null,
       phone: phone || null,
       address: address || null,
       vehicleType: vehicleType || null,
     });
 
-    const token = signToken(user);
-    res.status(201).json({ user: toPublicUser(user), token });
+    // Generate and send OTP
+    const isTest = isTestEmail(normalizedEmail);
+    const otp = isTest ? "123456" : generateOtp();
+    await OTP.deleteMany({ email: normalizedEmail }); // Clear old OTPs
+    await OTP.create({
+      email: normalizedEmail,
+      otp,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min
+    });
+    let emailSent = true;
+    try {
+      await sendOtpEmail(normalizedEmail, otp);
+    } catch (mailErr) {
+      emailSent = false;
+    }
+
+    // Do NOT issue a JWT token here — user must verify OTP first
+    res.status(201).json({
+      requiresVerification: true,
+      email: normalizedEmail,
+      emailSent,
+      message: emailSent
+        ? "Account created. Please verify your email with the OTP sent."
+        : "Account created. OTP could not be sent — please use Resend OTP.",
+    });
   } catch (error) {
     next(error);
   }
@@ -254,9 +422,35 @@ app.post("/api/auth/login", async (req, res, next) => {
     assertRequired(email, "Email is required");
     assertRequired(password, "Password is required");
 
-    const user = await User.findOne({ email: String(email).toLowerCase().trim() });
+    const normalizedEmail = String(email).toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user || !bcrypt.compareSync(String(password), user.passwordHash)) {
       return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    if (!isTestEmail(normalizedEmail)) {
+      // Require OTP verification for normal users on every login (after logout)
+      user.emailVerified = false;
+      await user.save();
+
+      // Generate a new OTP and send email
+      const otp = generateOtp();
+      await OTP.deleteMany({ email: normalizedEmail }); // Clear old OTPs
+      await OTP.create({
+        email: normalizedEmail,
+        otp,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      });
+
+      try {
+        await sendOtpEmail(normalizedEmail, otp);
+      } catch (mailErr) {
+        console.error("Failed to send login OTP email:", mailErr.message);
+      }
+    } else {
+      // Ensure test emails are always pre-verified
+      user.emailVerified = true;
+      await user.save();
     }
 
     const token = signToken(user);
@@ -270,6 +464,122 @@ app.get("/api/auth/me", requireAuth, async (req, res) => {
   const user = await User.findOne({ id: req.auth.sub });
   if (!user) return res.status(404).json({ message: "User not found" });
   return res.json({ user: toPublicUser(user) });
+});
+
+// ── OTP Verification ────────────────────────────────────────────────────────
+app.post("/api/auth/verify-otp", async (req, res, next) => {
+  try {
+    const { email, otp } = req.body || {};
+    assertRequired(email, "Email is required");
+    assertRequired(otp, "OTP is required");
+
+    const normalizedEmail = String(email).toLowerCase().trim();
+    const record = await OTP.findOne({ email: normalizedEmail, verified: false })
+      .sort({ createdAt: -1 });
+
+    if (!record) {
+      return res.status(400).json({ message: "No pending OTP found. Please request a new one." });
+    }
+    if (new Date() > record.expiresAt) {
+      return res.status(400).json({ message: "OTP has expired. Please request a new one." });
+    }
+    if (record.attempts >= 5) {
+      return res.status(429).json({ message: "Too many attempts. Please request a new OTP." });
+    }
+
+    record.attempts += 1;
+    await record.save();
+
+    if (record.otp !== String(otp).trim()) {
+      return res.status(400).json({ message: `Invalid OTP. ${5 - record.attempts} attempts remaining.` });
+    }
+
+    record.verified = true;
+    await record.save();
+
+    // Mark user email as verified
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    user.emailVerified = true;
+    await user.save();
+
+    // Now issue the JWT token for the first time
+    const token = signToken(user);
+
+    return res.json({ message: "Email verified successfully", user: toPublicUser(user), token });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/auth/resend-otp", async (req, res, next) => {
+  try {
+    const { email } = req.body || {};
+    assertRequired(email, "Email is required");
+
+    const normalizedEmail = String(email).toLowerCase().trim();
+    const isTest = isTestEmail(normalizedEmail);
+
+    // Rate limit: max 10 OTPs per email per hour (skip for test emails)
+    if (!isTest) {
+      const recentCount = await OTP.countDocuments({
+        email: normalizedEmail,
+        createdAt: { $gte: new Date(Date.now() - 60 * 60 * 1000) },
+      });
+      if (recentCount >= 10) {
+        return res.status(429).json({ message: "Too many OTP requests. Please try again in an hour." });
+      }
+    }
+
+    // Clean up old unverified OTPs for this email
+    await OTP.deleteMany({ email: normalizedEmail, verified: false });
+
+    const otp = isTest ? "123456" : generateOtp();
+    await OTP.create({
+      email: normalizedEmail,
+      otp,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+    });
+
+    try {
+      await sendOtpEmail(normalizedEmail, otp);
+    } catch (mailErr) {
+      console.error("Failed to send OTP email:", mailErr.message);
+    }
+
+    return res.json({ message: "OTP sent successfully" });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ── Save Address + Location ─────────────────────────────────────────────────
+app.post("/api/auth/save-address", requireAuth, async (req, res, next) => {
+  try {
+    const { address, lat, lng } = req.body || {};
+    assertRequired(address, "Address is required");
+
+    const user = await User.findOne({ id: req.auth.sub });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (user.role !== 'admin' && (lat == null || lng == null)) {
+      return res.status(400).json({ message: "Coordinates (lat and lng) are required." });
+    }
+
+    user.address = String(address).trim();
+    user.location = {
+      lat: lat != null ? Number(lat) : null,
+      lng: lng != null ? Number(lng) : null,
+      address: String(address).trim(),
+    };
+    await user.save();
+
+    return res.json({ user: toPublicUser(user) });
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.patch("/api/auth/profile", requireAuth, async (req, res, next) => {
@@ -296,7 +606,13 @@ app.patch("/api/auth/profile", requireAuth, async (req, res, next) => {
       user.phone = cleaned || null;
     }
     if (name !== undefined) user.name = String(name).trim();
-    if (address !== undefined) user.address = String(address).trim() || null;
+    if (address !== undefined) {
+      const trimmed = String(address).trim();
+      if (user.role !== 'admin' && !trimmed) {
+        return res.status(400).json({ message: "Address is required." });
+      }
+      user.address = trimmed || null;
+    }
     if (organizationName !== undefined) user.organizationName = String(organizationName).trim() || null;
     if (vehicleType !== undefined) user.vehicleType = String(vehicleType).trim() || null;
 
@@ -989,7 +1305,8 @@ app.get("/api/tasks", requireAuth, async (req, res, next) => {
       return res.status(403).json({ message: "Only volunteers can access tasks" });
     }
     const tasks = await Task.find().sort({ createdAt: -1 }).limit(100).lean();
-    res.json(tasks);
+    const populated = await populateTaskLocations(tasks);
+    res.json(populated);
   } catch (error) {
     next(error);
   }
@@ -1008,7 +1325,8 @@ app.get(
       const tasks = await Task.find({ orderId: { $in: orderIds } })
         .sort({ createdAt: -1 })
         .lean();
-      res.json(tasks);
+      const populated = await populateTaskLocations(tasks);
+      res.json(populated);
     } catch (error) {
       next(error);
     }
@@ -1025,7 +1343,8 @@ app.get("/api/orders/:id/tasks", requireAuth, async (req, res, next) => {
     }
 
     const tasks = await Task.find({ orderId: order.id }).sort({ createdAt: -1 }).lean();
-    res.json(tasks);
+    const populated = await populateTaskLocations(tasks);
+    res.json(populated);
   } catch (error) {
     next(error);
   }

@@ -57,7 +57,13 @@ const principles = [
   { icon: <Users size={22} />, title: 'Radical inclusivity', body: 'Every role — retailer, consumer, charity, volunteer — deserves first-class experience.' },
 ];
 
-function TimelineCard({ item, index }: { item: (typeof timelineItems)[0]; index: number }) {
+interface TimelineCardProps {
+  item: (typeof timelineItems)[0];
+  index: number;
+  key?: React.Key;
+}
+
+function TimelineCard({ item, index }: TimelineCardProps) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: '-80px' });
   return (
@@ -78,7 +84,13 @@ function TimelineCard({ item, index }: { item: (typeof timelineItems)[0]; index:
   );
 }
 
-function PrincipleCard({ p, i }: { p: (typeof principles)[0]; i: number }) {
+interface PrincipleCardProps {
+  p: (typeof principles)[0];
+  i: number;
+  key?: React.Key;
+}
+
+function PrincipleCard({ p, i }: PrincipleCardProps) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: '-60px' });
   return (

@@ -14,6 +14,12 @@ const UserSchema = new mongoose.Schema(
     phone: { type: String, default: null },
     address: { type: String, default: null },
     vehicleType: { type: String, default: null },
+    emailVerified: { type: Boolean, default: false },
+    location: {
+      lat: { type: Number, default: null },
+      lng: { type: Number, default: null },
+      address: { type: String, default: null },
+    },
   },
   { timestamps: true }
 );

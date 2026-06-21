@@ -51,7 +51,7 @@ export const api = {
     role: UserRole,
     details: any,
     mode: "login" | "signup" = "login"
-  ): Promise<User> => {
+  ): Promise<User & { _requiresVerification?: boolean }> => {
     const endpoint = mode === "signup" ? "/auth/signup" : "/auth/login";
     const body =
       mode === "signup"
@@ -70,13 +70,32 @@ export const api = {
             password: details?.password,
           };
 
-    const result = await request<{ user: User; token: string }>(
-      endpoint,
-      { method: "POST", body: JSON.stringify(body) },
-      false
-    );
-    persistSession(result.user, result.token);
-    return result.user;
+    if (mode === "signup") {
+      // Signup no longer returns user/token — only requiresVerification
+      const result = await request<{ requiresVerification: boolean; email: string; emailSent: boolean; message: string }>(
+        endpoint,
+        { method: "POST", body: JSON.stringify(body) },
+        false
+      );
+      // Return a minimal "pending" user object — NOT persisted to localStorage
+      return {
+        id: "",
+        email: result.email || email,
+        name: details?.name || email.split("@")[0],
+        role,
+        emailVerified: false,
+        _requiresVerification: true,
+      } as User & { _requiresVerification: boolean };
+    } else {
+      // Login returns user + token as before
+      const result = await request<{ user: User; token: string }>(
+        endpoint,
+        { method: "POST", body: JSON.stringify(body) },
+        false
+      );
+      persistSession(result.user, result.token);
+      return result.user;
+    }
   },
 
   logout: () => {
@@ -217,5 +236,36 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ oldPassword, newPassword }),
     });
+  },
+
+  verifyOtp: async (email: string, otp: string): Promise<{ message: string; user: User }> => {
+    const result = await request<{ message: string; user: User; token?: string }>(
+      "/auth/verify-otp",
+      { method: "POST", body: JSON.stringify({ email, otp }) },
+      false
+    );
+    if (result.user && result.token) {
+      persistSession(result.user, result.token);
+    } else if (result.user) {
+      localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(result.user));
+    }
+    return result;
+  },
+
+  resendOtp: async (email: string): Promise<{ message: string }> => {
+    return request<{ message: string }>(
+      "/auth/resend-otp",
+      { method: "POST", body: JSON.stringify({ email }) },
+      false
+    );
+  },
+
+  saveAddress: async (address: string, lat: number | null, lng: number | null): Promise<User> => {
+    const result = await request<{ user: User }>("/auth/save-address", {
+      method: "POST",
+      body: JSON.stringify({ address, lat, lng }),
+    });
+    localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(result.user));
+    return result.user;
   },
 };

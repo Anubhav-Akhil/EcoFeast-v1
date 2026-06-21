@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { User } from '../types';
 import { api } from '../services/api';
-import { User as UserIcon, Mail, Phone, MapPin, Building2, Shield, Star, Leaf, Truck, Award, ArrowLeft, Pencil, Check, X, KeyRound, Eye, EyeOff } from 'lucide-react';
+import { User as UserIcon, Mail, Phone, MapPin, Building2, Shield, Star, Leaf, Truck, Award, ArrowLeft, Pencil, Check, X, KeyRound, Eye, EyeOff, BadgeCheck, MapPinned } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { AddressMapModal } from '../components/AddressMapModal';
 import {
   fieldLabelClassName,
   inputClassName,
@@ -60,6 +61,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUserUpdate }) => {
   const [pwSuccess, setPwSuccess] = useState<string | null>(null);
   const [showOld, setShowOld] = useState(false);
   const [showNew, setShowNew] = useState(false);
+  const [showAddressMap, setShowAddressMap] = useState(false);
 
   // Validation helpers
   const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -72,6 +74,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUserUpdate }) => {
     else if (!validateEmail(form.email)) errors.email = 'Enter a valid email (must contain @)';
     if (form.phone && !validatePhone(form.phone)) errors.phone = 'Mobile number must be exactly 10 digits';
     if ((user.role === 'retailer' || user.role === 'charity') && !form.organizationName.trim()) errors.organizationName = 'Organization name is required';
+    if (user.role !== 'admin' && !form.address.trim()) errors.address = 'Address is required';
     return errors;
   };
 
@@ -213,6 +216,16 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUserUpdate }) => {
               <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${role.bg} ${role.color}`}>
                 {role.icon} {role.label}
               </span>
+              {user.emailVerified && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
+                  <BadgeCheck size={12} /> Verified
+                </span>
+              )}
+              {!user.emailVerified && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                  ⚠ Not Verified
+                </span>
+              )}
             </div>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">Member since {joinedDate} • ID: {user.id}</p>
           </div>
@@ -304,6 +317,22 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUserUpdate }) => {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Map Address Button */}
+          <div className="mt-4 pt-4 border-t border-gray-50 dark:border-dark-800">
+            <button
+              onClick={() => setShowAddressMap(true)}
+              className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors"
+            >
+              <MapPinned size={16} />
+              {user.location ? 'Update Location on Map' : 'Pin Location on Map'}
+            </button>
+            {user.location && (
+              <p className="text-xs text-slate-400 mt-1">
+                📍 {user.location.lat.toFixed(4)}, {user.location.lng.toFixed(4)}
+              </p>
+            )}
           </div>
         </div>
 
@@ -412,6 +441,19 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUserUpdate }) => {
           )}
         </div>
       </ModalShell>
+
+      {/* Address Map Modal */}
+      <AddressMapModal
+        open={showAddressMap}
+        onAddressSaved={(updatedUser) => {
+          onUserUpdate(updatedUser);
+          setShowAddressMap(false);
+          setForm(f => ({ ...f, address: updatedUser.address || '' }));
+        }}
+        onClose={() => setShowAddressMap(false)}
+        mandatory={false}
+        initialLocation={user.location || null}
+      />
     </div>
   );
 };

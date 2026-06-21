@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, MapPin, Navigation, Mail, Phone, ArrowRight, HandHeart, Truck, Users, CheckCircle } from 'lucide-react';
 import { api } from '../services/api';
-import { Charity } from '../types';
+import { Charity, UserRole } from '../types';
 import { ModalHeader, ModalShell, primaryButtonClassName } from '../components/ui';
 
 const howItWorks = [

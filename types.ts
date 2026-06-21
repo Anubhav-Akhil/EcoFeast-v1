@@ -16,6 +16,7 @@ export interface User {
   phone?: string;
   vehicleType?: string; // For volunteer
   charityPointsGained?: number; // For retailers
+  emailVerified?: boolean;
 }
 
 export interface Item {

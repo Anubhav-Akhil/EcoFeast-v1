@@ -4,7 +4,7 @@ import { api } from '../services/api';
 import { socket } from '../services/socket';
 import { predictExpiryAndTags } from '../services/aiService';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Package, Calendar, Camera, Leaf, Trash2, CheckSquare, Square, Truck, Upload, Search, PackagePlus, Layers3, TrendingUp, Sparkles, BadgeIndianRupee, ClipboardList, BadgeCheck, XCircle, Clock, RefreshCw, ShoppingBag } from 'lucide-react';
+import { Plus, Package, Calendar, Camera, Leaf, Trash2, CheckSquare, Square, Truck, Upload, Search, PackagePlus, Layers3, TrendingUp, Sparkles, BadgeIndianRupee, ClipboardList, BadgeCheck, XCircle, Clock, RefreshCw, ShoppingBag, MapPin } from 'lucide-react';
 import { BarChart, Bar, XAxis, ResponsiveContainer } from 'recharts';
 import { SuccessPopup } from '../components/SuccessPopup';
 import { AlertPopup, PopupType } from '../components/AlertPopup';
@@ -21,6 +21,50 @@ import {
   selectClassName,
   textareaClassName,
 } from '../components/ui';
+import { DeliveryTrackingMap } from '../components/DeliveryTrackingMap';
+
+// Haversine formula to calculate distance in km between two lat/lng coordinates
+export function getHaversineDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const R = 6371; // Radius of earth in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // Distance in km
+}
+
+export function formatDistanceAndTime(
+  loc1: { lat: number; lng: number } | null | undefined,
+  loc2: { lat: number; lng: number } | null | undefined
+) {
+  if (!loc1 || !loc2 || loc1.lat === null || loc1.lng === null || loc2.lat === null || loc2.lng === null) {
+    return { distanceStr: 'N/A', timeStr: 'N/A' };
+  }
+  
+  const distance = getHaversineDistance(loc1.lat, loc1.lng, loc2.lat, loc2.lng);
+  
+  // Format distance
+  const distanceStr = distance < 1 
+    ? `${Math.round(distance * 1000)} m` 
+    : `${distance.toFixed(1)} km`;
+    
+  // Estimate time: assume average speed is 20 km/h (3 minutes per km) 
+  // Add a base buffer of 3 minutes for handovers / traffic
+  const minutes = Math.max(2, Math.round(distance * 3 + 3));
+  const timeStr = `${minutes} min`;
+  
+  return { distanceStr, timeStr };
+}
 
 interface DashboardProps {
   user: User;
@@ -1171,6 +1215,31 @@ const OrdersAccordion: React.FC<{ reservations: Reservation[]; viewer?: User; lo
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [tasksByOrderId, setTasksByOrderId] = useState<Record<string, Task[]>>({});
   const [tasksLoadingByOrderId, setTasksLoadingByOrderId] = useState<Record<string, boolean>>({});
+  const [liveVolunteerLocations, setLiveVolunteerLocations] = useState<Record<string, { lat: number; lng: number; name?: string }>>({});
+
+  useEffect(() => {
+    const handleLocationUpdated = (data: { orderId: string; lat: number; lng: number; name?: string }) => {
+      if (data && data.orderId) {
+        setLiveVolunteerLocations((prev) => ({
+          ...prev,
+          [data.orderId]: { lat: data.lat, lng: data.lng, name: data.name },
+        }));
+      }
+    };
+
+    socket.on('volunteer-location-updated', handleLocationUpdated);
+
+    // Initial check for any accepted/picked_up orders
+    reservations.forEach(res => {
+      if (res.status === 'accepted' || res.status === 'picked_up') {
+        socket.emit('get-volunteer-location', { orderId: res.id });
+      }
+    });
+
+    return () => {
+      socket.off('volunteer-location-updated', handleLocationUpdated);
+    };
+  }, [reservations]);
 
   useEffect(() => {
     if (orderIdFromUrl && reservations.some(r => r.id === orderIdFromUrl)) {
@@ -1303,7 +1372,7 @@ const OrdersAccordion: React.FC<{ reservations: Reservation[]; viewer?: User; lo
         const dateStr = orderDate ? orderDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
         const timeStr = orderDate ? orderDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
 
-        const steps = [
+        const steps: { label: string; desc: string; done: boolean; isError?: boolean }[] = [
           { label: 'Order Placed', desc: 'Your request is in the system.', done: statusStep >= 1 },
           { label: 'Store Received', desc: 'Retailer is preparing items.', done: statusStep >= 3 },
           { label: 'Packed & Ready', desc: 'Items are bagged for pickup.', done: statusStep >= 4 },
@@ -1336,7 +1405,12 @@ const OrdersAccordion: React.FC<{ reservations: Reservation[]; viewer?: User; lo
               onClick={() => {
                 const next = isExpanded ? null : res.id;
                 setExpandedId(next);
-                if (next) ensureOrderTasksLoaded(next);
+                if (next) {
+                  ensureOrderTasksLoaded(next);
+                  if (res.status === 'accepted' || res.status === 'picked_up') {
+                    socket.emit('get-volunteer-location', { orderId: res.id });
+                  }
+                }
               }}
               className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 dark:hover:bg-dark-800/50 transition-colors"
             >
@@ -1463,6 +1537,124 @@ const OrdersAccordion: React.FC<{ reservations: Reservation[]; viewer?: User; lo
                     ))}
                   </div>
                 </div>
+
+                {/* Delivery Tracking Map */}
+                {viewer?.location && (
+                  <div className="px-5 pb-5">
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3 flex items-center gap-1.5">
+                      <MapPin size={12} /> Live Tracking Map
+                    </p>
+
+                    {/* Dynamic Real-Time Travel Distance & Arrival Estimation */}
+                    {(() => {
+                      const tasks = tasksByOrderId[res.id] || [];
+                      const activeTask = tasks.find(t => ['accepted', 'picked_up'].includes(t.status));
+                      const storeLoc = (tasks[0] as any)?.storeLocation;
+                      const customerLoc = viewer?.location;
+
+                      if (activeTask) {
+                        const volLoc = liveVolunteerLocations[res.id] || null;
+                        
+                        let targetLoc1 = volLoc;
+                        let targetLoc2 = null;
+                        let label = "";
+                        
+                        if (res.status === 'accepted' && storeLoc) {
+                          targetLoc2 = storeLoc;
+                          label = "Volunteer to Store";
+                        } else if (res.status === 'picked_up' && customerLoc) {
+                          targetLoc2 = customerLoc;
+                          label = "Volunteer to You";
+                        }
+                        
+                        if (targetLoc1 && targetLoc2) {
+                          const { distanceStr, timeStr } = formatDistanceAndTime(targetLoc1, targetLoc2);
+                          return (
+                            <div className="grid grid-cols-2 gap-3 mb-4 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl">
+                              <div className="text-center border-r border-slate-200 dark:border-slate-850">
+                                <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Est. Distance ({label})</p>
+                                <p className="font-black text-slate-950 dark:text-white text-base mt-0.5">{distanceStr}</p>
+                              </div>
+                              <div className="text-center">
+                                <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Est. Arrival Time</p>
+                                <p className="font-black text-emerald-600 dark:text-emerald-400 text-base mt-0.5">{timeStr}</p>
+                              </div>
+                            </div>
+                          );
+                        }
+                      } else if (res.status === 'ready' && storeLoc && customerLoc) {
+                        const { distanceStr, timeStr } = formatDistanceAndTime(storeLoc, customerLoc);
+                        return (
+                          <div className="grid grid-cols-2 gap-3 mb-4 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl">
+                            <div className="text-center border-r border-slate-200 dark:border-slate-850">
+                              <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Est. Delivery Distance</p>
+                              <p className="font-black text-slate-950 dark:text-white text-base mt-0.5">{distanceStr}</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Est. Travel Time</p>
+                              <p className="font-black text-slate-700 dark:text-slate-300 text-base mt-0.5">{timeStr}</p>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+
+                    <DeliveryTrackingMap
+                      storeLocation={(() => {
+                        const tasks = tasksByOrderId[res.id] || [];
+                        const firstTask = tasks[0];
+                        if (firstTask) {
+                          // Use real database store coordinates if populated
+                          if ((firstTask as any).storeLocation) {
+                            return {
+                              lat: (firstTask as any).storeLocation.lat,
+                              lng: (firstTask as any).storeLocation.lng,
+                              name: firstTask.storeName,
+                            };
+                          }
+                          // Fallback to offset
+                          return {
+                            lat: (viewer.location?.lat || 0) + 0.008,
+                            lng: (viewer.location?.lng || 0) + 0.005,
+                            name: firstTask.storeName,
+                          };
+                        }
+                        return null;
+                      })()}
+                      customerLocation={viewer.location ? {
+                        lat: viewer.location.lat,
+                        lng: viewer.location.lng,
+                        name: viewer.name,
+                      } : null}
+                      volunteerLocation={(() => {
+                        const tasks = tasksByOrderId[res.id] || [];
+                        const activeTask = tasks.find(t => ['accepted', 'picked_up'].includes(t.status));
+                        if (activeTask) {
+                          // Check if we have live tracking coordinates from socket
+                          if (liveVolunteerLocations[res.id]) {
+                            return {
+                              lat: liveVolunteerLocations[res.id].lat,
+                              lng: liveVolunteerLocations[res.id].lng,
+                              name: liveVolunteerLocations[res.id].name || activeTask.volunteerName || 'Volunteer',
+                            };
+                          }
+                          // Fallback to offset
+                          if (viewer && viewer.location) {
+                            return {
+                              lat: viewer.location.lat + 0.003,
+                              lng: viewer.location.lng + 0.002,
+                              name: activeTask.volunteerName || 'Volunteer',
+                            };
+                          }
+                        }
+                        return null;
+                      })()}
+                      status={res.status}
+                      height={280}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1876,6 +2068,7 @@ const VolunteerDashboard: React.FC<{ user: User }> = ({ user }) => {
   const [deliveryConfirmTarget, setDeliveryConfirmTarget] = useState<{ taskId: string; code: string } | null>(null);
   const [deliveryConfirmLoading, setDeliveryConfirmLoading] = useState(false);
   const deliveryOtpInputRef = useRef<HTMLInputElement | null>(null);
+  const [currentLoc, setCurrentLoc] = useState<{ lat: number; lng: number } | null>(null);
 
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertConfig, setAlertConfig] = useState<{ type: PopupType; title: string; message: string }>({ type: 'info', title: '', message: '' });
@@ -1898,6 +2091,49 @@ const VolunteerDashboard: React.FC<{ user: User }> = ({ user }) => {
   useEffect(() => {
     loadTasks();
   }, []);
+
+  // Live location tracking for active deliveries
+  useEffect(() => {
+    const activeTasks = tasks.filter(t => ['accepted', 'picked_up'].includes(t.status));
+    if (activeTasks.length === 0) return;
+
+    if (!navigator.geolocation) {
+      console.warn('Geolocation is not supported by this browser.');
+      return;
+    }
+
+    console.log('Starting live location tracking for tasks:', activeTasks.map(t => t.id));
+
+    // Watch position
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setCurrentLoc({ lat: latitude, lng: longitude });
+        activeTasks.forEach((task) => {
+          socket.emit('volunteer-location-update', {
+            orderId: task.orderId,
+            taskId: task.id,
+            lat: latitude,
+            lng: longitude,
+            name: user.name || 'Volunteer',
+          });
+        });
+      },
+      (err) => {
+        console.warn('Live tracking geolocation error:', err);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+
+    return () => {
+      console.log('Stopping live location tracking.');
+      navigator.geolocation.clearWatch(watchId);
+    };
+  }, [tasks, user.name]);
   const loadTasks = async () => {
     try {
       const t = await api.getTasks();
@@ -2055,20 +2291,27 @@ const VolunteerDashboard: React.FC<{ user: User }> = ({ user }) => {
                   )}
 
                   {/* Meta Info */}
-                  <div className="grid grid-cols-3 gap-2 mb-5">
-                    <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-2.5 text-center">
-                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Distance</p>
-                      <p className="font-bold text-slate-900 dark:text-white text-sm">2.4 km</p>
-                    </div>
-                    <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-2.5 text-center">
-                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Est. Time</p>
-                      <p className="font-bold text-slate-900 dark:text-white text-sm">18 min</p>
-                    </div>
-                    <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-2.5 text-center">
-                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Weight</p>
-                      <p className="font-bold text-slate-900 dark:text-white text-sm">{task.weight || 'N/A'}</p>
-                    </div>
-                  </div>
+                  {(() => {
+                    const storeLoc = (task as any).storeLocation;
+                    const dropLoc = (task as any).dropLocation;
+                    const { distanceStr, timeStr } = formatDistanceAndTime(storeLoc, dropLoc);
+                    return (
+                      <div className="grid grid-cols-3 gap-2 mb-5">
+                        <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-2.5 text-center">
+                          <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Est. Distance</p>
+                          <p className="font-bold text-slate-900 dark:text-white text-sm">{distanceStr}</p>
+                        </div>
+                        <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-2.5 text-center">
+                          <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Est. Time</p>
+                          <p className="font-bold text-slate-900 dark:text-white text-sm">{timeStr}</p>
+                        </div>
+                        <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-2.5 text-center">
+                          <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Weight</p>
+                          <p className="font-bold text-slate-900 dark:text-white text-sm">{task.weight || 'N/A'}</p>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   <button onClick={() => handleAccept(task.id)} className="w-full rounded-2xl bg-violet-600 py-3 text-sm font-black text-white hover:bg-violet-500 transition-all shadow-lg hover:shadow-violet-600/25 flex items-center justify-center gap-2">
                     Accept Pickup <CheckSquare size={16} />
@@ -2162,20 +2405,40 @@ const VolunteerDashboard: React.FC<{ user: User }> = ({ user }) => {
                   )}
 
                   {/* Meta row */}
-                  <div className="grid grid-cols-3 gap-2 mb-5">
-                    <div className="rounded-xl bg-white/80 dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-2.5 text-center">
-                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Distance</p>
-                      <p className="font-bold text-slate-900 dark:text-white text-sm">2.4 km</p>
-                    </div>
-                    <div className="rounded-xl bg-white/80 dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-2.5 text-center">
-                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Est. Time</p>
-                      <p className="font-bold text-slate-900 dark:text-white text-sm">18 min</p>
-                    </div>
-                    <div className="rounded-xl bg-white/80 dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-2.5 text-center">
-                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Weight</p>
-                      <p className="font-bold text-slate-900 dark:text-white text-sm">{task.weight || 'N/A'}</p>
-                    </div>
-                  </div>
+                  {(() => {
+                    const storeLoc = (task as any).storeLocation;
+                    const dropLoc = (task as any).dropLocation;
+                    
+                    let loc1 = currentLoc;
+                    let loc2 = task.status === 'picked_up' ? dropLoc : storeLoc;
+                    let label = task.status === 'picked_up' ? 'To Drop' : 'To Pick';
+                    
+                    // Fallback if currentLoc not available yet
+                    if (!loc1) {
+                      loc1 = storeLoc;
+                      loc2 = dropLoc;
+                      label = "Store to Drop";
+                    }
+                    
+                    const { distanceStr, timeStr } = formatDistanceAndTime(loc1, loc2);
+                    
+                    return (
+                      <div className="grid grid-cols-3 gap-2 mb-5">
+                        <div className="rounded-xl bg-white/80 dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-2.5 text-center">
+                          <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Distance ({label})</p>
+                          <p className="font-bold text-slate-900 dark:text-white text-sm">{distanceStr}</p>
+                        </div>
+                        <div className="rounded-xl bg-white/80 dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-2.5 text-center">
+                          <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Est. Time</p>
+                          <p className="font-bold text-slate-900 dark:text-white text-sm">{timeStr}</p>
+                        </div>
+                        <div className="rounded-xl bg-white/80 dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-2.5 text-center">
+                          <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Weight</p>
+                          <p className="font-bold text-slate-900 dark:text-white text-sm">{task.weight || 'N/A'}</p>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Action Button */}
                   {task.status === 'accepted' ? (

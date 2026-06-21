@@ -50,6 +50,7 @@ interface ModalShellProps {
   panelClassName?: string;
   contentClassName?: string;
   showCloseButton?: boolean;
+  closeOnBackdropClick?: boolean;
 }
 
 export const ModalShell: React.FC<ModalShellProps> = ({
@@ -61,6 +62,7 @@ export const ModalShell: React.FC<ModalShellProps> = ({
   panelClassName = '',
   contentClassName = 'p-6 sm:p-7',
   showCloseButton = true,
+  closeOnBackdropClick = true,
 }) => {
   return (
     <AnimatePresence>
@@ -72,7 +74,7 @@ export const ModalShell: React.FC<ModalShellProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
             className="absolute inset-0 bg-slate-950/60 backdrop-blur-md"
-            onClick={onClose}
+            onClick={closeOnBackdropClick ? onClose : undefined}
           />
           <motion.section
             initial={{ opacity: 0, scale: 0.96, y: 18 }}
