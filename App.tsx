@@ -324,7 +324,7 @@ const App: React.FC = () => {
                 <div className="space-y-4 mb-8">
                   {cart.map((entry) => (
                     <div key={entry.item.id} className="flex gap-4 p-4 bg-gray-50 dark:bg-dark-800 rounded-lg">
-                      <img src={entry.item.image} className="w-16 h-16 object-cover rounded" />
+                      <img src={entry.item.image} className="w-16 h-16 object-cover rounded" onError={(e) => { (e.target as HTMLImageElement).src = '/custom-placeholder.png'; }} />
                       <div className="flex-1">
                         <div className="font-bold dark:text-white">{entry.item.title}</div>
                         <div className="text-eco-600 font-bold">

@@ -583,7 +583,7 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
                   {filteredItems.map((item) => (
                     <div key={item.id} className="p-4 border dark:border-dark-700 rounded-xl bg-white dark:bg-dark-900">
                       <div className="flex gap-4">
-                        <img src={item.image} className="w-20 h-20 rounded-lg object-cover" />
+                        <img src={item.image} className="w-20 h-20 rounded-lg object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/custom-placeholder.png'; }} />
                         <div className="flex-1">
                           <div className="font-bold dark:text-white">{item.title}</div>
                           <div className="text-sm text-gray-500">{item.quantity} left • Pickup till {item.pickupEnd}</div>
@@ -804,7 +804,7 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
                             {row.storeItems.slice(0, 6).map((item, idx) => (
                               <div key={`${row.order.id}_${item.id}_${idx}`} className="flex items-center gap-3 bg-white dark:bg-dark-900 rounded-xl p-3 border border-gray-200 dark:border-dark-800">
                                 {item.image ? (
-                                  <img src={item.image} alt={item.title} className="h-10 w-10 rounded-lg object-cover flex-shrink-0" />
+                                  <img src={item.image} alt={item.title} className="h-10 w-10 rounded-lg object-cover flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).src = '/custom-placeholder.png'; }} />
                                 ) : (
                                   <div className="h-10 w-10 rounded-lg flex-shrink-0 bg-gray-100 dark:bg-dark-800 flex items-center justify-center border border-gray-200 dark:border-dark-700">
                                     <Package size={18} className="text-gray-400" />
@@ -1499,7 +1499,7 @@ const OrdersAccordion: React.FC<{ reservations: Reservation[]; viewer?: User; lo
                         {storeItems.map((item: any, idx: number) => (
                           <div key={idx} className="flex items-center gap-3 bg-gray-50 dark:bg-dark-800 rounded-xl p-3">
                             {item.image ? (
-                              <img src={item.image} alt={item.title} className="h-11 w-11 rounded-lg object-cover flex-shrink-0" />
+                              <img src={item.image} alt={item.title} className="h-11 w-11 rounded-lg object-cover flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).src = '/custom-placeholder.png'; }} />
                             ) : (
                               <div className="h-11 w-11 rounded-lg flex-shrink-0 bg-gray-200 dark:bg-dark-700 flex items-center justify-center border border-gray-300 dark:border-dark-600">
                                 <Package size={20} className="text-gray-400" />
@@ -2031,7 +2031,7 @@ const CharityDashboard: React.FC<{ user: User }> = ({ user }) => {
                 {donations.map((d) => (
                   <div key={d.id} className="group rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-emerald-300 dark:hover:border-emerald-800 hover:-translate-y-1 transition-all shadow-sm">
                     <div className="relative h-40 overflow-hidden">
-                      <img src={d.image} alt={d.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <img src={d.image} alt={d.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={(e) => { (e.target as HTMLImageElement).src = '/custom-placeholder.png'; }} />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                       <span className="absolute top-3 left-3 rounded-full bg-rose-500 px-3 py-1 text-xs font-black text-white">FREE DONATION</span>
                       <span className="absolute bottom-3 right-3 rounded-full bg-black/60 backdrop-blur px-2.5 py-1 text-xs font-bold text-white">{d.quantity} units</span>

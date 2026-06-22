@@ -211,7 +211,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
               >
                 {/* Image */}
                 <div className="relative h-52 overflow-hidden cursor-pointer" onClick={() => item.quantity > 0 && setSelectedItem(item)}>
-                  <img src={item.image} alt={item.title} className={`w-full h-full object-cover transition-transform duration-500 ${item.quantity > 0 ? 'group-hover:scale-105' : 'grayscale'}`} />
+                  <img src={item.image} alt={item.title} className={`w-full h-full object-cover transition-transform duration-500 ${item.quantity > 0 ? 'group-hover:scale-105' : 'grayscale'}`} onError={(e) => { (e.target as HTMLImageElement).src = '/custom-placeholder.png'; }} />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/50 to-transparent" />
 
                   {item.quantity === 0 && (
@@ -313,7 +313,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onAddToCart, ref
         {selectedItem && (
           <div>
             <div className="relative h-64 sm:h-72">
-              <img src={selectedItem.image} className="h-full w-full object-cover" alt={selectedItem.title} />
+              <img src={selectedItem.image} className="h-full w-full object-cover" alt={selectedItem.title} onError={(e) => { (e.target as HTMLImageElement).src = '/custom-placeholder.png'; }} />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent" />
               <div className="absolute bottom-0 inset-x-0 p-6 sm:p-8">
                 <div className="flex flex-wrap items-end justify-between gap-4">

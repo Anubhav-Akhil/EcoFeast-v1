@@ -433,7 +433,7 @@ app.post("/api/auth/login", async (req, res, next) => {
       user.emailVerified = false;
       await user.save();
 
-      // Generate a new OTP and send email
+      // Generate a new OTP and send email (non-blocking to avoid login delay)
       const otp = generateOtp();
       await OTP.deleteMany({ email: normalizedEmail }); // Clear old OTPs
       await OTP.create({
@@ -442,11 +442,10 @@ app.post("/api/auth/login", async (req, res, next) => {
         expiresAt: new Date(Date.now() + 10 * 60 * 1000),
       });
 
-      try {
-        await sendOtpEmail(normalizedEmail, otp);
-      } catch (mailErr) {
+      // Fire-and-forget: don't await email — user can resend from OTP modal if needed
+      sendOtpEmail(normalizedEmail, otp).catch((mailErr) => {
         console.error("Failed to send login OTP email:", mailErr.message);
-      }
+      });
     } else {
       // Ensure test emails are always pre-verified
       user.emailVerified = true;
