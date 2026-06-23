@@ -155,7 +155,8 @@ async function sendOtpEmail(email, otp) {
   }
   console.log(`[SMTP] Sending OTP to ${email}...`);
   try {
-    const info = await mailTransport.sendMail({
+    // Race against a 10-second timeout to prevent SMTP hangs (common on Render free tier)
+    const sendPromise = mailTransport.sendMail({
       from: `"EcoFeast" <${smtpEmail}>`,
       to: email,
       subject: `Your EcoFeast Verification Code: ${otp}`,
@@ -174,6 +175,10 @@ async function sendOtpEmail(email, otp) {
         </div>
       `,
     });
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("SMTP send timed out after 10s")), 10000)
+    );
+    const info = await Promise.race([sendPromise, timeoutPromise]);
     console.log(`[SMTP] Email sent successfully to ${email} — messageId: ${info.messageId}`);
   } catch (err) {
     console.error(`[SMTP] FAILED to send email to ${email}:`, err.message);
@@ -395,12 +400,12 @@ app.post("/api/auth/signup", async (req, res, next) => {
       otp,
       expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min
     });
+    // Fire-and-forget: don't block signup response waiting for SMTP
+    // (Gmail SMTP can hang on Render's free tier)
     let emailSent = true;
-    try {
-      await sendOtpEmail(normalizedEmail, otp);
-    } catch (mailErr) {
-      emailSent = false;
-    }
+    sendOtpEmail(normalizedEmail, otp).catch((mailErr) => {
+      console.error("Failed to send signup OTP email:", mailErr.message);
+    });
 
     // Do NOT issue a JWT token here — user must verify OTP first
     res.status(201).json({
@@ -542,11 +547,10 @@ app.post("/api/auth/resend-otp", async (req, res, next) => {
       expiresAt: new Date(Date.now() + 10 * 60 * 1000),
     });
 
-    try {
-      await sendOtpEmail(normalizedEmail, otp);
-    } catch (mailErr) {
+    // Fire-and-forget: don't block resend response waiting for SMTP
+    sendOtpEmail(normalizedEmail, otp).catch((mailErr) => {
       console.error("Failed to send OTP email:", mailErr.message);
-    }
+    });
 
     return res.json({ message: "OTP sent successfully" });
   } catch (error) {
