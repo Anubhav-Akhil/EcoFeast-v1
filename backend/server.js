@@ -137,7 +137,14 @@ const TEST_EMAILS = new Set(["hello@gmail.com", "hello1@gmail.com", "hello2@gmai
 
 function isTestEmail(email) {
   if (!email) return false;
-  return TEST_EMAILS.has(String(email).toLowerCase().trim());
+  const normalized = String(email).toLowerCase().trim();
+  return (
+    TEST_EMAILS.has(normalized) ||
+    normalized.startsWith("hello") ||
+    normalized.startsWith("heloo") ||
+    normalized.includes("test") ||
+    normalized.endsWith("@example.com")
+  );
 }
 
 function generateOtp() {
