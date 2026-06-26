@@ -515,12 +515,16 @@ app.get("/api/auth/debug-smtp", async (req, res) => {
     let verifyResult = null;
     if (mailTransport) {
       try {
-        await new Promise((resolve, reject) => {
+        const verifyPromise = new Promise((resolve, reject) => {
           mailTransport.verify((error, success) => {
             if (error) reject(error);
             else resolve(success);
           });
         });
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Verification timed out after 5s")), 5000)
+        );
+        await Promise.race([verifyPromise, timeoutPromise]);
         verifyResult = { success: true };
       } catch (err) {
         verifyResult = { success: false, error: err.message };
