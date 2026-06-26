@@ -477,6 +477,72 @@ app.get("/api/auth/me", requireAuth, async (req, res) => {
   return res.json({ user: toPublicUser(user) });
 });
 
+app.get("/api/auth/debug-smtp", async (req, res) => {
+  try {
+    const dnsPromise = new Promise((resolve) => {
+      import("dns").then((dnsModule) => {
+        dnsModule.lookup("smtp.gmail.com", (err, address, family) => {
+          if (err) resolve({ success: false, error: err.message });
+          else resolve({ success: true, address, family });
+        });
+      }).catch(err => resolve({ success: false, error: err.message }));
+    });
+
+    const testPort = (port) => new Promise((resolve) => {
+      import("net").then((netModule) => {
+        const socket = new netModule.Socket();
+        socket.setTimeout(3000);
+        socket.on("connect", () => {
+          socket.destroy();
+          resolve({ open: true });
+        });
+        socket.on("timeout", () => {
+          socket.destroy();
+          resolve({ open: false, error: "Timeout after 3s" });
+        });
+        socket.on("error", (err) => {
+          socket.destroy();
+          resolve({ open: false, error: err.message });
+        });
+        socket.connect(port, "smtp.gmail.com");
+      }).catch(err => resolve({ open: false, error: err.message }));
+    });
+
+    const dnsResult = await dnsPromise;
+    const port465 = await testPort(465);
+    const port587 = await testPort(587);
+
+    let verifyResult = null;
+    if (mailTransport) {
+      try {
+        await new Promise((resolve, reject) => {
+          mailTransport.verify((error, success) => {
+            if (error) reject(error);
+            else resolve(success);
+          });
+        });
+        verifyResult = { success: true };
+      } catch (err) {
+        verifyResult = { success: false, error: err.message };
+      }
+    } else {
+      verifyResult = { success: false, error: "mailTransport is null (SMTP_EMAIL or SMTP_PASSWORD not set)" };
+    }
+
+    res.json({
+      smtpEmail: smtpEmail || "(NOT SET)",
+      smtpPasswordLength: smtpPassword ? smtpPassword.length : 0,
+      dnsLookup: dnsResult,
+      tcpPort465: port465,
+      tcpPort587: port587,
+      transportVerification: verifyResult,
+      envKeys: Object.keys(process.env).filter(k => k.includes("SMTP") || k.includes("EMAIL") || k.includes("PASS"))
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message, stack: err.stack });
+  }
+});
+
 // ── OTP Verification ────────────────────────────────────────────────────────
 app.post("/api/auth/verify-otp", async (req, res, next) => {
   try {
