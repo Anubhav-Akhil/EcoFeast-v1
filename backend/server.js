@@ -156,31 +156,123 @@ async function sendOtpEmail(email, otp) {
     console.log(`[SMTP-TEST] Bypassing SMTP send for test email ${email} (OTP: ${otp})`);
     return;
   }
+
+  const subject = `Your EcoFeast Verification Code: ${otp}`;
+  const htmlContent = `
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f0fdf4;border-radius:16px">
+      <div style="text-align:center;margin-bottom:24px">
+        <h1 style="color:#059669;margin:0">EcoFeast</h1>
+        <p style="color:#64748b;font-size:14px;margin-top:4px">Email Verification</p>
+      </div>
+      <div style="background:white;border-radius:12px;padding:32px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06)">
+        <p style="color:#334155;font-size:15px;margin:0 0 20px">Use this code to verify your email:</p>
+        <div style="letter-spacing:12px;font-size:36px;font-weight:800;color:#059669;background:#f0fdf4;border-radius:12px;padding:16px;display:inline-block">${otp}</div>
+        <p style="color:#94a3b8;font-size:13px;margin-top:20px">This code expires in 10 minutes.</p>
+      </div>
+      <p style="color:#94a3b8;font-size:11px;text-align:center;margin-top:24px">&copy; ${new Date().getFullYear()} EcoFeast &mdash; Reducing food waste, one meal at a time.</p>
+    </div>
+  `;
+
+  // 1. Try Brevo HTTP API
+  if (process.env.BREVO_API_KEY) {
+    console.log(`[Email-API] Sending OTP via Brevo API to ${email}...`);
+    try {
+      const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "api-key": process.env.BREVO_API_KEY,
+          "content-type": "application/json",
+          "accept": "application/json"
+        },
+        body: JSON.stringify({
+          sender: { name: "EcoFeast", email: smtpEmail || "wizardgaminglive@gmail.com" },
+          to: [{ email }],
+          subject,
+          htmlContent
+        })
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Brevo API failed: ${res.status} - ${errText}`);
+      }
+      console.log(`[Email-API] Email sent successfully via Brevo to ${email}`);
+      return;
+    } catch (err) {
+      console.error(`[Email-API] Brevo send failed:`, err.message);
+      throw err;
+    }
+  }
+
+  // 2. Try SendGrid HTTP API
+  if (process.env.SENDGRID_API_KEY) {
+    console.log(`[Email-API] Sending OTP via SendGrid API to ${email}...`);
+    try {
+      const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.SENDGRID_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          personalizations: [{ to: [{ email }] }],
+          from: { email: smtpEmail || "wizardgaminglive@gmail.com", name: "EcoFeast" },
+          subject,
+          content: [{ type: "text/html", value: htmlContent }]
+        })
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`SendGrid API failed: ${res.status} - ${errText}`);
+      }
+      console.log(`[Email-API] Email sent successfully via SendGrid to ${email}`);
+      return;
+    } catch (err) {
+      console.error(`[Email-API] SendGrid send failed:`, err.message);
+      throw err;
+    }
+  }
+
+  // 3. Try Resend HTTP API
+  if (process.env.RESEND_API_KEY) {
+    console.log(`[Email-API] Sending OTP via Resend API to ${email}...`);
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          from: "EcoFeast <onboarding@resend.dev>", // Or verified domain email
+          to: [email],
+          subject,
+          html: htmlContent
+        })
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Resend API failed: ${res.status} - ${errText}`);
+      }
+      console.log(`[Email-API] Email sent successfully via Resend to ${email}`);
+      return;
+    } catch (err) {
+      console.error(`[Email-API] Resend send failed:`, err.message);
+      throw err;
+    }
+  }
+
+  // 4. Fallback to Nodemailer SMTP
   if (!mailTransport) {
     console.log(`[OTP-DEV] OTP for ${email}: ${otp} (no SMTP configured, printed to console)`);
     return;
   }
   console.log(`[SMTP] Sending OTP to ${email}...`);
   try {
-    // Race against a 10-second timeout to prevent SMTP hangs (common on Render free tier)
     const sendPromise = mailTransport.sendMail({
       from: `"EcoFeast" <${smtpEmail}>`,
       to: email,
-      subject: `Your EcoFeast Verification Code: ${otp}`,
-      html: `
-        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f0fdf4;border-radius:16px">
-          <div style="text-align:center;margin-bottom:24px">
-            <h1 style="color:#059669;margin:0">EcoFeast</h1>
-            <p style="color:#64748b;font-size:14px;margin-top:4px">Email Verification</p>
-          </div>
-          <div style="background:white;border-radius:12px;padding:32px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06)">
-            <p style="color:#334155;font-size:15px;margin:0 0 20px">Use this code to verify your email:</p>
-            <div style="letter-spacing:12px;font-size:36px;font-weight:800;color:#059669;background:#f0fdf4;border-radius:12px;padding:16px;display:inline-block">${otp}</div>
-            <p style="color:#94a3b8;font-size:13px;margin-top:20px">This code expires in 10 minutes.</p>
-          </div>
-          <p style="color:#94a3b8;font-size:11px;text-align:center;margin-top:24px">&copy; ${new Date().getFullYear()} EcoFeast &mdash; Reducing food waste, one meal at a time.</p>
-        </div>
-      `,
+      subject,
+      html: htmlContent,
     });
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error("SMTP send timed out after 10s")), 10000)
@@ -540,7 +632,10 @@ app.get("/api/auth/debug-smtp", async (req, res) => {
       tcpPort465: port465,
       tcpPort587: port587,
       transportVerification: verifyResult,
-      envKeys: Object.keys(process.env).filter(k => k.includes("SMTP") || k.includes("EMAIL") || k.includes("PASS"))
+      brevoApiKeyConfigured: !!process.env.BREVO_API_KEY,
+      sendgridApiKeyConfigured: !!process.env.SENDGRID_API_KEY,
+      resendApiKeyConfigured: !!process.env.RESEND_API_KEY,
+      envKeys: Object.keys(process.env).filter(k => k.includes("SMTP") || k.includes("EMAIL") || k.includes("PASS") || k.includes("KEY"))
     });
   } catch (err) {
     res.status(500).json({ error: err.message, stack: err.stack });
