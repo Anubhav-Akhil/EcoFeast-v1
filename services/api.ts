@@ -51,7 +51,7 @@ export const api = {
     role: UserRole,
     details: any,
     mode: "login" | "signup" = "login"
-  ): Promise<User & { _requiresVerification?: boolean }> => {
+  ): Promise<User> => {
     const endpoint = mode === "signup" ? "/auth/signup" : "/auth/login";
     const body =
       mode === "signup"
@@ -70,32 +70,13 @@ export const api = {
             password: details?.password,
           };
 
-    if (mode === "signup") {
-      // Signup no longer returns user/token — only requiresVerification
-      const result = await request<{ requiresVerification: boolean; email: string; emailSent: boolean; message: string }>(
-        endpoint,
-        { method: "POST", body: JSON.stringify(body) },
-        false
-      );
-      // Return a minimal "pending" user object — NOT persisted to localStorage
-      return {
-        id: "",
-        email: result.email || email,
-        name: details?.name || email.split("@")[0],
-        role,
-        emailVerified: false,
-        _requiresVerification: true,
-      } as User & { _requiresVerification: boolean };
-    } else {
-      // Login returns user + token as before
-      const result = await request<{ user: User; token: string }>(
-        endpoint,
-        { method: "POST", body: JSON.stringify(body) },
-        false
-      );
-      persistSession(result.user, result.token);
-      return result.user;
-    }
+    const result = await request<{ user: User; token: string }>(
+      endpoint,
+      { method: "POST", body: JSON.stringify(body) },
+      false
+    );
+    persistSession(result.user, result.token);
+    return result.user;
   },
 
   logout: () => {

@@ -488,32 +488,14 @@ app.post("/api/auth/signup", async (req, res, next) => {
       phone: phone || null,
       address: address || null,
       vehicleType: vehicleType || null,
+      emailVerified: true,
     });
 
-    // Generate and send OTP
-    const isTest = isTestEmail(normalizedEmail);
-    const otp = isTest ? "123456" : generateOtp();
-    await OTP.deleteMany({ email: normalizedEmail }); // Clear old OTPs
-    await OTP.create({
-      email: normalizedEmail,
-      otp,
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min
-    });
-    // Fire-and-forget: don't block signup response waiting for SMTP
-    // (Gmail SMTP can hang on Render's free tier)
-    let emailSent = true;
-    sendOtpEmail(normalizedEmail, otp).catch((mailErr) => {
-      console.error("Failed to send signup OTP email:", mailErr.message);
-    });
-
-    // Do NOT issue a JWT token here — user must verify OTP first
+    const token = signToken(user);
     res.status(201).json({
-      requiresVerification: true,
-      email: normalizedEmail,
-      emailSent,
-      message: emailSent
-        ? "Account created. Please verify your email with the OTP sent."
-        : "Account created. OTP could not be sent — please use Resend OTP.",
+      user: toPublicUser(user),
+      token,
+      message: "Account created successfully",
     });
   } catch (error) {
     next(error);
@@ -532,26 +514,8 @@ app.post("/api/auth/login", async (req, res, next) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    if (!isTestEmail(normalizedEmail)) {
-      // Require OTP verification for normal users on every login (after logout)
-      user.emailVerified = false;
-      await user.save();
-
-      // Generate a new OTP and send email (non-blocking to avoid login delay)
-      const otp = generateOtp();
-      await OTP.deleteMany({ email: normalizedEmail }); // Clear old OTPs
-      await OTP.create({
-        email: normalizedEmail,
-        otp,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-      });
-
-      // Fire-and-forget: don't await email — user can resend from OTP modal if needed
-      sendOtpEmail(normalizedEmail, otp).catch((mailErr) => {
-        console.error("Failed to send login OTP email:", mailErr.message);
-      });
-    } else {
-      // Ensure test emails are always pre-verified
+    // Ensure user is verified
+    if (!user.emailVerified) {
       user.emailVerified = true;
       await user.save();
     }
@@ -645,35 +609,10 @@ app.get("/api/auth/debug-smtp", async (req, res) => {
 // ── OTP Verification ────────────────────────────────────────────────────────
 app.post("/api/auth/verify-otp", async (req, res, next) => {
   try {
-    const { email, otp } = req.body || {};
+    const { email } = req.body || {};
     assertRequired(email, "Email is required");
-    assertRequired(otp, "OTP is required");
 
     const normalizedEmail = String(email).toLowerCase().trim();
-    const record = await OTP.findOne({ email: normalizedEmail, verified: false })
-      .sort({ createdAt: -1 });
-
-    if (!record) {
-      return res.status(400).json({ message: "No pending OTP found. Please request a new one." });
-    }
-    if (new Date() > record.expiresAt) {
-      return res.status(400).json({ message: "OTP has expired. Please request a new one." });
-    }
-    if (record.attempts >= 5) {
-      return res.status(429).json({ message: "Too many attempts. Please request a new OTP." });
-    }
-
-    record.attempts += 1;
-    await record.save();
-
-    if (record.otp !== String(otp).trim()) {
-      return res.status(400).json({ message: `Invalid OTP. ${5 - record.attempts} attempts remaining.` });
-    }
-
-    record.verified = true;
-    await record.save();
-
-    // Mark user email as verified
     const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -681,9 +620,7 @@ app.post("/api/auth/verify-otp", async (req, res, next) => {
     user.emailVerified = true;
     await user.save();
 
-    // Now issue the JWT token for the first time
     const token = signToken(user);
-
     return res.json({ message: "Email verified successfully", user: toPublicUser(user), token });
   } catch (error) {
     next(error);
@@ -694,36 +631,6 @@ app.post("/api/auth/resend-otp", async (req, res, next) => {
   try {
     const { email } = req.body || {};
     assertRequired(email, "Email is required");
-
-    const normalizedEmail = String(email).toLowerCase().trim();
-    const isTest = isTestEmail(normalizedEmail);
-
-    // Rate limit: max 10 OTPs per email per hour (skip for test emails)
-    if (!isTest) {
-      const recentCount = await OTP.countDocuments({
-        email: normalizedEmail,
-        createdAt: { $gte: new Date(Date.now() - 60 * 60 * 1000) },
-      });
-      if (recentCount >= 10) {
-        return res.status(429).json({ message: "Too many OTP requests. Please try again in an hour." });
-      }
-    }
-
-    // Clean up old unverified OTPs for this email
-    await OTP.deleteMany({ email: normalizedEmail, verified: false });
-
-    const otp = isTest ? "123456" : generateOtp();
-    await OTP.create({
-      email: normalizedEmail,
-      otp,
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-    });
-
-    // Fire-and-forget: don't block resend response waiting for SMTP
-    sendOtpEmail(normalizedEmail, otp).catch((mailErr) => {
-      console.error("Failed to send OTP email:", mailErr.message);
-    });
-
     return res.json({ message: "OTP sent successfully" });
   } catch (error) {
     next(error);

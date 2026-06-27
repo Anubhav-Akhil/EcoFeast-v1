@@ -20,7 +20,7 @@ import { socket } from './services/socket';
 import { useNotificationStore, buildNotification } from './services/notificationStore';
 import { AlertPopup, PopupType } from './components/AlertPopup';
 import { ModalHeader, ModalShell, primaryButtonClassName, secondaryButtonClassName } from './components/ui';
-import { OtpVerificationModal } from './components/OtpVerificationModal';
+
 import { AddressMapModal } from './components/AddressMapModal';
 
 interface CartEntry {
@@ -43,8 +43,6 @@ const App: React.FC = () => {
   const [alertConfig, setAlertConfig] = useState<{ type: PopupType; title: string; message: string }>({ type: 'info', title: '', message: '' });
 
   // Verification pipeline state
-  const [showOtpModal, setShowOtpModal] = useState(false);
-  const [otpEmail, setOtpEmail] = useState('');
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [addressMandatory, setAddressMandatory] = useState(false);
 
@@ -126,25 +124,16 @@ const App: React.FC = () => {
   }, []);
 
   // Verification checking pipeline — for LOGGED IN users only
-  // During signup, user is null and the OTP modal is managed explicitly by handleLogin
   useEffect(() => {
     if (user) {
-      if (!user.emailVerified) {
-        setOtpEmail(user.email);
-        setShowOtpModal(true);
-        setShowAddressModal(false);
-      } else if (user.role !== 'admin' && (!user.address || !user.location || !user.location.lat || !user.location.lng)) {
+      if (user.role !== 'admin' && (!user.address || !user.location || !user.location.lat || !user.location.lng)) {
         setAddressMandatory(true);
         setShowAddressModal(true);
-        setShowOtpModal(false);
       } else {
-        setShowOtpModal(false);
         setShowAddressModal(false);
         setAddressMandatory(false);
       }
     }
-    // When user is null, do NOT force-close showOtpModal —
-    // it may be open for a fresh signup (user hasn't verified yet)
   }, [user]);
 
   useEffect(() => {
@@ -168,32 +157,7 @@ const App: React.FC = () => {
   const handleLogin = async (email: string, role: UserRole, details: any, mode: 'login' | 'signup') => {
     const u = await api.login(email, role, details, mode);
     setAuthModalOpen(false);
-
-    if (mode === 'signup') {
-      // Signup: user is NOT logged in yet — just show OTP modal
-      // Backend already sent the OTP email during signup
-      setOtpEmail(email);
-      setShowOtpModal(true);
-    } else {
-      // Login: user IS logged in
-      setUser(u);
-      // If unverified, show the OTP modal (backend already generated/sent the OTP)
-      if (!u.emailVerified) {
-        setOtpEmail(u.email);
-        setShowOtpModal(true);
-      }
-      // The verification pipeline useEffect handles the rest
-    }
-  };
-
-  const handleOtpVerified = (verifiedUser: User) => {
-    setUser(verifiedUser);
-    setShowOtpModal(false);
-    // After OTP verification, check if address is needed
-    if (verifiedUser.role !== 'admin' && (!verifiedUser.address || !verifiedUser.location || !verifiedUser.location.lat || !verifiedUser.location.lng)) {
-      setAddressMandatory(true);
-      setShowAddressModal(true);
-    }
+    setUser(u);
   };
 
   const handleAddressSaved = (updatedUser: User) => {
@@ -471,17 +435,7 @@ const App: React.FC = () => {
 
       <AlertPopup open={alertOpen} type={alertConfig.type} title={alertConfig.title} message={alertConfig.message} onClose={() => setAlertOpen(false)} />
 
-      {/* OTP Verification Modal */}
-      <OtpVerificationModal
-        open={showOtpModal}
-        email={otpEmail}
-        onVerified={handleOtpVerified}
-        onClose={() => {
-          setShowOtpModal(false);
-          api.logout();
-          setUser(null);
-        }}
-      />
+
 
       {/* Address Collection Modal */}
       <AddressMapModal
