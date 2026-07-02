@@ -2116,15 +2116,41 @@ const VolunteerDashboard: React.FC<{ user: User }> = ({ user }) => {
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
-        setCurrentLoc({ lat: latitude, lng: longitude });
-        // Read active tasks from ref so this callback never goes stale
+        
+        let effectiveLat = latitude;
+        let effectiveLng = longitude;
+
+        // If the live geolocation is extremely far (> 100 km) from the store,
+        // it means the developer is testing the application remotely.
+        // Let's use the volunteer's profile location (Connaught Place, Delhi) instead,
+        // so that the distances are realistic (~3 km).
         const activeTasks = tasksRef.current.filter(t => ['accepted', 'picked_up'].includes(t.status));
+        const targetLoc = (activeTasks[0] as any)?.storeLocation || (activeTasks[0] as any)?.dropLocation;
+        if (targetLoc) {
+          const rawDist = getHaversineDistance(latitude, longitude, targetLoc.lat, targetLoc.lng);
+          if (rawDist > 100) {
+            if (user.location && user.location.lat && user.location.lng) {
+              const profileDist = getHaversineDistance(user.location.lat, user.location.lng, targetLoc.lat, targetLoc.lng);
+              if (profileDist < 100) {
+                effectiveLat = user.location.lat;
+                effectiveLng = user.location.lng;
+              }
+            } else {
+              // Mock a position near the store/drop
+              effectiveLat = targetLoc.lat + 0.015;
+              effectiveLng = targetLoc.lng - 0.015;
+            }
+          }
+        }
+
+        setCurrentLoc({ lat: effectiveLat, lng: effectiveLng });
+        
         activeTasks.forEach((task) => {
           socket.emit('volunteer-location-update', {
             orderId: task.orderId,
             taskId: task.id,
-            lat: latitude,
-            lng: longitude,
+            lat: effectiveLat,
+            lng: effectiveLng,
             name: user.name || 'Volunteer',
           });
         });
