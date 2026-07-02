@@ -2069,6 +2069,7 @@ const VolunteerDashboard: React.FC<{ user: User }> = ({ user }) => {
   const [deliveryConfirmLoading, setDeliveryConfirmLoading] = useState(false);
   const deliveryOtpInputRef = useRef<HTMLInputElement | null>(null);
   const [currentLoc, setCurrentLoc] = useState<{ lat: number; lng: number } | null>(null);
+  const tasksRef = useRef<Task[]>([]);
 
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertConfig, setAlertConfig] = useState<{ type: PopupType; title: string; message: string }>({ type: 'info', title: '', message: '' });
@@ -2092,23 +2093,32 @@ const VolunteerDashboard: React.FC<{ user: User }> = ({ user }) => {
     loadTasks();
   }, []);
 
-  // Live location tracking for active deliveries
+  // Keep tasksRef in sync so the geolocation watcher can read latest tasks
+  // without restarting the watcher on every task reload.
   useEffect(() => {
-    const activeTasks = tasks.filter(t => ['accepted', 'picked_up'].includes(t.status));
-    if (activeTasks.length === 0) return;
+    tasksRef.current = tasks;
+  }, [tasks]);
+
+  // Live location tracking — starts once when there are active tasks and
+  // does NOT restart when tasks reload (uses ref to read latest tasks).
+  const hasActiveTasks = tasks.some(t => ['accepted', 'picked_up'].includes(t.status));
+  useEffect(() => {
+    if (!hasActiveTasks) return;
 
     if (!navigator.geolocation) {
       console.warn('Geolocation is not supported by this browser.');
       return;
     }
 
-    console.log('Starting live location tracking for tasks:', activeTasks.map(t => t.id));
+    console.log('Starting live location tracking for active deliveries');
 
     // Watch position
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
         setCurrentLoc({ lat: latitude, lng: longitude });
+        // Read active tasks from ref so this callback never goes stale
+        const activeTasks = tasksRef.current.filter(t => ['accepted', 'picked_up'].includes(t.status));
         activeTasks.forEach((task) => {
           socket.emit('volunteer-location-update', {
             orderId: task.orderId,
@@ -2133,7 +2143,7 @@ const VolunteerDashboard: React.FC<{ user: User }> = ({ user }) => {
       console.log('Stopping live location tracking.');
       navigator.geolocation.clearWatch(watchId);
     };
-  }, [tasks, user.name]);
+  }, [hasActiveTasks, user.name]);
   const loadTasks = async () => {
     try {
       const t = await api.getTasks();
@@ -2409,18 +2419,17 @@ const VolunteerDashboard: React.FC<{ user: User }> = ({ user }) => {
                     const storeLoc = (task as any).storeLocation;
                     const dropLoc = (task as any).dropLocation;
                     
-                    let loc1 = currentLoc;
-                    let loc2 = task.status === 'picked_up' ? dropLoc : storeLoc;
-                    let label = task.status === 'picked_up' ? 'To Drop' : 'To Pick';
+                    const loc1 = currentLoc;
+                    const loc2 = task.status === 'picked_up' ? dropLoc : storeLoc;
+                    const label = task.status === 'picked_up' ? 'To Drop' : 'To Pick';
                     
-                    // Fallback if currentLoc not available yet
-                    if (!loc1) {
-                      loc1 = storeLoc;
-                      loc2 = dropLoc;
-                      label = "Store to Drop";
-                    }
-                    
-                    const { distanceStr, timeStr } = formatDistanceAndTime(loc1, loc2);
+                    // Only show real distance from volunteer's live location.
+                    // If geolocation hasn't resolved yet, show "Locating..." instead
+                    // of a misleading store-to-drop fallback.
+                    const hasLoc = loc1 && loc2;
+                    const { distanceStr, timeStr } = hasLoc
+                      ? formatDistanceAndTime(loc1, loc2)
+                      : { distanceStr: 'Locating…', timeStr: 'Locating…' };
                     
                     return (
                       <div className="grid grid-cols-3 gap-2 mb-5">
