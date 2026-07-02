@@ -204,7 +204,7 @@ export const Layout: React.FC<LayoutProps> = ({
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: -10, scale: 0.97 }}
                             transition={{ duration: 0.16, ease: 'easeOut' }}
-                            className="absolute right-0 mt-2 w-[22rem] bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/8 rounded-2xl shadow-2xl z-50 overflow-hidden"
+                            className="absolute right-0 mt-2 w-[92vw] sm:w-[22rem] max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/8 rounded-2xl shadow-2xl z-50 overflow-hidden"
                           >
                             {/* Panel header */}
                             <div className="px-5 pt-4 pb-3 border-b border-slate-100 dark:border-white/6">
@@ -423,13 +423,187 @@ export const Layout: React.FC<LayoutProps> = ({
             </div>
 
             {/* Mobile menu button */}
-            <div className="md:hidden flex items-center gap-2">
+            <div className="md:hidden flex items-center gap-1.5">
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-xl text-slate-500 dark:text-slate-400"
+                className="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
               >
                 {isDark ? <Sun size={18} /> : <Moon size={18} />}
               </button>
+
+              {user && (
+                <>
+                  {/* Notification Center for Mobile */}
+                  <div className="relative">
+                    <button
+                      onClick={() => {
+                        setIsNotificationsOpen(!isNotificationsOpen);
+                        setNotifView('all');
+                      }}
+                      className="relative p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white transition-colors"
+                    >
+                      <Bell size={19} />
+                      {unreadCount > 0 && (
+                        <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                    </button>
+
+                    {/* Notification Dropdown for Mobile */}
+                    <AnimatePresence>
+                      {isNotificationsOpen && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setIsNotificationsOpen(false)} />
+                          <motion.div
+                            initial={{ opacity: 0, y: -10, scale: 0.97 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -10, scale: 0.97 }}
+                            transition={{ duration: 0.16, ease: 'easeOut' }}
+                            className="absolute right-0 mt-2 w-[92vw] sm:w-[22rem] max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/8 rounded-2xl shadow-2xl z-50 overflow-hidden"
+                          >
+                            {/* Panel header */}
+                            <div className="px-5 pt-4 pb-3 border-b border-slate-100 dark:border-white/6">
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <h3 className="text-[15px] font-black text-slate-900 dark:text-white">Notifications</h3>
+                                  <p className="text-xs text-slate-400 mt-0.5">
+                                    {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
+                                  </p>
+                                </div>
+                                <div className="flex gap-3">
+                                  {unreadCount > 0 && (
+                                    <button
+                                      onClick={markAllAsRead}
+                                      className="flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+                                    >
+                                      <CheckCheck size={13} /> Mark all read
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={clearAll}
+                                    className="text-xs font-bold text-rose-500 hover:underline"
+                                  >
+                                    Clear
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="mt-3 flex gap-1.5">
+                                {(['all', 'unread'] as const).map((v) => (
+                                  <button
+                                    key={v}
+                                    onClick={() => setNotifView(v)}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition capitalize ${notifView === v
+                                        ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950'
+                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                      }`}
+                                  >
+                                    {v}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="max-h-[68vh] overflow-y-auto">
+                              {visibleNotifications.length === 0 ? (
+                                <div className="py-14 text-center">
+                                  <BellOff size={28} className="mx-auto text-slate-300 dark:text-slate-700 mb-3" />
+                                  <p className="text-sm font-medium text-slate-400 dark:text-slate-600">
+                                    {notifView === 'unread' ? 'No unread notifications' : 'Nothing here yet'}
+                                  </p>
+                                </div>
+                              ) : (
+                                <div className="divide-y divide-slate-100 dark:divide-white/5">
+                                  {visibleNotifications.map((notif, idx) => {
+                                    const cfg = notifTypeConfig[notif.type] || notifTypeConfig.system;
+                                    const Icon = cfg.Icon;
+                                    return (
+                                      <motion.button
+                                        key={notif.id}
+                                        initial={{ opacity: 0, x: -8 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: idx * 0.025 }}
+                                        onClick={() => {
+                                          markAsRead(notif.id);
+                                          setIsNotificationsOpen(false);
+                                          if (notif.link) navigate(notif.link);
+                                        }}
+                                        className={`w-full text-left px-5 py-4 transition-all border-b border-slate-50 dark:border-white/5 relative group/notif ${
+                                          !notif.read 
+                                            ? 'bg-emerald-50/30 dark:bg-emerald-500/5' 
+                                            : 'bg-white dark:bg-transparent'
+                                        }`}
+                                      >
+                                        <div className="flex gap-4 items-start">
+                                          {/* Icon tile */}
+                                          <div className={`h-10 w-10 rounded-2xl flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
+                                            !notif.read ? cfg.iconBg : 'bg-slate-100 dark:bg-slate-800/50'
+                                          }`}>
+                                            <Icon size={18} className={!notif.read ? cfg.iconColor : 'text-slate-400 dark:text-slate-500'} />
+                                          </div>
+                                          
+                                          <div className="min-w-0 flex-1">
+                                            <div className="flex justify-between items-baseline gap-2 mb-1">
+                                              <span className={`text-sm leading-snug transition-colors ${
+                                                !notif.read 
+                                                  ? 'font-black text-slate-900 dark:text-white' 
+                                                  : 'font-bold text-slate-500 dark:text-slate-400'
+                                              }`}>
+                                                {notif.title}
+                                              </span>
+                                              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tight flex-shrink-0">
+                                                {formatTimeAgo(notif.timestamp)}
+                                              </span>
+                                            </div>
+                                            
+                                            <p className={`text-xs leading-snug transition-colors ${
+                                              !notif.read 
+                                                ? 'text-slate-600 dark:text-slate-300 font-medium' 
+                                                : 'text-slate-400 dark:text-slate-500'
+                                            }`}>
+                                              {notif.message}
+                                            </p>
+                                            
+                                            {notif.subtitle && (
+                                              <div className={`inline-flex items-center gap-1 mt-2.5 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-all ${
+                                                !notif.read 
+                                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
+                                                  : 'bg-slate-100 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500'
+                                              }`}>
+                                                {notif.subtitle}
+                                              </div>
+                                            )}
+                                          </div>
+                                          
+                                          {!notif.read && (
+                                            <div className="h-2 w-2 rounded-full bg-emerald-500 flex-shrink-0 mt-2 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                                          )}
+                                        </div>
+                                      </motion.button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        </>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </>
+              )}
+
+              {user && user.role === 'consumer' && (
+                <button onClick={onOpenCart} className="relative p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white transition-colors">
+                  <ShoppingCart size={19} />
+                  {cartCount > 0 && (
+                    <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white">
+                      {cartCount}
+                    </span>
+                  )}
+                </button>
+              )}
+
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5"
@@ -455,13 +629,61 @@ export const Layout: React.FC<LayoutProps> = ({
                 </Link>
               ))}
               {user ? (
-                <Link
-                  to="/dashboard"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="block px-3 py-2 text-base font-medium text-eco-700 dark:text-eco-400 bg-eco-50 dark:bg-dark-800 rounded-md"
-                >
-                  My Dashboard
-                </Link>
+                <div className="border-t border-gray-100 dark:border-dark-800 pt-4 mt-2">
+                  <div className="px-3 py-2 flex items-center gap-2 mb-2">
+                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-white text-xs font-black">
+                      {user.name?.[0]?.toUpperCase() || 'U'}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{user.name}</p>
+                      <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                    </div>
+                  </div>
+                  
+                  <Link
+                    to="/profile"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-eco-600 hover:bg-eco-50 dark:hover:bg-dark-800"
+                  >
+                    My Profile
+                  </Link>
+                  <Link
+                    to="/dashboard"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="block px-3 py-2 text-base font-medium text-gray-700 dark:text-gray-200 hover:text-eco-600 hover:bg-eco-50 dark:hover:bg-dark-800"
+                  >
+                    My Dashboard
+                  </Link>
+                  {(user.role === 'consumer' || user.role === 'charity') && (
+                    <Link
+                      to="/dashboard?tab=orders"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="block px-3 py-2 text-base font-medium text-gray-700 dark:text-gray-200 hover:text-eco-600 hover:bg-eco-50 dark:hover:bg-dark-800"
+                    >
+                      Your Orders
+                    </Link>
+                  )}
+                  {user.role === 'consumer' && (
+                    <button
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        onOpenCart();
+                      }}
+                      className="w-full text-left px-3 py-2 text-base font-medium text-gray-700 dark:text-gray-200 hover:text-eco-600 hover:bg-eco-50 dark:hover:bg-dark-800 flex items-center gap-2"
+                    >
+                      <ShoppingCart size={18} className="text-slate-400" /> Cart ({cartCount})
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      onLogout();
+                    }}
+                    className="w-full text-left px-3 py-2 text-base font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-md"
+                  >
+                    Log Out
+                  </button>
+                </div>
               ) : (
                 <button
                   onClick={() => {

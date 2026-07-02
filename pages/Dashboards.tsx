@@ -502,7 +502,7 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
         </div>
 
         {/* Tab bar */}
-        <div className="flex gap-1 mt-6">
+        <div className="flex flex-wrap gap-1.5 mt-6 sm:flex-nowrap overflow-x-auto select-none no-scrollbar">
           {[
             { key: 'listings', label: 'Listings', icon: Package, count: 0 },
             { key: 'orders', label: 'Orders', icon: ClipboardList, count: orderCounts.total },
@@ -530,7 +530,7 @@ const RetailerDashboard: React.FC<{ user: User }> = ({ user }) => {
 
         {activeTab === 'listings' && (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
               {[
                 { label: 'Total Listings', value: items.length, color: 'emerald', sub: 'live on platform' },
                 { label: 'Live Units', value: totalUnits, color: 'blue', sub: 'units available now' },
@@ -1748,7 +1748,7 @@ const ConsumerDashboard: React.FC<{ user: User }> = ({ user }) => {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mt-6">
+        <div className="flex flex-wrap gap-1.5 mt-6 sm:flex-nowrap overflow-x-auto select-none no-scrollbar">
           {[
             { key: 'overview', label: 'Overview' },
             { key: 'orders', label: `Your Orders (${reservations.length})` },
@@ -1772,7 +1772,7 @@ const ConsumerDashboard: React.FC<{ user: User }> = ({ user }) => {
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Stats Row */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               {[
                 { label: 'Eco Points', value: user.ecoPoints || 0, suffix: 'pts', icon: <Leaf size={18} />, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/30', border: 'border-emerald-200 dark:border-emerald-900/50' },
                 { label: 'CO₂ Saved', value: co2Saved, suffix: 'kg', icon: <Sparkles size={18} />, color: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-50 dark:bg-teal-950/30', border: 'border-teal-200 dark:border-teal-900/50' },
@@ -1985,7 +1985,7 @@ const CharityDashboard: React.FC<{ user: User }> = ({ user }) => {
             </div>
           </div>
         </div>
-        <div className="flex gap-1 mt-6">
+        <div className="flex flex-wrap gap-1.5 mt-6 sm:flex-nowrap overflow-x-auto select-none no-scrollbar">
           {[
             { key: 'overview', label: 'Available Donations' },
             { key: 'orders', label: `Your Claims (${reservations.length})` },

@@ -248,7 +248,7 @@ export const Home: React.FC<HomeProps> = ({ user, onOpenAuth }) => {
             </div>
 
             {/* Right: role selector pills */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {roles.map((role, i) => (
                 <motion.button
                   key={role.label}
