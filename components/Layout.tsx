@@ -204,7 +204,7 @@ export const Layout: React.FC<LayoutProps> = ({
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: -10, scale: 0.97 }}
                             transition={{ duration: 0.16, ease: 'easeOut' }}
-                            className="absolute right-0 mt-2 w-[92vw] sm:w-[22rem] max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/8 rounded-2xl shadow-2xl z-50 overflow-hidden"
+                            className="fixed sm:absolute top-[72px] sm:top-full right-4 sm:right-0 left-4 sm:left-auto mt-2 sm:mt-2 w-auto sm:w-[22rem] max-w-[calc(100vw-2rem)] sm:max-w-none bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/8 rounded-2xl shadow-2xl z-50 overflow-hidden"
                           >
                             {/* Panel header */}
                             <div className="px-5 pt-4 pb-3 border-b border-slate-100 dark:border-white/6">
@@ -460,7 +460,7 @@ export const Layout: React.FC<LayoutProps> = ({
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: -10, scale: 0.97 }}
                             transition={{ duration: 0.16, ease: 'easeOut' }}
-                            className="absolute right-0 mt-2 w-[92vw] sm:w-[22rem] max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/8 rounded-2xl shadow-2xl z-50 overflow-hidden"
+                            className="fixed sm:absolute top-[72px] sm:top-full right-4 sm:right-0 left-4 sm:left-auto mt-2 sm:mt-2 w-auto sm:w-[22rem] max-w-[calc(100vw-2rem)] sm:max-w-none bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/8 rounded-2xl shadow-2xl z-50 overflow-hidden"
                           >
                             {/* Panel header */}
                             <div className="px-5 pt-4 pb-3 border-b border-slate-100 dark:border-white/6">
