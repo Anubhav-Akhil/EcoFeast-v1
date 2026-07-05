@@ -1338,15 +1338,13 @@ const OrdersAccordion: React.FC<{ reservations: Reservation[]; viewer?: User; lo
                     s === 'received' ? 3 :
                       s === 'pending' ? 2 : 1;
 
-        let statusStep = Math.max(1, ...taskStatuses.map(getStep));
+        let statusStep = Math.max(1, getStep(res.status), ...taskStatuses.map(getStep));
 
         // If it's cancelled, we want to know how far it got before cancellation
         // If all tasks are cancelled, statusStep will be 1 (from getStep('cancelled'))
         // So we fall back to res.lastStatus or 1
         if (res.status === 'cancelled' && statusStep <= 2) {
           statusStep = getStep(res.lastStatus || 'pending');
-        } else if (res.status !== 'cancelled') {
-          // Standard case: statusStep is already calculated from tasks
         }
 
         const statusConfig: Record<string, { label: string; badge: string; bar: string }> = {
@@ -1452,7 +1450,12 @@ const OrdersAccordion: React.FC<{ reservations: Reservation[]; viewer?: User; lo
                               const matchingTask =
                                 orderTasks.find((t) => storeId && t.storeId === storeId) ||
                                 orderTasks.find((t) => t.storeName === storeName);
-                              const s = matchingTask?.status || 'pending';
+                              let s = matchingTask?.status || 'pending';
+                              if (res.status === 'completed') {
+                                s = 'completed';
+                              } else if (res.status === 'cancelled') {
+                                s = 'cancelled';
+                              }
                               const labelMap: Record<string, string> = {
                                 pending: 'Order sent to store',
                                 received: 'Order confirmed by store',
